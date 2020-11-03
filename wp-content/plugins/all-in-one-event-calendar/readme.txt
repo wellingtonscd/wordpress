@@ -2,8 +2,8 @@
 Contributors: uchu, calvinyeh, raquelleira, renatotbueno, domanb, elirenato, hubrik, vtowel, yani.iliev, nicolapeluchetti, jbutkus, lpawlik, bangelov
 Tags: calendar, event, ical, feed, ics, icalendar, sync, aggregator, google, venue, calendar widget, events widget
 Requires at least: 3.5
-Tested up to: 5.4.2
-Stable tag: 2.6.7
+Tested up to: 5.5.1
+Stable tag: 2.6.8
 Requires PHP: 5.4
 License: GNU General Public License, version 3 (GPL-3.0)
 
@@ -14,6 +14,8 @@ An events calendar system with multiple views, upcoming events widget, color-cod
 The free [All-in-One Event Calendar](https://time.ly/wordpress-calendar-plugins-addons) from [Timely](https://time.ly/) is a beautiful way to list your events in WordPress and easily share them with the rest of the world.
 
 Our events calendar is easy to manage. Combines clean visual design with a powerful set of features to create the most advanced website calendar system available for WordPress.
+
+This plugin is a service provided by [Timely](https://time.ly/) and requires that you create and activate an account in order to use it. 
 
 = Features =
 
@@ -48,6 +50,10 @@ Upgrade your free WordPress calendar version and get the following additional fe
 * [Extended Views](https://time.ly/wordpress-extended-visual-views-add-on/)
 
 Looking for more features like importing events from other calendars, front end submission, event finder, ticketing, booking and Facebook & Twitter integration? Check out our [Website Event Calendar App](https://time.ly/timely-website-events-calendar).
+
+= Legal =
+
+By creating or activating an account and/or embedding the code into a website, you agree to Timely's [Terms of Service](https://time.ly/tos) and policies. Please note that to provide you with our services, we sometimes send you service announcements and other information. To learn more about what personal data we collect from you and how we use it, please check our [Privacy Policy](https://time.ly/tos/privacy-policy). 
 
 = Languages =
 
@@ -113,6 +119,9 @@ You can help translate by going to [https://translate.time.ly](https://translate
 **[ai1ec exact_date="5-10-2017"]**
 
 == Changelog ==
+
+= Version 2.6.8 =
+* Fixed broken pages after updating to WordPress 5.5
 
 = Version 2.6.7 =
 * Some calendars wouldn't show the current date when using month view
@@ -1335,6 +1344,9 @@ directory.
 WordPress Dashboard.
 3. Once the plugin is activated, follow the instructions in the notice
 to configure it.
+4. Log in or sign up for a Timely account.
+
+Your WordPress site and Timely account will be connected and then you're ready to get started with Timely's All-in-One Event Calendar.
 
 == Screenshots ==
 

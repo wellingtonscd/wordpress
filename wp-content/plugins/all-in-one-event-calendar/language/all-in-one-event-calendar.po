@@ -2,13 +2,13 @@
 # This file is distributed under the same license as the All-in-One Event Calendar by Time.ly package.
 msgid ""
 msgstr ""
-"Project-Id-Version: All-in-One Event Calendar by Time.ly 2.6.7\n"
+"Project-Id-Version: All-in-One Event Calendar by Time.ly 2.6.8\n"
 "Report-Msgid-Bugs-To: http://wordpress.org/tag/all-in-one-event-calendar\n"
-"POT-Creation-Date: 2020-08-10 20:19:40+00:00\n"
+"POT-Creation-Date: 2020-10-09 13:19:53+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2020-08-10 20:19+0000\n"
+"PO-Revision-Date: 2020-10-09 13:19+0000\n"
 "Last-Translator: Timely <support@time.ly>\n"
 "Language-Team:\n"
 
@@ -41,10 +41,6 @@ msgstr ""
 "Your database is found to be corrupt. Likely previous update has failed. "
 "Please restore All-in-One Event Calendar tables from a backup and retry."
 "<br>Following errors were found:<br>%s"
-
-#: app/controller/javascript-widget.php:49
-msgid "You must choose the Calendar page before using the Super Widget"
-msgstr "You must choose the Calendar page before using the Super Widget"
 
 #: app/controller/javascript.php:453
 msgid "This feed is already being imported."
@@ -342,6 +338,10 @@ msgstr "The end date can't be earlier than the start date."
 msgid "For week and day view, you must select an interval of at least 6 hours."
 msgstr ""
 "For week and day view, you must select an interval of at least 6 hours."
+
+#: app/controller/javascript-widget.php:49
+msgid "You must choose the Calendar page before using the Super Widget"
+msgstr "You must choose the Calendar page before using the Super Widget"
 
 #: app/model/api/api-abstract.php:191
 msgid "%s.<br/>Detail: %s."
@@ -2965,6 +2965,106 @@ msgstr "Show <strong>Subscribe</strong> buttons"
 msgid "Hide this widget on calendar page"
 msgstr "Hide this widget on calendar page"
 
+#: public/admin/box_eventbrite.php:1
+msgid "Eventbrite Ticketing"
+msgstr "Eventbrite Ticketing"
+
+#: public/admin/box_eventbrite.php:7
+msgid "Register this event with Eventbrite.com?"
+msgstr "Register this event with Eventbrite.com?"
+
+#: public/admin/box_eventbrite.php:12 public/admin/feed_row.php:50
+#: public/admin/feed_row.php:61 public/admin/feed_row.php:73
+#: public/admin/feed_row.php:85 public/admin/feed_row.php:96
+msgid "Yes"
+msgstr "Yes"
+
+#: public/admin/box_eventbrite.php:14 public/admin/feed_row.php:52
+#: public/admin/feed_row.php:63 public/admin/feed_row.php:75
+#: public/admin/feed_row.php:87 public/admin/feed_row.php:98
+msgid "No"
+msgstr "No"
+
+#: public/admin/box_eventbrite.php:22
+msgid "Set up your first ticket"
+msgstr "Set up your first ticket"
+
+#: public/admin/box_eventbrite.php:24
+msgid ""
+"To create multiple tickets per event, submit this form, then follow the link "
+"to Eventbrite."
+msgstr ""
+"To create multiple tickets per event, submit this form, then follow the link "
+"to Eventbrite."
+
+#: public/admin/box_eventbrite.php:32
+msgid "Name"
+msgstr "Name"
+
+#: public/admin/box_eventbrite.php:42
+msgid "Description"
+msgstr "Description"
+
+#: public/admin/box_eventbrite.php:53
+msgid "Type"
+msgstr "Type"
+
+#: public/admin/box_eventbrite.php:58
+msgid "Set Price"
+msgstr "Set Price"
+
+#: public/admin/box_eventbrite.php:60
+msgid "Donation Based"
+msgstr "Donation Based"
+
+#: public/admin/box_eventbrite.php:68
+msgid ""
+"The price for this event's first ticket will be taken from the Cost field "
+"above."
+msgstr ""
+"The price for this event's first ticket will be taken from the Cost field "
+"above."
+
+#: public/admin/box_eventbrite.php:75
+msgid "Quantity"
+msgstr "Quantity"
+
+#: public/admin/box_eventbrite.php:85
+msgid "Include Fee in Price"
+msgstr "Include Fee in Price"
+
+#: public/admin/box_eventbrite.php:90
+msgid "Add Service Fee on top of price"
+msgstr "Add Service Fee on top of price"
+
+#: public/admin/box_eventbrite.php:92
+msgid "Include Service fee in price"
+msgstr "Include Service fee in price"
+
+#: public/admin/box_eventbrite.php:98
+msgid "Payment Options"
+msgstr "Payment Options"
+
+#: public/admin/box_eventbrite.php:103
+msgid "Paypal"
+msgstr "Paypal"
+
+#: public/admin/box_eventbrite.php:105
+msgid "Google Checkout"
+msgstr "Google Checkout"
+
+#: public/admin/box_eventbrite.php:107
+msgid "Check"
+msgstr "Check"
+
+#: public/admin/box_eventbrite.php:109
+msgid "Cash"
+msgstr "Cash"
+
+#: public/admin/box_eventbrite.php:111
+msgid "Send an Invoice"
+msgstr "Send an Invoice"
+
 #: public/admin/box_event_children.php:12
 msgid "Base recurrence event"
 msgstr "Base recurrence event"
@@ -3176,106 +3276,6 @@ msgstr "Longitude:"
 #: public/admin/box_event_location.php:85
 msgid "Show Map"
 msgstr "Show Map"
-
-#: public/admin/box_eventbrite.php:1
-msgid "Eventbrite Ticketing"
-msgstr "Eventbrite Ticketing"
-
-#: public/admin/box_eventbrite.php:7
-msgid "Register this event with Eventbrite.com?"
-msgstr "Register this event with Eventbrite.com?"
-
-#: public/admin/box_eventbrite.php:12 public/admin/feed_row.php:50
-#: public/admin/feed_row.php:61 public/admin/feed_row.php:73
-#: public/admin/feed_row.php:85 public/admin/feed_row.php:96
-msgid "Yes"
-msgstr "Yes"
-
-#: public/admin/box_eventbrite.php:14 public/admin/feed_row.php:52
-#: public/admin/feed_row.php:63 public/admin/feed_row.php:75
-#: public/admin/feed_row.php:87 public/admin/feed_row.php:98
-msgid "No"
-msgstr "No"
-
-#: public/admin/box_eventbrite.php:22
-msgid "Set up your first ticket"
-msgstr "Set up your first ticket"
-
-#: public/admin/box_eventbrite.php:24
-msgid ""
-"To create multiple tickets per event, submit this form, then follow the link "
-"to Eventbrite."
-msgstr ""
-"To create multiple tickets per event, submit this form, then follow the link "
-"to Eventbrite."
-
-#: public/admin/box_eventbrite.php:32
-msgid "Name"
-msgstr "Name"
-
-#: public/admin/box_eventbrite.php:42
-msgid "Description"
-msgstr "Description"
-
-#: public/admin/box_eventbrite.php:53
-msgid "Type"
-msgstr "Type"
-
-#: public/admin/box_eventbrite.php:58
-msgid "Set Price"
-msgstr "Set Price"
-
-#: public/admin/box_eventbrite.php:60
-msgid "Donation Based"
-msgstr "Donation Based"
-
-#: public/admin/box_eventbrite.php:68
-msgid ""
-"The price for this event's first ticket will be taken from the Cost field "
-"above."
-msgstr ""
-"The price for this event's first ticket will be taken from the Cost field "
-"above."
-
-#: public/admin/box_eventbrite.php:75
-msgid "Quantity"
-msgstr "Quantity"
-
-#: public/admin/box_eventbrite.php:85
-msgid "Include Fee in Price"
-msgstr "Include Fee in Price"
-
-#: public/admin/box_eventbrite.php:90
-msgid "Add Service Fee on top of price"
-msgstr "Add Service Fee on top of price"
-
-#: public/admin/box_eventbrite.php:92
-msgid "Include Service fee in price"
-msgstr "Include Service fee in price"
-
-#: public/admin/box_eventbrite.php:98
-msgid "Payment Options"
-msgstr "Payment Options"
-
-#: public/admin/box_eventbrite.php:103
-msgid "Paypal"
-msgstr "Paypal"
-
-#: public/admin/box_eventbrite.php:105
-msgid "Google Checkout"
-msgstr "Google Checkout"
-
-#: public/admin/box_eventbrite.php:107
-msgid "Check"
-msgstr "Check"
-
-#: public/admin/box_eventbrite.php:109
-msgid "Cash"
-msgstr "Cash"
-
-#: public/admin/box_eventbrite.php:111
-msgid "Send an Invoice"
-msgstr "Send an Invoice"
 
 #: public/admin/box_profile_timezone.php:9
 msgid "Your preferred timezone"
@@ -3713,14 +3713,6 @@ msgctxt "theme"
 msgid "Install Themes"
 msgstr "Install Themes"
 
-#: public/admin/themes-updated.php:3
-msgid "Update Calendar Themes"
-msgstr "Update Calendar Themes"
-
-#: public/admin/themes-updated.php:13
-msgid "All-in-One Event Calendar Settings »"
-msgstr "All-in-One Event Calendar Settings »"
-
 #: public/admin/themes.php:18
 msgid "Current Calendar Theme"
 msgstr "Current Calendar Theme"
@@ -3732,6 +3724,14 @@ msgstr "Current theme preview"
 #: public/admin/themes.php:47
 msgid "Available Calendar Themes"
 msgstr "Available Calendar Themes"
+
+#: public/admin/themes-updated.php:3
+msgid "Update Calendar Themes"
+msgstr "Update Calendar Themes"
+
+#: public/admin/themes-updated.php:13
+msgid "All-in-One Event Calendar Settings »"
+msgstr "All-in-One Event Calendar Settings »"
 
 #: public/themes-ai1ec/journey/less/user_variables.php:5
 #: public/themes-ai1ec/umbra/less/user_variables.php:5
