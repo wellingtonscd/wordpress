@@ -1,0 +1,327 @@
+# Translation of WordPress.com - Themes - Sequential in Chinese (China)
+# This file is distributed under the same license as the WordPress.com - Themes - Sequential package.
+msgid ""
+msgstr ""
+"PO-Revision-Date: 2017-10-05 03:52:56+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: GlotPress/2.4.0-alpha\n"
+"Language: zh_CN\n"
+"Project-Id-Version: WordPress.com - Themes - Sequential\n"
+
+#: inc/wpcom-colors.php:184
+msgid "Salmon and Grey"
+msgstr "浅橙色和灰色"
+
+#: inc/wpcom-colors.php:192
+msgid "Marine"
+msgstr "海洋系列"
+
+#: inc/wpcom-colors.php:200
+msgid "Burgundy and Gold"
+msgstr "紫红色和金色"
+
+#: inc/wpcom-colors.php:121
+msgid "Accent"
+msgstr "强调"
+
+#: inc/wpcom-colors.php:160
+msgid "Blue and Red"
+msgstr "蓝色和红色"
+
+#: inc/wpcom-colors.php:168
+msgid "Green and Yellow"
+msgstr "绿色和黄色"
+
+#: inc/wpcom-colors.php:176
+msgid "Grey and Orange"
+msgstr "灰色和橙色"
+
+#. translators: %s: Name of current post
+#: inc/extras.php:137
+msgid "Continue reading %s"
+msgstr "继续阅读%s"
+
+#: inc/template-tags.php:42
+msgid "Newer posts"
+msgstr "较新的文章"
+
+#: content-grid.php:16
+msgid "Read more"
+msgstr "阅读更多"
+
+#: content.php:25
+msgid "Continue reading"
+msgstr "繼續閱讀"
+
+#: inc/template-tags.php:30
+msgid "Older posts"
+msgstr "较早的博文"
+
+#: comments.php:49
+msgid "Older Comments"
+msgstr "较早评论"
+
+#: comments.php:50
+msgid "Newer Comments"
+msgstr "较新评论"
+
+#: inc/customizer.php:20
+msgid "Theme Options"
+msgstr "主题设置"
+
+#: archive-jetpack-testimonial.php:23
+msgid "Testimonials"
+msgstr "褒奖"
+
+#. Template Name of the plugin/theme
+#: wp-content/themes/pub/sequential/page-templates/full-width-page.php
+msgid "Full-Width Page"
+msgstr "全宽页面"
+
+#. Template Name of the plugin/theme
+#: wp-content/themes/pub/sequential/page-templates/front-page.php
+msgid "Front Page"
+msgstr "首页"
+
+#: search.php:16
+msgid "Search Results for: %s"
+msgstr "针对以下内容的搜索结果：%s"
+
+#: inc/template-tags.php:201
+msgid "% Comments"
+msgstr "%条评论"
+
+#: inc/template-tags.php:201
+msgid "1 Comment"
+msgstr "1条评论"
+
+#: inc/template-tags.php:201
+msgid "Leave a comment"
+msgstr "发表评论"
+
+#: inc/template-tags.php:195
+msgid "Tagged %1$s"
+msgstr "已添加标签 %1$s"
+
+#: inc/template-tags.php:189
+msgid "Posted in %1$s"
+msgstr "发表在 %1$s"
+
+#. translators: used between list items, there is a space after the comma
+#: inc/template-tags.php:187 inc/template-tags.php:193
+msgid ", "
+msgstr "， "
+
+#: inc/template-tags.php:167
+msgid "Featured"
+msgstr "推荐"
+
+#: inc/template-tags.php:141
+msgid "All %s posts"
+msgstr "所有 %s 文章"
+
+#: inc/template-tags.php:79
+msgid "<span class=\"meta-nav\">Next Post</span>%title"
+msgstr "<span class=\"meta-nav\">下一文章</span>%title"
+
+#: inc/template-tags.php:72
+msgid "<span class=\"meta-nav\">Published In</span>%title"
+msgstr "<span class=\"meta-nav\">发布于</span>%title"
+
+#: inc/template-tags.php:78
+msgid "<span class=\"meta-nav\">Previous Post</span>%title"
+msgstr "<span class=\"meta-nav\">上一文章</span>%title"
+
+#: inc/template-tags.php:68
+msgid "Post navigation"
+msgstr "文章导航"
+
+#: inc/template-tags.php:21
+msgid "Posts navigation"
+msgstr "文章导航"
+
+#: inc/extras.php:83
+msgid "Page %s"
+msgstr "第 %s 页"
+
+#: header.php:45
+msgid "Menu"
+msgstr "菜单"
+
+#. translators: If there are characters in your language that are not supported
+#. * by Source Code Pro, translate this to 'off'. Do not translate into your
+#. own language.
+#: functions.php:186
+msgctxt "Source Code Pro font: on or off"
+msgid "on"
+msgstr "on"
+
+#: header.php:23
+msgid "Skip to content"
+msgstr "跳转到内容"
+
+#. translators: To add an additional Open Sans character subset specific to
+#. your language,
+#. * translate this to 'greek', 'cyrillic' or 'vietnamese'. Do not translate
+#. into your own language.
+#: functions.php:154
+msgctxt "Open Sans font: add new subset (greek, cyrillic, vietnamese)"
+msgid "no-subset"
+msgstr "no-subset"
+
+#. translators: If there are characters in your language that are not supported
+#. * by Open Sans, translate this to 'off'. Do not translate into your own
+#. language.
+#: functions.php:148
+msgctxt "Open Sans font: on or off"
+msgid "on"
+msgstr "开"
+
+#: functions.php:104
+msgid "Footer"
+msgstr "页脚"
+
+#: functions.php:95
+msgid "Sidebar"
+msgstr "侧边栏"
+
+#: functions.php:60
+msgid "Footer Menu"
+msgstr "页脚菜单"
+
+#: functions.php:59
+msgid "Primary Menu"
+msgstr "主要菜单"
+
+#: footer.php:32
+msgid "Theme: %1$s by %2$s."
+msgstr "主题: %1$s 作者 %2$s."
+
+#: footer.php:30
+msgid "Proudly powered by %s"
+msgstr "由 %s 强力驱动"
+
+#: footer.php:30
+msgid "http://wordpress.org/"
+msgstr "http://wordpress.org/"
+
+#: content-page.php:24 content-single.php:26 content.php:27
+msgid "Pages:"
+msgstr "页面："
+
+#: content-none.php:28
+msgid "It seems we can&rsquo;t find what you&rsquo;re looking for. Perhaps searching can help."
+msgstr "看来我们无法找到您想查找的内容。或许搜索可以帮助您。"
+
+#: content-none.php:23
+msgid "Sorry, but nothing matched your search terms. Please try again with some different keywords."
+msgstr "您的关键词返回的搜索结果为空，请换一组关键词重试。"
+
+#: content-none.php:19
+msgid "Ready to publish your first post? <a href=\"%1$s\">Get started here</a>."
+msgstr "准备发布您的第一篇文章？<a href=\"%1$s\">在此处开始</a>。"
+
+#: content-none.php:13
+msgid "Nothing Found"
+msgstr "没有找到任何内容"
+
+#: content-grid.php:19 content-page.php:32 inc/template-tags.php:175
+#: page-templates/front-page.php:26
+msgid "Edit"
+msgstr "编辑"
+
+#: comments.php:60
+msgid "Comments are closed."
+msgstr "评论功能被关闭。"
+
+#: comments.php:48
+msgid "Comment navigation"
+msgstr "评论导航"
+
+#: comments.php:29
+msgctxt "comments title"
+msgid "One thought on &ldquo;%2$s&rdquo;"
+msgid_plural "%1$s thoughts on &ldquo;%2$s&rdquo;"
+msgstr[0] "一个有关“%2$s”的想法"
+
+#: archive.php:66
+msgid "Archives"
+msgstr "存档页"
+
+#: archive.php:63
+msgid "Chats"
+msgstr "聊天"
+
+#: archive.php:60
+msgid "Audios"
+msgstr "音频"
+
+#: archive.php:57
+msgid "Statuses"
+msgstr "状态"
+
+#: archive.php:54 inc/wpcom-colors.php:49
+msgid "Links"
+msgstr "链接"
+
+#: archive.php:51
+msgid "Quotes"
+msgstr "报价"
+
+#: archive.php:48
+msgid "Videos"
+msgstr "视频"
+
+#: archive.php:45
+msgid "Images"
+msgstr "图片"
+
+#: archive.php:42
+msgid "Galleries"
+msgstr "图库"
+
+#: archive.php:39
+msgid "Asides"
+msgstr "日志"
+
+#: archive.php:36
+msgctxt "yearly archives date format"
+msgid "Y"
+msgstr "Y"
+
+#: archive.php:36
+msgid "Year: %s"
+msgstr "年：%s"
+
+#: archive.php:33
+msgctxt "monthly archives date format"
+msgid "F Y"
+msgstr "Y年n月"
+
+#: archive.php:33
+msgid "Month: %s"
+msgstr "月：%s"
+
+#: archive.php:30
+msgid "Day: %s"
+msgstr "日：%s"
+
+#: archive.php:27
+msgid "Author: %s"
+msgstr "作者：%s"
+
+#. translators: %1$s: smiley
+#: 404.php:29
+msgid "Try looking in the monthly archives. %1$s"
+msgstr "尝试在每月的档案中查找。%1$s"
+
+#: 404.php:20
+msgid "It looks like nothing was found at this location. Maybe try one of the links below or a search?"
+msgstr "在此位置似乎没有找到任何内容。或许您可以尝试点击下面的某个链接或进行搜索？"
+
+#: 404.php:16
+msgid "Oops! That page can&rsquo;t be found."
+msgstr "抱歉！无法找到该页面。"

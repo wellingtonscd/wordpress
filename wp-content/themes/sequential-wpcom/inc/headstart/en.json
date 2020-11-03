@@ -1,0 +1,254 @@
+{
+    "settings": {
+        "options": {
+            "show_on_front": "page"
+        },
+        "theme_mods": {
+            "0": false,
+            "header_textcolor": "ffffff",
+            "sequential_tagline": false,
+            "sequential_top_area_content": "Top Content: Edit in the <a href=\"https:\/\/wordpress.com\/customize\/\">Customizer<\/a>",
+            "sequential_title_front_page": false,
+            "nav_menu_locations": {
+                "primary": "primary",
+                "footer": "primary"
+            },
+            "sequential_featured_page_one_front_page": "_hs_featured_page_one",
+            "sequential_featured_page_two_front_page": "_hs_featured_page_two",
+            "colors_manager": {
+                "colors": {
+                    "bg": "#000cae",
+                    "txt": "#000000",
+                    "link": "#83c2bc",
+                    "fg1": "#615f8b",
+                    "fg2": "#000000"
+                },
+                "cached": false
+            }
+        },
+        "headstart": {
+            "mapped_id_options": [],
+            "mapped_id_theme_mods": [
+                "sequential_featured_page_one_front_page",
+                "sequential_featured_page_two_front_page"
+            ],
+            "keep_submenu_items": false
+        }
+    },
+    "widgets": [
+        {
+            "id": "search-2",
+            "id_base": "search",
+            "settings": {
+                "title": ""
+            },
+            "sidebar": "sidebar-1",
+            "position": 0
+        },
+        {
+            "id": "text-2",
+            "id_base": "text",
+            "settings": {
+                "title": "Sidebar Text Widget",
+                "text": "This is a text widget. The Text Widget allows you to add text or HTML to your sidebar. You can use a text widget to display text, links, images, HTML, or a combination of these. Edit them in the Widget section of the <a href=\"https:\/\/wordpress.com\/customize\/\">Customizer<\/a>."
+            },
+            "sidebar": "sidebar-1",
+            "position": 1
+        },
+        {
+            "id": "text-2",
+            "id_base": "text",
+            "settings": {
+                "title": "Text Widget",
+                "text": "This is a text widget. The Text Widget allows you to add text or HTML to your sidebar. You can use a text widget to display text, links, images, HTML, or a combination of these. Edit them in the Widget section of the <a href=\"https:\/\/wordpress.com\/customize\/\">Customizer<\/a>."
+            },
+            "sidebar": "sidebar-2",
+            "position": 0
+        },
+        {
+            "id": "text-3",
+            "id_base": "text",
+            "settings": {
+                "title": "Social Media Integration",
+                "text": "Sequential allows you display links to your social media profiles, like Twitter, Facebook and Google Plus, as icons using a <a href=\"http:\/\/en.support.wordpress.com\/menus\/\" target=\"_blank\">custom menu<\/a>.",
+                "filter": true,
+                "syntaxhighlighter_encoded": true
+            },
+            "sidebar": "sidebar-2",
+            "position": 1
+        },
+        {
+            "id": "nav_menu-2",
+            "id_base": "nav_menu",
+            "settings": {
+                "title": "Follow Us",
+                "nav_menu": "social-menu"
+            },
+            "sidebar": "sidebar-2",
+            "position": 2
+        }
+    ],
+    "content": [
+        {
+            "post_title": "Home",
+            "post_content": "Welcome to your new site!  You can edit this page by clicking on the Edit link.  For more information about customizing your site check out <a href=\"http:\/\/learn.wordpress.com\/\">http:\/\/learn.wordpress.com\/<\/a>",
+            "post_excerpt": "This is the home page's excerpt",
+            "post_status": "publish",
+            "menu_order": 0,
+            "comment_status": "closed",
+            "ping_status": "closed",
+            "post_type": "page",
+            "hs_custom_meta": "_hs_front_page",
+            "hs_sharing": 1,
+            "hs_like_status": 1,
+            "hs_old_id": 100,
+            "attachment_url": "https:\/\/sequentialdemo.files.wordpress.com\/2014\/10\/wordpress-com1.png",
+            "page_template": "page-templates\/front-page.php"
+        },
+        {
+            "post_title": "About",
+            "post_content": "This is an example of an about page. Unlike posts, pages are better suited for more timeless content that you want to be easily accessible, like your About or Contact information. Click the Edit link to make changes to this page or <a href=\"https:\/\/wordpress.com\/page\">add another page<\/a>.",
+            "post_excerpt": "This is just a short excerpt for the about&nbsp;page.",
+            "post_status": "publish",
+            "menu_order": 1,
+            "comment_status": "closed",
+            "ping_status": "closed",
+            "post_type": "page",
+            "hs_custom_meta": "_hs_about_page",
+            "hs_sharing": 1,
+            "hs_like_status": 1,
+            "hs_old_id": 101
+        },
+        {
+            "post_title": "Contact",
+            "post_content": "This is a contact page with some basic contact information and a contact form. [contact-form][contact-field label=\"Name\" type=\"name\" required=\"1\"\/][contact-field label=\"Email\" type=\"email\" required=\"1\"\/][contact-field label=\"Website\" type=\"url\"\/][contact-field label=\"Comment\" type=\"textarea\" required=\"1\"\/][\/contact-form]",
+            "post_excerpt": "This is just a short excerpt for the contact&nbsp;page.",
+            "post_status": "publish",
+            "menu_order": 2,
+            "comment_status": "closed",
+            "ping_status": "closed",
+            "post_type": "page",
+            "hs_custom_meta": "_hs_contact_page",
+            "hs_sharing": 1,
+            "hs_like_status": 1,
+            "hs_old_id": 102
+        },
+        {
+            "post_title": "Blog",
+            "post_content": "This is the page where users will find your site's blog",
+            "post_excerpt": "This is just a short excerpt about your blog.",
+            "post_status": "publish",
+            "menu_order": 3,
+            "comment_status": "closed",
+            "ping_status": "closed",
+            "post_type": "page",
+            "hs_custom_meta": "_hs_blog_page",
+            "hs_sharing": 1,
+            "hs_like_status": 1,
+            "hs_old_id": 103
+        },
+        {
+            "post_title": "Featured One",
+            "post_content": "<h3>Featured Page One<\/h3><p>Change the content of this featured area by clicking Edit, or visiting the <a href=\"https:\/\/wordpress.com\/customize\/\">Customizer<\/a>.<\/p>",
+            "post_status": "publish",
+            "menu_order": 1,
+            "comment_status": "closed",
+            "ping_status": "closed",
+            "post_type": "page",
+            "hs_custom_meta": "_hs_featured_page_one",
+            "hs_post_parent": 100,
+            "hs_old_id": 104
+        },
+        {
+            "post_title": "Featured Two",
+            "post_content": "<h3>Featured Page Two<\/h3><p>Change the content of this featured area by clicking Edit, or visiting the <a href=\"https:\/\/wordpress.com\/customize\/\">Customizer<\/a>.<\/p>",
+            "post_status": "publish",
+            "menu_order": 1,
+            "comment_status": "closed",
+            "ping_status": "closed",
+            "post_type": "page",
+            "hs_custom_meta": "_hs_featured_page_two",
+            "hs_post_parent": 100,
+            "hs_old_id": 105
+        },
+        {
+            "post_title": "First blog post",
+            "post_content": "This is your very first post. Click the Edit link to modify or delete it, or <a href=\"https:\/\/wordpress.com\/post\">start a new post<\/a>. If you like, use this post to tell readers why you started this blog and what you plan to do with it.",
+            "post_excerpt": "This is the excerpt for your very first post.",
+            "post_status": "publish",
+            "comment_status": "open",
+            "ping_status": "open",
+            "post_type": "post",
+            "hs_custom_meta": "_hs_first_post",
+            "hs_sharing": 1,
+            "hs_like_status": 0
+        }
+    ],
+    "menus": {
+        "social-menu": {
+            "name": "Social Menu",
+            "items": [
+                {
+                    "menu-item-title": "Facebook",
+                    "menu-item-db-id": 116,
+                    "menu-item-object-id": "116",
+                    "menu-item-object": "custom",
+                    "menu-item-type": "custom",
+                    "menu-item-status": "publish",
+                    "menu-item-position": 1,
+                    "menu-item-parent-id": "0",
+                    "menu-item-description": "",
+                    "menu-item-url": "http:\/\/facebook.com"
+                },
+                {
+                    "menu-item-title": "Twitter",
+                    "menu-item-db-id": 117,
+                    "menu-item-object-id": "117",
+                    "menu-item-object": "custom",
+                    "menu-item-type": "custom",
+                    "menu-item-status": "publish",
+                    "menu-item-position": 2,
+                    "menu-item-parent-id": "0",
+                    "menu-item-description": "",
+                    "menu-item-url": "http:\/\/twitter.com"
+                },
+                {
+                    "menu-item-title": "Google Plus",
+                    "menu-item-db-id": 118,
+                    "menu-item-object-id": "118",
+                    "menu-item-object": "custom",
+                    "menu-item-type": "custom",
+                    "menu-item-status": "publish",
+                    "menu-item-position": 3,
+                    "menu-item-parent-id": "0",
+                    "menu-item-description": "",
+                    "menu-item-url": "http:\/\/plus.google.com"
+                },
+                {
+                    "menu-item-title": "CodePen",
+                    "menu-item-db-id": 119,
+                    "menu-item-object-id": "119",
+                    "menu-item-object": "custom",
+                    "menu-item-type": "custom",
+                    "menu-item-status": "publish",
+                    "menu-item-position": 4,
+                    "menu-item-parent-id": "0",
+                    "menu-item-description": "",
+                    "menu-item-url": "http:\/\/codepen.io"
+                },
+                {
+                    "menu-item-title": "WordPress",
+                    "menu-item-db-id": 120,
+                    "menu-item-object-id": "120",
+                    "menu-item-object": "custom",
+                    "menu-item-type": "custom",
+                    "menu-item-status": "publish",
+                    "menu-item-position": 5,
+                    "menu-item-parent-id": "0",
+                    "menu-item-description": "",
+                    "menu-item-url": "http:\/\/wordpress.com"
+                }
+            ]
+        }
+    }
+}

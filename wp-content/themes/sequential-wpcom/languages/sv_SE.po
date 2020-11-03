@@ -1,0 +1,333 @@
+# Translation of WordPress.com - Themes - Sequential in Swedish
+# This file is distributed under the same license as the WordPress.com - Themes - Sequential package.
+msgid ""
+msgstr ""
+"PO-Revision-Date: 2017-10-05 03:52:53+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: GlotPress/2.4.0-alpha\n"
+"Language: sv_SE\n"
+"Project-Id-Version: WordPress.com - Themes - Sequential\n"
+
+#: inc/wpcom-colors.php:184
+msgid "Salmon and Grey"
+msgstr "Laxrosa och grå"
+
+#: inc/wpcom-colors.php:192
+msgid "Marine"
+msgstr "Marin"
+
+#: inc/wpcom-colors.php:200
+msgid "Burgundy and Gold"
+msgstr "Vinröd och guld"
+
+#: inc/wpcom-colors.php:121
+msgid "Accent"
+msgstr "Accentuering"
+
+#: inc/wpcom-colors.php:160
+msgid "Blue and Red"
+msgstr "Blå och röd"
+
+#: inc/wpcom-colors.php:168
+msgid "Green and Yellow"
+msgstr "Grön och gul"
+
+#: inc/wpcom-colors.php:176
+msgid "Grey and Orange"
+msgstr "Grå och orange"
+
+#. translators: %s: Name of current post
+#: inc/extras.php:137
+msgid "Continue reading %s"
+msgstr "Fortsätt läsa %s"
+
+#: inc/template-tags.php:42
+msgid "Newer posts"
+msgstr "Nyare inlägg"
+
+#: content-grid.php:16
+msgid "Read more"
+msgstr "Läs mer"
+
+#: content.php:25
+msgid "Continue reading"
+msgstr "Fortsätt läs"
+
+#: inc/template-tags.php:30
+msgid "Older posts"
+msgstr "Äldre inlägg"
+
+#: comments.php:49
+msgid "Older Comments"
+msgstr "Äldre kommentarer"
+
+#: comments.php:50
+msgid "Newer Comments"
+msgstr "Nyare kommentarer"
+
+#: inc/customizer.php:20
+msgid "Theme Options"
+msgstr "Temainställningar"
+
+#: archive-jetpack-testimonial.php:23
+msgid "Testimonials"
+msgstr "Omdömen"
+
+#. Template Name of the plugin/theme
+#: wp-content/themes/pub/sequential/page-templates/grid-page.php
+msgid "Grid Page"
+msgstr "Rutnätssida"
+
+#. Template Name of the plugin/theme
+#: wp-content/themes/pub/sequential/page-templates/full-width-page.php
+msgid "Full-Width Page"
+msgstr "Sida fullbredd"
+
+#. Template Name of the plugin/theme
+#: wp-content/themes/pub/sequential/page-templates/front-page.php
+msgid "Front Page"
+msgstr "Startsida"
+
+#: search.php:16
+msgid "Search Results for: %s"
+msgstr "Sökresultat för: %s"
+
+#: inc/template-tags.php:201
+msgid "% Comments"
+msgstr "% kommentarer"
+
+#: inc/template-tags.php:201
+msgid "1 Comment"
+msgstr "1 kommentar"
+
+#: inc/template-tags.php:201
+msgid "Leave a comment"
+msgstr "Lämna en kommentar"
+
+#: inc/template-tags.php:195
+msgid "Tagged %1$s"
+msgstr "Taggad %1$s"
+
+#: inc/template-tags.php:189
+msgid "Posted in %1$s"
+msgstr "Postat i %1$s"
+
+#. translators: used between list items, there is a space after the comma
+#: inc/template-tags.php:187 inc/template-tags.php:193
+msgid ", "
+msgstr ", "
+
+#: inc/template-tags.php:167
+msgid "Featured"
+msgstr "Utvalda"
+
+#: inc/template-tags.php:141
+msgid "All %s posts"
+msgstr "Alla %s inlägg"
+
+#: inc/template-tags.php:79
+msgid "<span class=\"meta-nav\">Next Post</span>%title"
+msgstr "<span class=\"meta-nav\">Nästa inlägg</span>%title"
+
+#: inc/template-tags.php:72
+msgid "<span class=\"meta-nav\">Published In</span>%title"
+msgstr "<span class=\"meta-nav\">Pubicerat i</span>%title"
+
+#: inc/template-tags.php:78
+msgid "<span class=\"meta-nav\">Previous Post</span>%title"
+msgstr "<span class=\"meta-nav\">Föregående inlägg</span>%title"
+
+#: inc/template-tags.php:68
+msgid "Post navigation"
+msgstr "Inläggsnavigering"
+
+#: inc/template-tags.php:21
+msgid "Posts navigation"
+msgstr "Inläggsnavigering"
+
+#: inc/extras.php:83
+msgid "Page %s"
+msgstr "Sida %s"
+
+#: inc/customizer.php:56
+msgid "Front Page: Featured Page One"
+msgstr "Startsida: Utvald sida ett"
+
+#: inc/customizer.php:68
+msgid "Front Page: Featured Page Two"
+msgstr "Startsida: Utvald sida två"
+
+#: header.php:45
+msgid "Menu"
+msgstr "Meny"
+
+#: header.php:23
+msgid "Skip to content"
+msgstr "Hoppa till innehåll"
+
+#. translators: To add an additional Open Sans character subset specific to
+#. your language,
+#. * translate this to 'greek', 'cyrillic' or 'vietnamese'. Do not translate
+#. into your own language.
+#: functions.php:154
+msgctxt "Open Sans font: add new subset (greek, cyrillic, vietnamese)"
+msgid "no-subset"
+msgstr "no-subset"
+
+#. translators: If there are characters in your language that are not supported
+#. * by Open Sans, translate this to 'off'. Do not translate into your own
+#. language.
+#: functions.php:148
+msgctxt "Open Sans font: on or off"
+msgid "on"
+msgstr "on"
+
+#: functions.php:104
+msgid "Footer"
+msgstr "Sidfot"
+
+#: functions.php:95
+msgid "Sidebar"
+msgstr "Sidopanel"
+
+#: functions.php:60
+msgid "Footer Menu"
+msgstr "Sidfotsmeny"
+
+#: functions.php:59
+msgid "Primary Menu"
+msgstr "Primär meny"
+
+#: footer.php:32
+msgid "Theme: %1$s by %2$s."
+msgstr "Tema: %1$s av %2$s."
+
+#: footer.php:30
+msgid "Proudly powered by %s"
+msgstr "Drivs med %s"
+
+#: footer.php:30
+msgid "http://wordpress.org/"
+msgstr "http://wordpress.org/"
+
+#: content-page.php:24 content-single.php:26 content.php:27
+msgid "Pages:"
+msgstr "Sidor:"
+
+#: content-none.php:28
+msgid "It seems we can&rsquo;t find what you&rsquo;re looking for. Perhaps searching can help."
+msgstr "Det verkar inte som om vi kan hitta det du letar efter. Kanske kan en sökning hjälpa."
+
+#: content-none.php:23
+msgid "Sorry, but nothing matched your search terms. Please try again with some different keywords."
+msgstr "Tyvärr matchade inget din sökning. Prova igen med något eller några andra nyckelord."
+
+#: content-none.php:19
+msgid "Ready to publish your first post? <a href=\"%1$s\">Get started here</a>."
+msgstr "Är du redo att posta ditt första inlägg? <a href=\"%1$s\">Starta här</a>."
+
+#: content-none.php:13
+msgid "Nothing Found"
+msgstr "Inget funnet"
+
+#: content-grid.php:19 content-page.php:32 inc/template-tags.php:175
+#: page-templates/front-page.php:26
+msgid "Edit"
+msgstr "Redigera"
+
+#: comments.php:60
+msgid "Comments are closed."
+msgstr "Kommentarer inaktiverade."
+
+#: comments.php:48
+msgid "Comment navigation"
+msgstr "Kommentarsnavigering"
+
+#: comments.php:29
+msgctxt "comments title"
+msgid "One thought on &ldquo;%2$s&rdquo;"
+msgid_plural "%1$s thoughts on &ldquo;%2$s&rdquo;"
+msgstr[0] "En reaktion på &rdquo;%2$s&rdquo;"
+msgstr[1] "%1$s reaktioner på &rdquo;%2$s&rdquo;"
+
+#: archive.php:66
+msgid "Archives"
+msgstr "Arkiv"
+
+#: archive.php:63
+msgid "Chats"
+msgstr "Chattar"
+
+#: archive.php:60
+msgid "Audios"
+msgstr "Ljud"
+
+#: archive.php:57
+msgid "Statuses"
+msgstr "Statusar"
+
+#: archive.php:54 inc/wpcom-colors.php:49
+msgid "Links"
+msgstr "Länkar"
+
+#: archive.php:51
+msgid "Quotes"
+msgstr "citat"
+
+#: archive.php:48
+msgid "Videos"
+msgstr "Videos"
+
+#: archive.php:45
+msgid "Images"
+msgstr "Bilder"
+
+#: archive.php:42
+msgid "Galleries"
+msgstr "Gallerier"
+
+#: archive.php:39
+msgid "Asides"
+msgstr "Noteringar"
+
+#: archive.php:36
+msgctxt "yearly archives date format"
+msgid "Y"
+msgstr "Y"
+
+#: archive.php:36
+msgid "Year: %s"
+msgstr "År: %s"
+
+#: archive.php:33
+msgctxt "monthly archives date format"
+msgid "F Y"
+msgstr "F Y"
+
+#: archive.php:33
+msgid "Month: %s"
+msgstr "Månad: %s"
+
+#: archive.php:30
+msgid "Day: %s"
+msgstr "Dag: %s"
+
+#: archive.php:27
+msgid "Author: %s"
+msgstr "Författare: %s"
+
+#. translators: %1$s: smiley
+#: 404.php:29
+msgid "Try looking in the monthly archives. %1$s"
+msgstr "Prova att leta i månadsarkiven. %1$s"
+
+#: 404.php:20
+msgid "It looks like nothing was found at this location. Maybe try one of the links below or a search?"
+msgstr "Det verkar som att det inte finns någonting här. Du kan testa en av länkarna nedan eller att göra en sökning."
+
+#: 404.php:16
+msgid "Oops! That page can&rsquo;t be found."
+msgstr "Hoppsan, sidan kunde inte hittas."
