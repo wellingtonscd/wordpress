@@ -52,7 +52,6 @@ $_load_scripts_class = function() {
  * @final Can't be extended.
  */
 final class Scripts {
-	use \The_SEO_Framework\Traits\Enclose_Stray_Private;
 
 	/**
 	 * @since 4.0.0
@@ -108,6 +107,7 @@ final class Scripts {
 			static::prepare_media_scripts();
 
 			$_scripts[] = static::get_post_edit_scripts();
+			$_scripts[] = static::get_tabs_scripts();
 			$_scripts[] = static::get_media_scripts();
 			$_scripts[] = static::get_title_scripts();
 			$_scripts[] = static::get_description_scripts();
@@ -144,6 +144,7 @@ final class Scripts {
 			static::prepare_metabox_scripts();
 
 			$_scripts[] = static::get_seo_settings_scripts();
+			$_scripts[] = static::get_tabs_scripts();
 			$_scripts[] = static::get_media_scripts();
 			$_scripts[] = static::get_title_scripts();
 			$_scripts[] = static::get_description_scripts();
@@ -414,7 +415,7 @@ final class Scripts {
 			[
 				'id'       => 'tsf-settings',
 				'type'     => 'js',
-				'deps'     => [ 'jquery', 'tsf-ays', 'tsf-title', 'tsf-description', 'tsf', 'tsf-tt', 'wp-color-picker', 'wp-util' ],
+				'deps'     => [ 'jquery', 'tsf-ays', 'tsf-title', 'tsf-description', 'tsf', 'tsf-tabs', 'tsf-tt', 'wp-color-picker', 'wp-util' ],
 				'autoload' => true,
 				'name'     => 'settings',
 				'base'     => THE_SEO_FRAMEWORK_DIR_URL . 'lib/js/',
@@ -472,7 +473,7 @@ final class Scripts {
 			[
 				'id'       => 'tsf-post',
 				'type'     => 'js',
-				'deps'     => [ 'jquery', 'tsf-ays', 'tsf-title', 'tsf-description', 'tsf-social', 'tsf-tt', 'tsf' ],
+				'deps'     => [ 'jquery', 'tsf-ays', 'tsf-title', 'tsf-description', 'tsf-social', 'tsf-tabs', 'tsf-tt', 'tsf' ],
 				'autoload' => true,
 				'name'     => 'post',
 				'base'     => THE_SEO_FRAMEWORK_DIR_URL . 'lib/js/',
@@ -592,9 +593,33 @@ final class Scripts {
 	}
 
 	/**
+	 * Returns Tabs scripts params.
+	 *
+	 * @since 4.1.3
+	 *
+	 * @return array The script params.
+	 */
+	public static function get_tabs_scripts() {
+		return [
+			'id'       => 'tsf-tabs',
+			'type'     => 'js',
+			'deps'     => [], // nada.
+			'autoload' => true,
+			'name'     => 'tabs',
+			'base'     => THE_SEO_FRAMEWORK_DIR_URL . 'lib/js/',
+			'ver'      => THE_SEO_FRAMEWORK_VERSION,
+			'l10n'     => [
+				'name' => 'tsfTabsL10n',
+				'data' => [],
+			],
+		];
+	}
+
+	/**
 	 * Returns Media scripts params.
 	 *
 	 * @since 4.0.0
+	 * @since 4.1.2 Removed redundant button titles.
 	 *
 	 * @return array The script params.
 	 */
@@ -613,10 +638,10 @@ final class Scripts {
 					'labels' => [
 						'social' => [
 							'imgSelect'      => \esc_attr__( 'Select Image', 'autodescription' ),
-							'imgSelectTitle' => \esc_attr_x( 'Select social image', 'Button hover', 'autodescription' ),
+							'imgSelectTitle' => '',
 							'imgChange'      => \esc_attr__( 'Change Image', 'autodescription' ),
 							'imgRemove'      => \esc_attr__( 'Remove Image', 'autodescription' ),
-							'imgRemoveTitle' => \esc_attr__( 'Remove selected social image', 'autodescription' ),
+							'imgRemoveTitle' => '',
 							'imgFrameTitle'  => \esc_attr_x( 'Select Social Image', 'Frame title', 'autodescription' ),
 							'imgFrameButton' => \esc_attr__( 'Use this image', 'autodescription' ),
 						],
@@ -625,7 +650,7 @@ final class Scripts {
 							'imgSelectTitle' => '',
 							'imgChange'      => \esc_attr__( 'Change Logo', 'autodescription' ),
 							'imgRemove'      => \esc_attr__( 'Remove Logo', 'autodescription' ),
-							'imgRemoveTitle' => \esc_attr__( 'Unset selected logo', 'autodescription' ),
+							'imgRemoveTitle' => '',
 							'imgFrameTitle'  => \esc_attr_x( 'Select Logo', 'Frame title', 'autodescription' ),
 							'imgFrameButton' => \esc_attr__( 'Use this image', 'autodescription' ),
 						],

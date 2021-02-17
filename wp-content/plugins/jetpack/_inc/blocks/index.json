@@ -32,13 +32,22 @@
 		"simple-payments",
 		"slideshow",
 		"social-previews",
+		"story",
 		"subscriptions",
 		"tiled-gallery",
 		"videopress",
 		"wordads"
 	],
-	"beta": [ "amazon", "story" ],
-	"experimental": [ "seo" ],
+	"beta": [
+		"amazon"
+	],
+	"experimental": [
+		"anchor-fm",
+		"seo",
+		"premium-content",
+		"conversation",
+		"dialogue"
+	],
 	"no-post-editor": [
 		"business-hours",
 		"button",

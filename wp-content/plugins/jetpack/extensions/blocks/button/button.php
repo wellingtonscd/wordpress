@@ -21,7 +21,7 @@ const BLOCK_NAME   = 'jetpack/' . FEATURE_NAME;
  * registration if we need to.
  */
 function register_block() {
-	jetpack_register_block(
+	Blocks::jetpack_register_block(
 		BLOCK_NAME,
 		array( 'render_callback' => __NAMESPACE__ . '\render_block' )
 	);
@@ -51,7 +51,7 @@ function render_block( $attributes, $content ) {
 	$text      = get_attribute( $attributes, 'text' );
 	$unique_id = get_attribute( $attributes, 'uniqueId' );
 	$url       = get_attribute( $attributes, 'url' );
-	$classes   = Blocks::classes( FEATURE_NAME, $attributes );
+	$classes   = Blocks::classes( FEATURE_NAME, $attributes, array( 'wp-block-button' ) );
 
 	$button_classes = get_button_classes( $attributes );
 	$button_styles  = get_button_styles( $attributes );
@@ -173,7 +173,6 @@ function get_button_styles( $attributes ) {
 
 	return implode( ' ', $styles );
 }
-
 
 /**
  * Get filtered attributes.

@@ -46,6 +46,16 @@ and we will include it within the theme from next version update.
 /**********************************************************/
 
 == Changelog ==
+== Version 1.9.0 - 2021-01-18
+* Refactor - Customize setting and control 
+* Modify - Theme options now uses Customize API instead of Options API.
+
+= Version 1.8.3 - 2020-12-21 =
+* Fix - Custom customize editor control not working since WordPress 5.6
+
+= Version 1.8.2 - 2020-12-15 =
+* Tweak - Update footer credit link with `rel="nofollow"` attributes.
+
 = Version 1.8.1 - 2020-10-12 =
 Fix - Header button text displaying text as url
 

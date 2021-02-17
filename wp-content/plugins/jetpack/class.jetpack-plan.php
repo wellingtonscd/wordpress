@@ -62,6 +62,7 @@ class Jetpack_Plan {
 			'supports' => array(
 				'akismet',
 				'recurring-payments',
+				'premium-content/container',
 			),
 		),
 		'premium'  => array(
@@ -143,6 +144,13 @@ class Jetpack_Plan {
 		}
 
 		if ( ! isset( $results['plan'] ) ) {
+			return false;
+		}
+
+		$current_plan = get_option( self::PLAN_OPTION, array() );
+
+		if ( ! empty( $current_plan ) && $current_plan === $results['plan'] ) {
+			// Bail if the plans array hasn't changed.
 			return false;
 		}
 
@@ -285,7 +293,7 @@ class Jetpack_Plan {
 	 *  the feature or false if not found
 	 */
 	public static function get_minimum_plan_for_feature( $feature ) {
-		foreach ( self::PLAN_DATA as $class => $details ) {
+		foreach ( self::PLAN_DATA as $details ) {
 			if ( in_array( $feature, $details['supports'], true ) ) {
 				return $details['plans'][0];
 			}

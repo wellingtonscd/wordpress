@@ -58,7 +58,7 @@ function stats_load() {
 		add_action( 'admin_init', 'stats_merged_widget_admin_init' );
 	}
 
-	add_filter( 'jetpack_xmlrpc_methods', 'stats_xmlrpc_methods' );
+	add_filter( 'jetpack_xmlrpc_unauthenticated_methods', 'stats_xmlrpc_methods' );
 
 	add_filter( 'pre_option_db_version', 'stats_ignore_db_version' );
 
@@ -194,6 +194,7 @@ function stats_template_redirect() {
 	}
 
 	add_action( 'wp_footer', 'stats_footer', 101 );
+	add_action( 'web_stories_print_analytics', 'stats_footer' );
 
 }
 
@@ -221,11 +222,15 @@ function stats_build_view_data() {
 		// 2. Set show_on_front = page
 		// 3. Set page_on_front = something
 		// 4. Visit https://example.com/ !
-		$queried_object = ( isset( $wp_the_query->queried_object ) ) ? $wp_the_query->queried_object : null;
-		$queried_object_id = ( isset( $wp_the_query->queried_object_id ) ) ? $wp_the_query->queried_object_id : null;
-		$post = $wp_the_query->get_queried_object_id();
-		$wp_the_query->queried_object = $queried_object;
-		$wp_the_query->queried_object_id = $queried_object_id;
+		$queried_object    = isset( $wp_the_query->queried_object ) ? $wp_the_query->queried_object : null;
+		$queried_object_id = isset( $wp_the_query->queried_object_id ) ? $wp_the_query->queried_object_id : null;
+		try {
+			$post_obj = $wp_the_query->get_queried_object();
+			$post     = $post_obj instanceof WP_Post ? $post_obj->ID : '0';
+		} finally {
+			$wp_the_query->queried_object    = $queried_object;
+			$wp_the_query->queried_object_id = $queried_object_id;
+		}
 	} else {
 		$post = '0';
 	}
@@ -255,8 +260,8 @@ function stats_render_footer( $data ) {
 	$data_stats_array = stats_array( $data );
 
 	$stats_footer = <<<END
-<script type='text/javascript' src='{$script}' async='async' defer='defer'></script>
-<script type='text/javascript'>
+<script src='{$script}' defer></script>
+<script>
 	_stq = window._stq || [];
 	_stq.push([ 'view', {{$data_stats_array}} ]);
 	_stq.push([ 'clickTrackerInit', '{$data['blog']}', '{$data['post']}' ]);
@@ -653,7 +658,7 @@ function stats_reports_page( $main_chart_only = false ) {
 			if ( in_array( $_REQUEST[$var], $vals ) )
 				$q[$var] = $_REQUEST[$var];
 		} elseif ( 'int' === $vals ) {
-			$q[$var] = intval( $_REQUEST[$var] );
+			$q[$var] = (int) $_REQUEST[$var];
 		} elseif ( 'date' === $vals ) {
 			if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $_REQUEST[$var] ) )
 				$q[$var] = $_REQUEST[$var];
@@ -681,7 +686,7 @@ function stats_reports_page( $main_chart_only = false ) {
 
 	$get = Client::remote_request( compact( 'url', 'method', 'timeout', 'user_id' ) );
 	$get_code = wp_remote_retrieve_response_code( $get );
-	if ( is_wp_error( $get ) || ( 2 !== intval( $get_code / 100 ) && 304 !== $get_code ) || empty( $get['body'] ) ) {
+	if ( is_wp_error( $get ) || ( 2 !== (int) ( $get_code / 100 ) && 304 !== $get_code ) || empty( $get['body'] ) ) {
 		stats_print_wp_remote_error( $get, $url );
 	} else {
 		if ( ! empty( $get['headers']['content-type'] ) ) {
@@ -1097,59 +1102,22 @@ function stats_dashboard_widget_control() {
  * @return void
  */
 function stats_jetpack_dashboard_widget() {
-?>
+	?>
 	<form id="stats_dashboard_widget_control" action="<?php echo esc_url( admin_url() ); ?>" method="post">
 		<?php stats_dashboard_widget_control(); ?>
 		<?php wp_nonce_field( 'edit-dashboard-widget_dashboard_stats', 'dashboard-widget-nonce' ); ?>
 		<input type="hidden" name="widget_id" value="dashboard_stats" />
 		<?php submit_button( __( 'Submit', 'jetpack' ) ); ?>
 	</form>
-	<span class="js-toggle-stats_dashboard_widget_control">
-		<?php esc_html_e( 'Configure', 'jetpack' ); ?>
-	</span>
+	<button type="button" class="handlediv js-toggle-stats_dashboard_widget_control" aria-expanded="true">
+		<span class="screen-reader-text"><?php esc_html_e( 'Configure', 'jetpack' ); ?></span>
+		<span class="toggle-indicator" aria-hidden="true"></span>
+	</button>
 	<div id="dashboard_stats">
 		<div class="inside">
 			<div style="height: 250px;"></div>
 		</div>
 	</div>
-	<script>
-		jQuery(document).ready(function($){
-			var $toggle = $('.js-toggle-stats_dashboard_widget_control');
-
-			$toggle.parent().prev().append( $toggle );
-			$toggle.show().click(function(e){
-				e.preventDefault();
-				e.stopImmediatePropagation();
-				$(this).parent().toggleClass('controlVisible');
-				$('#stats_dashboard_widget_control').slideToggle();
-			});
-		});
-	</script>
-	<style>
-		.js-toggle-stats_dashboard_widget_control {
-			display: none;
-			float: right;
-			margin-top: 0.2em;
-			font-weight: 400;
-			color: #444;
-			font-size: .8em;
-			text-decoration: underline;
-			cursor: pointer;
-		}
-		#stats_dashboard_widget_control {
-			display: none;
-			padding: 0 10px;
-			overflow: hidden;
-		}
-		#stats_dashboard_widget_control .button-primary {
-			float: right;
-		}
-		#dashboard_stats {
-			box-sizing: border-box;
-			width: 100%;
-			padding: 0 10px;
-		}
-	</style>
 	<?php
 }
 
@@ -1169,7 +1137,8 @@ function stats_register_widget_control_callback() {
  * @access public
  * @return void
  */
-function stats_dashboard_head() { ?>
+function stats_dashboard_head() {
+	?>
 <script type="text/javascript">
 /* <![CDATA[ */
 jQuery( function($) {
@@ -1198,82 +1167,25 @@ jQuery( function($) {
 	jQuery( window ).one( 'resize', function() {
 		jQuery( '#stat-chart' ).css( 'width', 'auto' );
 	} );
+
+
+	// Widget settings toggle container.
+	var toggle = $( '.js-toggle-stats_dashboard_widget_control' );
+
+	// Move the toggle in the widget header.
+	toggle.appendTo( '#jetpack_summary_widget .handle-actions' );
+
+	// Toggle settings when clicking on it.
+	toggle.show().click( function( e ) {
+		e.preventDefault();
+		e.stopImmediatePropagation();
+		$( this ).parent().toggleClass( 'controlVisible' );
+		$( '#stats_dashboard_widget_control' ).slideToggle();
+	} );
 } );
 /* ]]> */
 </script>
-<style type="text/css">
-/* <![CDATA[ */
-#stat-chart {
-	background: none !important;
-}
-#dashboard_stats .inside {
-	margin: 10px 0 0 0 !important;
-}
-#dashboard_stats #stats-graph {
-	margin: 0;
-}
-#stats-info {
-	border-top: 1px solid #dfdfdf;
-	margin: 7px -10px 0 -10px;
-	padding: 10px;
-	background: #fcfcfc;
-	-moz-box-shadow:inset 0 1px 0 #fff;
-	-webkit-box-shadow:inset 0 1px 0 #fff;
-	box-shadow:inset 0 1px 0 #fff;
-	overflow: hidden;
-	border-radius: 0 0 2px 2px;
-	-webkit-border-radius: 0 0 2px 2px;
-	-moz-border-radius: 0 0 2px 2px;
-	-khtml-border-radius: 0 0 2px 2px;
-}
-#stats-info #top-posts, #stats-info #top-search {
-	float: left;
-	width: 50%;
-}
-#stats-info #top-posts {
-	padding-right: 3%;
-}
-#top-posts .stats-section-inner p {
-	white-space: nowrap;
-	overflow: hidden;
-}
-#top-posts .stats-section-inner p a {
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-#stats-info div#active {
-	border-top: 1px solid #dfdfdf;
-	margin: 0 -10px;
-	padding: 10px 10px 0 10px;
-	-moz-box-shadow:inset 0 1px 0 #fff;
-	-webkit-box-shadow:inset 0 1px 0 #fff;
-	box-shadow:inset 0 1px 0 #fff;
-	overflow: hidden;
-}
-#top-search p {
-	color: #999;
-}
-#stats-info h3 {
-	font-size: 1em;
-	margin: 0 0 .5em 0 !important;
-}
-#stats-info p {
-	margin: 0 0 .25em;
-	color: #999;
-}
-#stats-info p.widget-loading {
-	margin: 1em 0 0;
-	color: #333;
-}
-#stats-info p a {
-	display: block;
-}
-#stats-info p a.button {
-	display: inline;
-}
-/* ]]> */
-</style>
-<?php
+	<?php
 }
 
 /**
@@ -1319,7 +1231,7 @@ function stats_dashboard_widget_content() {
 
 	$get = Client::remote_request( compact( 'url', 'method', 'timeout', 'user_id' ) );
 	$get_code = wp_remote_retrieve_response_code( $get );
-	if ( is_wp_error( $get ) || ( 2 !== intval( $get_code / 100 ) && 304 !== $get_code ) || empty( $get['body'] ) ) {
+	if ( is_wp_error( $get ) || ( 2 !== (int) ( $get_code / 100 ) && 304 !== $get_code ) || empty( $get['body'] ) ) {
 		stats_print_wp_remote_error( $get, $url );
 	} else {
 		$body = stats_convert_post_titles( $get['body'] );
@@ -1574,7 +1486,7 @@ function stats_get_remote_csv( $url ) {
 
 	$get = Client::remote_request( compact( 'url', 'method', 'timeout', 'user_id' ) );
 	$get_code = wp_remote_retrieve_response_code( $get );
-	if ( is_wp_error( $get ) || ( 2 !== intval( $get_code / 100 ) && 304 !== $get_code ) || empty( $get['body'] ) ) {
+	if ( is_wp_error( $get ) || ( 2 !== (int) ( $get_code / 100 ) && 304 !== $get_code ) || empty( $get['body'] ) ) {
 		return array(); // @todo: return an error?
 	} else {
 		return stats_str_getcsv( $get['body'] );

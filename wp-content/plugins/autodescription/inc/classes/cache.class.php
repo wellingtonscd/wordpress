@@ -113,6 +113,8 @@ class Cache extends Site_Options {
 	 *
 	 * @since 2.8.0
 	 * @since 3.0.0 Process is halted when no valid $post_id is supplied.
+	 * @since 4.1.3 Now flushes the sitemap cache (and instigates pinging thereof)
+	 *              even when TSF sitemaps are disabled.
 	 *
 	 * @param int $post_id The Post ID that has been updated.
 	 * @return bool True on success, false on failure.
@@ -123,11 +125,9 @@ class Cache extends Site_Options {
 
 		$success[] = $this->delete_cache( 'post', $post_id );
 
-		if ( $this->get_option( 'sitemaps_output' ) ) {
-			// Don't flush sitemap on revision.
-			if ( ! \wp_is_post_revision( $post_id ) )
-				$success[] = $this->delete_cache( 'sitemap' );
-		}
+		// Don't flush sitemap on revision.
+		if ( ! \wp_is_post_revision( $post_id ) )
+			$success[] = $this->delete_cache( 'sitemap' );
 
 		return ! \in_array( false, $success, true );
 	}
@@ -336,6 +336,8 @@ class Cache extends Site_Options {
 	 * If the transient does not exists, does not have a value or has expired,
 	 * or transients have been disabled through a constant, then the transient
 	 * will be false.
+	 *
+	 * N.B. not all transient settings make use of this function, bypassing the constant check.
 	 *
 	 * @since 2.6.0
 	 * @uses $this->the_seo_framework_use_transients
@@ -616,6 +618,7 @@ class Cache extends Site_Options {
 	 *
 	 * @since 2.9.1
 	 * @since 2.9.2 Now returns false when an incorrect $type is supplied.
+	 * @since 4.1.2 Now accepts $type 'sitemap_lock'.
 	 * @see $this->generate_cache_key().
 	 * @see $this->generate_cache_key_by_query() to get cache key from the query.
 	 *
@@ -642,6 +645,8 @@ class Cache extends Site_Options {
 				return $this->add_cache_key_suffix( $this->generate_taxonomical_cache_key( $page_id, $taxonomy ) );
 			case 'ping':
 				return $this->add_cache_key_suffix( 'tsf_throttle_ping' );
+			case 'sitemap_lock':
+				return $this->add_cache_key_suffix( 'tsf_sitemap_lock' );
 			default:
 				$this->_doing_it_wrong( __METHOD__, 'Third parameter must be a known type.', '2.6.5' );
 				return $this->add_cache_key_suffix( \esc_sql( $type . '_' . $page_id . '_' . $taxonomy ) );
@@ -821,24 +826,24 @@ class Cache extends Site_Options {
 	 */
 	public function delete_sitemap_transient() {
 
-		static $run = false;
-
-		if ( $run )
-			return false;
+		if ( _has_run( __METHOD__ ) ) return false;
 
 		$transient = $this->get_sitemap_transient_name();
 		$transient and \delete_transient( $transient );
 
-		$ping_use_cron = $this->get_option( 'ping_use_cron' );
+		$ping_use_cron           = $this->get_option( 'ping_use_cron' );
+		$ping_use_cron_prerender = $this->get_option( 'ping_use_cron_prerender' );
 
 		/**
 		 * @since 4.1.1
+		 * @since 4.1.2 Added index `ping_use_cron_prerender` to the first parameter.
 		 * @param array $params Any useful environment parameters.
 		 */
 		\do_action(
 			'the_seo_framework_sitemap_transient_cleared',
 			[
-				'ping_use_cron' => $ping_use_cron,
+				'ping_use_cron'           => $ping_use_cron,
+				'ping_use_cron_prerender' => $ping_use_cron_prerender,
 			]
 		);
 
@@ -848,7 +853,7 @@ class Cache extends Site_Options {
 			\The_SEO_Framework\Bridges\Ping::ping_search_engines();
 		}
 
-		return $run = true;
+		return true;
 	}
 
 	/**

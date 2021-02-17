@@ -62,12 +62,13 @@ class Admin_Init extends Init {
 	 * Adds post states for the post/page edit.php query.
 	 *
 	 * @since 4.0.0
+	 * @access private
 	 *
 	 * @param array    $states The current post states array
-	 * @param \WP_Post $post The Post Object.
+	 * @param \WP_Post $post   The Post Object.
 	 * @return array Adjusted $states
 	 */
-	public function _add_post_state( $states = [], $post ) {
+	public function _add_post_state( $states = [], $post = null ) {
 
 		$post_id = isset( $post->ID ) ? $post->ID : false;
 
@@ -91,6 +92,7 @@ class Admin_Init extends Init {
 	 * @since 3.1.0
 	 * @since 4.0.0 Now discerns autoloading between taxonomies and singular types.
 	 * @since 4.1.0 Now invokes autoloading when persistent scripts are enqueued (regardless of validity).
+	 * @since 4.1.2 Now autoenqueues on edit.php and edit-tags.php regardless of SEO Bar output (for quick/bulk-edit support).
 	 * @access private
 	 *
 	 * @param string|null $hook The current page hook.
@@ -121,16 +123,6 @@ class Admin_Init extends Init {
 					'edit-tags.php',
 					'term.php',
 				];
-
-				if ( ! $this->get_option( 'display_seo_bar_tables' ) ) {
-					$enqueue_hooks = array_diff(
-						$enqueue_hooks,
-						[
-							'edit.php',
-							'edit-tags.php',
-						]
-					);
-				}
 			}
 
 			if ( \in_array( $hook, $enqueue_hooks, true ) )
@@ -453,6 +445,7 @@ class Admin_Init extends Init {
 	 * Registers dismissible persistent notice, that'll respawn during page load until dismissed or otherwise expired.
 	 *
 	 * @since 4.1.0
+	 * @since 4.1.3 Now handles timeout values below -1 gracefully, by purging the whole notification gracelessly.
 	 * @uses $this->generate_dismissible_persistent_notice()
 	 *
 	 * @param string $message    The notice message. Expected to be escaped if $escape is false.
@@ -473,6 +466,8 @@ class Admin_Init extends Init {
 	 *     'count'        => int    Optional. The number of times the persistent notice may appear (for everyone allowed to see it).
 	 *                              Set to -1 for unlimited. When -1, the notice must be removed from display manually.
 	 *     'timeout'      => int    Optional. The number of seconds the notice should remain valid for display. Set to -1 to disable check.
+	 *                              When the timeout is below -1, then the notification will not be outputted.
+	 *                              Do not input non-integer values (such as `false`), for those might cause adverse events.
 	 * }
 	 */
 	public function register_dismissible_persistent_notice( $message, $key, array $args = [], array $conditions = [] ) {
@@ -506,6 +501,9 @@ class Admin_Init extends Init {
 
 		// Required key for security.
 		if ( ! $conditions['capability'] ) return;
+
+		// Timeout already expired. Let's not register it.
+		if ( $conditions['timeout'] < -1 ) return;
 
 		// Add current time to timeout, so we can compare against it later.
 		if ( $conditions['timeout'] > -1 )
@@ -861,7 +859,7 @@ class Admin_Init extends Init {
 				$parent_url = \wp_get_attachment_url( $attachment_id );
 				$url        = str_replace( basename( $parent_url ), basename( $cropped ), $parent_url );
 
-				// phpcs:ignore, WordPress.PHP.NoSilencedErrors -- Feature may be disabled.
+				// phpcs:ignore, WordPress.PHP.NoSilencedErrors -- Feature may be disabled; should not cause fatal errors.
 				$size       = @getimagesize( $cropped );
 				$image_type = ( $size ) ? $size['mime'] : 'image/jpeg';
 

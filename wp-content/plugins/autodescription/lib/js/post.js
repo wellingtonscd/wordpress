@@ -122,13 +122,16 @@ window.tsfPost = function( $ ) {
 		 * @return {undefined}
 		 */
 		const triggerResize = target => {
-			window.dispatchEvent( new CustomEvent( 'tsf-flex-resize', {
-				bubbles:    false,
-				cancelable: false,
-				detail:     {
-					target
-				},
-			} ) );
+			window.dispatchEvent( new CustomEvent(
+				'tsf-flex-resize',
+				{
+					bubbles:    false,
+					cancelable: false,
+					detail:     {
+						target
+					},
+				}
+			) );
 		}
 		if ( 'undefined' !== typeof window.ResizeObserver ) {
 			let resizeAnimationFrame = {};
@@ -179,183 +182,185 @@ window.tsfPost = function( $ ) {
 	/**
 	 * Sets the navigation tabs content equal to the buttons.
 	 *
-	 * @todo Merge with tsfSettings._initTabs?
-	 *       It's basically a carbon copy, aside from the trigger and classes.
 	 * @since 4.0.0
+	 * @since 4.1.3 Now offloaded to tsfTabs.
 	 * @access private
 	 *
 	 * @function
 	 * @return {(undefined|null)}
 	 */
 	const _initTabs = () => {
-
-		let togglePromises  = {},
-			toggleTarget    = {},
-			toggleWrap      = {},
-			toggleContainer = {};
-
-		const tabToggledEvent = new CustomEvent( 'tsf-flex-tab-toggled' );
-
-		/**
-		 * Sets correct tab content and classes on toggle.
-		 *
-		 * @function
-		 * @param {Event} event
-		 * @return {(undefined|null)}
-		 */
-		const flexTabToggle = ( event ) => {
-
-			const currentToggle = event.target;
-			const onload        = ! event.isTrusted;
-
-			// Why is this here? For broken customEvent triggers?
-			// if ( ! currentToggle.checked ) return;
-
-			const toggleId   = event.target.id,
-				  toggleName = event.target.name;
-
-			toggleWrap.hasOwnProperty( toggleName ) || (
-				toggleWrap[ toggleName ] = currentToggle.closest( '.tsf-flex-nav-tab-wrapper' )
-			);
-
-			const activeClass       = 'tsf-flex-tab-content-active',
-				  toggleActiveClass = 'tsf-flex-tab-active',
-				  previousToggle    = toggleWrap[ toggleName ].querySelector( `.${toggleActiveClass}` );
-
-			if ( ! onload ) {
-				// Perform validity check, this prevents non-invoking hidden browser validation errors.
-				const invalidInput = document.querySelector( `.${activeClass} :invalid` );
-				if ( invalidInput ) {
-					invalidInput.reportValidity();
-
-					if ( previousToggle )
-						previousToggle.checked = true;
-
-					currentToggle.checked = false;
-
-					event.stopPropagation();
-					event.preventDefault();
-					return false; // stop propagation in jQuery.
-				}
+		tsfTabs.initStack(
+			'tsfSettings',
+			{
+				tabToggledEvent: new CustomEvent( 'tsf-flex-tab-toggled' ),
+				HTMLClasses:     {
+					wrapper:          'tsf-flex-nav-tab-wrapper',
+					tabRadio:         'tsf-flex-nav-tab-radio',
+					tabLabel:         'tsf-flex-nav-tab-label',
+					activeTab:        'tsf-flex-tab-active', // change to tsf-flex-nav-tab-active?
+					// TODO make this tsf-flex-tab-active-content (force -content affix?)
+					activeTabContent: 'tsf-flex-tab-content-active',
+				},
+				fixHistory:      true, // doesn't work since the inputs reset on navigation; enabled for future-proofing.
 			}
-
-			if ( previousToggle ) {
-				previousToggle.classList.remove( toggleActiveClass );
-				let label = document.querySelector( `.tsf-flex-nav-tab-label[for="${previousToggle.id}"]` );
-				label && label.classList.remove( 'tsf-no-focus-ring' );
-			}
-			currentToggle.classList.add( toggleActiveClass );
-
-			if ( onload ) {
-				const newContent = document.getElementById( `${toggleId}-content` );
-
-				if ( ! newContent.classList.contains( activeClass ) ) {
-					const allContent = document.querySelectorAll( `.${toggleName}-content` );
-					allContent && allContent.forEach( element => {
-						element.classList.remove( activeClass );
-					} );
-					newContent && newContent.classList.add( activeClass );
-				}
-
-				document.getElementById( toggleId ).dispatchEvent( tabToggledEvent );
-			} else {
-				if ( ! toggleContainer.hasOwnProperty( toggleName ) ) {
-					toggleContainer[ toggleName ] = currentToggle.closest( '.inside' );
-					togglePromises[ toggleName ]  = void 0;
-				}
-
-				const fadeOutTimeout = 150;
-
-				// Set toggleTarget for (active or upcoming) Promise.
-				toggleTarget[ toggleName ] = toggleId;
-				// If the promise is running, let it finish and consider the newly set ID.
-				if ( 'undefined' !== typeof togglePromises[ toggleName ] ) return;
-
-				const $allContent = $( '.' + toggleName + '-content' );
-				const setCorrectTab = () => {
-					$( `#${toggleTarget[ toggleName ]}-content` ).stop( false, true ).addClass( activeClass ).fadeIn( 250 );
-					toggleContainer[ toggleName ].style.minHeight = '';
-					return new Promise( resolve => setTimeout( resolve, fadeOutTimeout ) );
-				};
-				const lockHeight = () => {
-					toggleContainer[ toggleName ].style.minHeight = toggleContainer[ toggleName ].getBoundingClientRect().height;
-				}
-
-				togglePromises[ toggleName ] = () => new Promise( resolve => {
-					// Lock height, so to prevent jumping.
-					lockHeight();
-
-					// Stop any running animations, and hide the content. Put in $.Deferred so to run the thenable only once.
-					$.when( $allContent.stop( false, true ).fadeOut( fadeOutTimeout ) ).then( () => {
-						$allContent.removeClass( activeClass );
-						resolve();
-					} );
-				} ).then(
-					setCorrectTab
-				).then( () => {
-					let toggledContent = document.getElementById( `${toggleTarget[ toggleName ]}-content` );
-
-					// Test if the correct tab has been set--otherwise, try again.
-					// Resolve if the query fails, so to prevent an infinite loop.
-					if ( ! toggledContent || toggledContent.classList.contains( activeClass ) ) {
-						document.getElementById( toggleTarget[ toggleName ] ).dispatchEvent( tabToggledEvent );
-						togglePromises[ toggleName ] = void 0;
-					} else {
-						// Lock height to prevent jumping.
-						lockHeight();
-						// Hide everything instantly. We don't make false promises here.
-						$allContent.removeClass( activeClass );
-						// Retry self.
-						togglePromises[ toggleName ]();
-					}
-				} );
-
-				togglePromises[ toggleName ]();
-			}
-		}
-
-		/**
-		 * Sets a class to the active element which helps excluding focus rings.
-		 *
-		 * @see flexTabToggle Handles this class.
-		 *
-		 * @function
-		 * @param {Event} event
-		 * @return {(undefined|null)}
-		 */
-		const addNoFocusClass = event => event.currentTarget.classList.add( 'tsf-no-focus-ring' );
-		document.querySelectorAll( '.tsf-flex-nav-tab-wrapper .tsf-flex-nav-tab-label' ).forEach( el => {
-			el.addEventListener( 'click', addNoFocusClass );
-		} );
-
-		document.querySelectorAll( '.tsf-flex-nav-tab-radio' ).forEach( el => {
-			el.addEventListener( 'change', flexTabToggle );
-		} );
-		document.querySelectorAll( '.tsf-flex-nav-tab-radio:checked' ).forEach( el => {
-			el.dispatchEvent( new Event( 'change' ) );
-		} );
+		);
 	}
 
 	/**
 	 * Initializes canonical URL meta input listeners.
 	 *
 	 * @since 4.0.0
+	 * @since 4.1.2 Changed name from _initCanonicalInput
 	 * @access private
 	 *
 	 * @function
 	 * @return {undefined}
 	 */
-	const _initCanonicalInput = () => {
+	const _initVisibilityListeners = () => {
 
-		let canonicalInput = $( '#autodescription_canonical' );
+		// Prefix with B because I don't trust using 'protected' (might become reserved).
+		const BPROTECTED = 0b01,
+		      BNOINDEX   = 0b10;
 
-		if ( ! canonicalInput ) return;
+		const indexSelect = document.getElementById( 'autodescription_noindex' );
 
-		const updateCanonical = ( link ) => {
-			canonicalInput.attr( 'placeholder', link );
+		let canonicalPhState = 0b00,
+			canonicalUrl     = '';
+
+		let updateCanonicalPlaceholderDebouncer = void 0;
+		/**
+		 * @since 4.1.2
+		 *
+		 * @function
+		 * @param {string} link
+		 * @return {undefined}
+		 */
+		const updateCanonicalPlaceholder = () => {
+			clearTimeout( updateCanonicalPlaceholderDebouncer );
+			updateCanonicalPlaceholderDebouncer = setTimeout( () => {
+				let canonicalInput = document.getElementById( 'autodescription_canonical' );
+
+				if ( ! canonicalInput ) return;
+
+				// Link might not've been updated (yet). Fill it in with PHP-supplied value (if any).
+				canonicalUrl = canonicalUrl || canonicalInput.placeholder;
+
+				if ( ( canonicalPhState & BPROTECTED ) || ( canonicalPhState & BNOINDEX ) ) {
+					canonicalInput.placeholder = '';
+				} else {
+					canonicalInput.placeholder = canonicalUrl;
+				}
+			}, 50 );
 		}
 
+		/**
+		 * @since 4.0.0
+		 *
+		 * @function
+		 * @param {string} link
+		 * @return {undefined}
+		 */
+		const updateCanonical = link => {
+			canonicalUrl = link;
+			updateCanonicalPlaceholder();
+		}
 		$( document ).on( 'tsf-updated-gutenberg-link', ( event, link ) => updateCanonical( link ) );
+
+		/**
+		 * @since 4.1.2
+		 *
+		 * @function
+		 * @param {string} visibility
+		 * @return {undefined}
+		 */
+		const setRobotsDefaultIndexingState = visibility => {
+			let _defaultIndexOption = indexSelect.querySelector( '[value="0"]' ),
+				indexDefaultValue   = '';
+
+			switch ( visibility ) {
+				case 'password':
+				case 'private':
+					indexDefaultValue = 'noindex';
+					canonicalPhState |= BPROTECTED;
+					break;
+
+				default:
+				case 'public':
+					indexDefaultValue = indexSelect.dataset.defaultUnprotected;
+					canonicalPhState &= ~BPROTECTED;
+					break;
+			}
+
+			if ( _defaultIndexOption ) {
+				_defaultIndexOption.innerHTML = indexSelect.dataset.defaultI18n.replace( '%s', tsf.decodeEntities( indexDefaultValue ) );
+			}
+			updateCanonicalPlaceholder();
+		}
+		$( document ).on( 'tsf-updated-gutenberg-visibility', ( event, visibility ) => setRobotsDefaultIndexingState( visibility ) );
+
+		/**
+		 * @since 4.1.2
+		 *
+		 * @function
+		 * @param {Event} event
+		 * @return {undefined}
+		 */
+		const setClassicRobotsDefaultIndexingState = event => {
+			let visibility = $( '#visibility' ).find( 'input:radio:checked' ).val();
+			if ( 'password' === visibility ) {
+				let pass = $( '#visibility' ).find( '#post_password' ).val();
+				// A falsy-password (like '0'), will return true in "SOME OF" WP's front-end PHP, false in WP's JS before submitting...
+				// It won't invoke WordPress's password protection. TODO FIXME: file WP Core bug report.
+				if ( ! pass || ! pass.length ) {
+					visibility = 'public';
+				}
+			}
+			setRobotsDefaultIndexingState( visibility );
+		}
+		const classicVisibilityInput = document.querySelector( '#visibility .save-post-visibility' );
+		classicVisibilityInput && classicVisibilityInput.addEventListener( 'click', setClassicRobotsDefaultIndexingState );
+
+		if ( l10n.states.isPrivate ) {
+			setRobotsDefaultIndexingState( 'private' );
+		} else if ( l10n.states.isProtected ) {
+			setRobotsDefaultIndexingState( 'password' );
+		} else {
+			setRobotsDefaultIndexingState( 'public' );
+		}
+
+		/**
+		 * @since 4.1.2
+		 *
+		 * @function
+		 * @param {Number} value
+		 * @return {undefined}
+		 */
+		const setRobotsIndexingState = value => {
+			let type = '';
+
+			switch ( +value ) {
+				case 0: // default, unset since unknown.
+					type = indexSelect.dataset.defaultUnprotected;
+					break;
+				case -1: // index
+					type = 'index';
+					break;
+				case 1: // noindex
+					type = 'noindex';
+					break;
+			}
+			if ( 'noindex' === type ) {
+				canonicalPhState |= BNOINDEX;
+			} else {
+				canonicalPhState &= ~BNOINDEX;
+			}
+
+			updateCanonicalPlaceholder();
+		}
+		indexSelect.addEventListener( 'change', event => setRobotsIndexingState( event.target.value ) );
+
+		setRobotsIndexingState( indexSelect.value );
 	}
 
 	/**
@@ -421,8 +426,7 @@ window.tsfPost = function( $ ) {
 		 * @param {string} visibility
 		 * @return {undefined}
 		 */
-		const setTitleVisibilityPrefix = ( visibility ) => {
-
+		const setTitleVisibilityPrefix = visibility => {
 			let oldPrefixValue = tsfTitle.getStateOf( _titleId, 'prefixValue' ),
 				prefixValue    = '';
 
@@ -453,7 +457,7 @@ window.tsfPost = function( $ ) {
 		 * @param {Event} event
 		 * @return {undefined}
 		 */
-		const setClassicTitleVisibilityPrefix = ( event ) => {
+		const setClassicTitleVisibilityPrefix = event => {
 			let visibility = $( '#visibility' ).find( 'input:radio:checked' ).val();
 			if ( 'password' === visibility ) {
 				let pass = $( '#visibility' ).find( '#post_password' ).val();
@@ -481,7 +485,7 @@ window.tsfPost = function( $ ) {
 		 * @param {string} value
 		 * @return {undefined}
 		 */
-		const updateDefaultTitle = ( val ) => {
+		const updateDefaultTitle = val => {
 			val = typeof val === 'string' && val.trim() || '';
 
 			let defaultTitle = tsfTitle.stripTitleTags ? tsf.stripTags( val ) : val
@@ -505,6 +509,7 @@ window.tsfPost = function( $ ) {
 	 * Initializes description meta input listeners.
 	 *
 	 * @since 4.0.0
+	 * @since 4.1.2 Now prefills the 'useDefaultDescription' accordingly.
 	 * @access private
 	 *
 	 * @function
@@ -525,10 +530,63 @@ window.tsfPost = function( $ ) {
 		tsfDescription.updateStateOf( _descId, 'defaultDescription', state.defaultDescription.trim() );
 		tsfDescription.updateStateOf( _descId, 'hasLegacy', !! ( state.hasLegacy || false ) );
 
-		// TODO set private/protected listeners, that will empty the generated description?
-		// TODO set post-content (via ajax) listeners?
-
 		tsfDescription.enqueueUnregisteredInputTrigger( _descId );
+
+		/**
+		 * Sets private/protected visibility state.
+		 *
+		 * @function
+		 * @param {string} visibility
+		 * @return {undefined}
+		 */
+		const setDescriptionVisibility = visibility => {
+			let oldUseDefaultDescription = tsfDescription.getStateOf( _descId, 'useDefaultDescription' ),
+				useDefaultDescription    = true;
+
+			switch ( visibility ) {
+				case 'password':
+				case 'private':
+					useDefaultDescription = false;
+					break;
+
+				default:
+				case 'public':
+					useDefaultDescription = true;
+					break;
+			}
+
+			if ( useDefaultDescription !== oldUseDefaultDescription )
+				tsfDescription.updateStateOf( _descId, 'useDefaultDescription', useDefaultDescription );
+		}
+		$( document ).on( 'tsf-updated-gutenberg-visibility', ( event, visibility ) => setDescriptionVisibility( visibility ) );
+
+		/**
+		 * Sets private/protected visibility state for the classic editor.
+		 *
+		 * @function
+		 * @param {Event} event
+		 * @return {undefined}
+		 */
+		const setClassicTitleVisibilityPrefix = event => {
+			let visibility = $( '#visibility' ).find( 'input:radio:checked' ).val();
+			if ( 'password' === visibility ) {
+				let pass = $( '#visibility' ).find( '#post_password' ).val();
+				// A falsy-password (like '0'), will return true in "SOME OF" WP's front-end PHP, false in WP's JS before submitting...
+				// It won't invoke WordPress's password protection. TODO FIXME: file WP Core bug report?
+				if ( ! pass || ! pass.length ) {
+					visibility = 'public';
+				}
+			}
+			setDescriptionVisibility( visibility );
+		}
+		const classicVisibilityInput = document.querySelector( '#visibility .save-post-visibility' );
+		classicVisibilityInput && classicVisibilityInput.addEventListener( 'click', setClassicTitleVisibilityPrefix );
+
+		if ( l10n.states.isPrivate ) {
+			setDescriptionVisibility( 'private' );
+		} else if ( l10n.states.isProtected ) {
+			setDescriptionVisibility( 'password' );
+		}
 	}
 
 	/**
@@ -691,7 +749,7 @@ window.tsfPost = function( $ ) {
 	 * @return {undefined}
 	 */
 	const _loadSettings = () => {
-		_initCanonicalInput();
+		_initVisibilityListeners();
 		_initTitleListeners();
 		_initDescriptionListeners();
 		_initGeneralListeners();

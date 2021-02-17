@@ -330,6 +330,7 @@ class Sanitize extends Admin_Pages {
 				'ping_use_cron',
 				'ping_google',
 				'ping_bing',
+				'ping_use_cron_prerender',
 
 				'excerpt_the_feed',
 				'source_the_feed',
@@ -799,11 +800,6 @@ class Sanitize extends Admin_Pages {
 
 				case '_genesis_canonical_uri':
 				case '_social_image_url':
-					/**
-					 * Remove unwanted query parameters. They're allowed by Google, but very much rather not.
-					 * Also, they will only cause bugs.
-					 * Query parameters are also only used when no pretty permalinks are used. Which is bad.
-					 */
 					$value = $this->s_url_query( $value );
 					continue 2;
 
@@ -1394,6 +1390,7 @@ class Sanitize extends Admin_Pages {
 	 *
 	 * @since 2.2.8
 	 * @since 2.8.0 Method is now public.
+	 * @TODO rename to s_url_keep_query?
 	 *
 	 * @param string $new_value String, a URL, possibly unsafe.
 	 * @return string String a safe URL with Query Arguments.
@@ -2040,7 +2037,7 @@ class Sanitize extends Admin_Pages {
 
 		$cleaned_details = [];
 
-		// Failsafe. Convert associative detailts to a multidimensional sequential array.
+		// Failsafe. Convert associative details to a multidimensional sequential array.
 		if ( isset( $details_array['url'] ) )
 			$details_array = [ $details_array ];
 
