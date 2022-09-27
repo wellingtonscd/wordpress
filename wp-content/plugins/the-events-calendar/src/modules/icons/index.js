@@ -1,4 +1,5 @@
 export { default as Categories } from './categories.svg';
+export { default as CaretDown } from './caret-down.svg';
 export { default as CheckboxOn } from './checkbox-on.svg';
 export { default as CheckboxOff } from './checkbox-off.svg';
 export { default as Classic } from './classic.svg';
@@ -11,4 +12,4 @@ export { default as Tags } from './tags.svg';
 export { default as Sharing } from './sharing.svg';
 export { default as Venue } from './venue.svg';
 export { default as Website } from './website.svg';
-
+export { default as EventsList } from './events-list.svg';

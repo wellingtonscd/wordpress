@@ -10,7 +10,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -35,13 +35,13 @@ namespace The_SEO_Framework;
 class Term_Data extends Post_Data {
 
 	/**
-	 * Initializes term meta data filters and functions.
+	 * Initializes term meta data handlers.
 	 *
 	 * @since 4.0.0
+	 * @since 4.1.4 Now protected.
 	 */
-	public function init_term_meta() {
+	protected function init_term_meta() {
 		\add_action( 'edit_term', [ $this, '_update_term_meta' ], 10, 3 );
-		\add_action( 'delete_term', [ $this, '_delete_term_meta' ], 10, 3 );
 	}
 
 	/**
@@ -59,45 +59,16 @@ class Term_Data extends Post_Data {
 	/**
 	 * Returns the term meta item by key.
 	 *
+	 * @since 4.0.0
+	 * @since 4.2.0 No longer accidentally returns an empty array on failure.
+	 *
 	 * @param string $item      The item to get.
 	 * @param int    $term_id   The Term ID.
 	 * @param bool   $use_cache Whether to use caching; only has effect when $term_id is set.
 	 * @return mixed The term meta item. Null when not found.
 	 */
 	public function get_term_meta_item( $item, $term_id = 0, $use_cache = true ) {
-
-		if ( ! $term_id ) {
-			$meta = $this->get_current_term_meta();
-		} else {
-			$meta = $this->get_term_meta( $term_id, $use_cache );
-		}
-
-		return isset( $meta[ $item ] ) ? $meta[ $item ] : null;
-	}
-
-	/**
-	 * Returns and caches term meta for the current query.
-	 * Memoizes the return value for the current request.
-	 *
-	 * @since 3.0.0
-	 * @since 4.0.1 Now uses the filterable `get_the_real_ID()`
-	 *
-	 * @return array The current term meta.
-	 */
-	public function get_current_term_meta() {
-
-		static $cache;
-
-		if ( isset( $cache ) )
-			return $cache;
-
-		if ( $this->is_term_meta_capable() ) {
-			$cache = $this->get_term_meta( $this->get_the_real_ID() ) ?: [];
-		} else {
-			$cache = [];
-		}
-
-		return $cache;
+		return $this->get_term_meta( $term_id ?: $this->get_the_real_ID(), $use_cache )[ $item ] ?? null;
 	}
 
 	/**
@@ -112,6 +83,9 @@ class Term_Data extends Post_Data {
 	 * @since 3.1.0 Deprecated filter.
 	 * @since 4.0.0 1. Removed deprecated filter.
 	 *              2. Now fills in defaults.
+	 * @since 4.1.4 1. Removed deprecated filter.
+	 *              2. Now considers headlessness.
+	 * @since 4.2.0 Now returns an empty array when the term's taxonomy isn't supported.
 	 *
 	 * @param int  $term_id The Term ID.
 	 * @param bool $use_cache Whether to use caching.
@@ -119,11 +93,15 @@ class Term_Data extends Post_Data {
 	 */
 	public function get_term_meta( $term_id, $use_cache = true ) {
 
-		if ( $use_cache ) {
-			static $cache = [];
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( $use_cache && ( $memo = memo( null, $term_id ) ) ) return $memo;
 
-			if ( isset( $cache[ $term_id ] ) )
-				return $cache[ $term_id ];
+		$term = \get_term( $term_id );
+
+		// We test taxonomy support to be consistent with `get_post_meta()`.
+		if ( empty( $term->term_id ) || ! $this->is_taxonomy_supported( $term->taxonomy ) ) {
+			// Do not overwrite cache when not requested. Otherwise, we'd have two "initial" states, causing incongruities.
+			return $use_cache ? memo( [], $term_id ) : [];
 		}
 
 		/**
@@ -132,56 +110,38 @@ class Term_Data extends Post_Data {
 		 */
 		$defaults = array_merge(
 			$this->get_unfiltered_term_meta_defaults(),
-			$this->get_term_meta_defaults( $term_id )
+			$this->get_term_meta_defaults( $term->term_id )
 		);
 
-		$meta = \get_term_meta( $term_id, THE_SEO_FRAMEWORK_TERM_OPTIONS, true ) ?: [];
-
-		static $has_deprecated_filter = null;
-		if ( null === $has_deprecated_filter && \has_filter( 'the_seo_framework_current_term_meta' ) ) {
-			$has_deprecated_filter = true;
-			$this->_deprecated_filter( 'the_seo_framework_current_term_meta', '4.0.0', 'the_seo_framework_term_meta' );
-		}
-
-		if ( $has_deprecated_filter && $meta ) {
-			/**
-			 * @since 3.0.0
-			 * @since 4.0.0 Deprecated.
-			 * @deprecated
-			 * @param array $meta The CURRENT term metadata.
-			 * @param int   $term_id The term ID.
-			 */
-			$meta = \apply_filters( 'the_seo_framework_current_term_meta', $meta, $term_id );
-
-			/**
-			 * Filter the extraneous term meta items based on defaults' keys.
-			 * This is redundant, but in line with the requirement at `get_post_meta()`
-			 * where we get all metadata without a key.
-			 *
-			 * @see `$this->s_term_meta()`, which strips them out, already. As such,
-			 * we only use this when the (deprecated) filter is used.
-			 */
-			$meta = array_intersect_key(
-				$meta,
-				$defaults
-			);
+		if ( $this->is_headless['meta'] ) {
+			$meta = [];
+		} else {
+			// Unlike get_post_meta(), we need not filter here.
+			// See: <https://github.com/sybrew/the-seo-framework/issues/185>
+			$meta = \get_term_meta( $term->term_id, THE_SEO_FRAMEWORK_TERM_OPTIONS, true ) ?: [];
 		}
 
 		/**
 		 * @since 4.0.5
+		 * @since 4.1.4 1. Now considers headlessness.
+		 *              2. Now returns a 3rd parameter: boolean $headless.
 		 * @note Do not delete/unset/add indexes! It'll cause errors.
 		 * @param array $meta    The current term meta.
 		 * @param int   $term_id The term ID.
+		 * @param bool  $headless Whether the meta are headless.
 		 */
 		$meta = \apply_filters_ref_array(
 			'the_seo_framework_term_meta',
 			[
 				array_merge( $defaults, $meta ),
-				$term_id,
+				$term->term_id,
+				$this->is_headless['meta'],
 			]
 		);
 
-		return $cache[ $term_id ] = $meta;
+		// Cache using $term_id, not $term->term_id, otherwise invalid queries can bypass the cache.
+		// Do not overwrite cache when not requested. Otherwise, we'd have two "initial" states, causing incongruities.
+		return $use_cache ? memo( $meta, $term_id ) : $meta;
 	}
 
 	/**
@@ -189,10 +149,10 @@ class Term_Data extends Post_Data {
 	 *
 	 * @since 2.7.0
 	 * @since 3.1.0 This is now always used.
-	 * @since 4.0.0 : 1. Added $term_id parameter.
-	 *                2. Added 'redirect' value.
-	 *                3. Added 'title_no_blog_name' value.
-	 *                4. Removed 'saved_flag' value.
+	 * @since 4.0.0 1. Added $term_id parameter.
+	 *              2. Added 'redirect' value.
+	 *              3. Added 'title_no_blog_name' value.
+	 *              4. Removed 'saved_flag' value.
 	 *
 	 * @param int $term_id The term ID.
 	 * @return array The Term Metadata default options.
@@ -217,7 +177,7 @@ class Term_Data extends Post_Data {
 	 *
 	 * @since 4.0.0
 	 *
-	 * @return array The default, unfiltered, post meta.
+	 * @return array The default, unfiltered, term meta.
 	 */
 	protected function get_unfiltered_term_meta_defaults() {
 		return [
@@ -242,15 +202,15 @@ class Term_Data extends Post_Data {
 	 * Sanitizes and saves term meta data when a term is altered.
 	 *
 	 * @since 2.7.0
-	 * @since 4.0.0 : 1. Renamed from `update_term_meta`
-	 *                2. noindex, nofollow, noarchive are now converted to qubits.
-	 *                3. Added new keys to sanitize.
-	 *                4. Now marked as private.
-	 *                5. Added more sanity protection.
-	 *                6. No longer runs when no `autodescription-meta` POST data is sent.
-	 *                7. Now uses the current term meta to set new values.
-	 *                8. No longer deletes meta from abstracting plugins on save when they're deactivated.
-	 *                9. Now allows updating during `WP_AJAX`.
+	 * @since 4.0.0 1. Renamed from `update_term_meta`
+	 *              2. noindex, nofollow, noarchive are now converted to qubits.
+	 *              3. Added new keys to sanitize.
+	 *              4. Now marked as private.
+	 *              5. Added more sanity protection.
+	 *              6. No longer runs when no `autodescription-meta` POST data is sent.
+	 *              7. Now uses the current term meta to set new values.
+	 *              8. No longer deletes meta from abstracting plugins on save when they're deactivated.
+	 *              9. Now allows updating during `WP_AJAX`.
 	 * @securitycheck 3.0.0 OK.
 	 * @access private
 	 *         Use $this->save_term_meta() instead.
@@ -275,8 +235,8 @@ class Term_Data extends Post_Data {
 	 * Overwrites all of the term meta on term-edit.
 	 *
 	 * @since 4.0.0
-	 * @since 4.0.2 : 1. Now tests for valid term ID in the term object.
-	 *                2. Now continues using the filtered term object.
+	 * @since 4.0.2 1. Now tests for valid term ID in the term object.
+	 *              2. Now continues using the filtered term object.
 	 *
 	 * @param int    $term_id  Term ID.
 	 * @param int    $tt_id    Term taxonomy ID.
@@ -294,7 +254,7 @@ class Term_Data extends Post_Data {
 		// Note, however: function wp_update_term() already performs all these checks for us before firing this callback's action.
 		if ( ! \current_user_can( 'edit_term', $term->term_id ) ) return;
 		if ( ! isset( $_POST['_wpnonce'] ) ) return;
-		if ( ! \wp_verify_nonce( $_POST['_wpnonce'], 'update-tag_' . $term->term_id ) ) return;
+		if ( ! \wp_verify_nonce( $_POST['_wpnonce'], "update-tag_{$term->term_id}" ) ) return;
 
 		$data = (array) $_POST['autodescription-meta'];
 
@@ -306,8 +266,8 @@ class Term_Data extends Post_Data {
 	 * Overwrites a part of the term meta on quick-edit.
 	 *
 	 * @since 4.0.0
-	 * @since 4.0.2 : 1. Now tests for valid term ID in the term object.
-	 *                2. Now continues using the filtered term object.
+	 * @since 4.0.2 1. Now tests for valid term ID in the term object.
+	 *              2. Now continues using the filtered term object.
 	 *
 	 * @param int    $term_id  Term ID.
 	 * @param int    $tt_id    Term taxonomy ID.
@@ -344,8 +304,8 @@ class Term_Data extends Post_Data {
 	 * as it reprocesses all term meta.
 	 *
 	 * @since 4.0.0
-	 * @since 4.0.2 : 1. Now tests for valid term ID in the term object.
-	 *                2. Now continues using the filtered term object.
+	 * @since 4.0.2 1. Now tests for valid term ID in the term object.
+	 *              2. Now continues using the filtered term object.
 	 * @uses $this->save_term_meta() to process all data.
 	 *
 	 * @param string $item     The item to update.
@@ -371,15 +331,15 @@ class Term_Data extends Post_Data {
 	 * Updates term meta from input.
 	 *
 	 * @since 4.0.0
-	 * @since 4.0.2 : 1. Now tests for valid term ID in the term object.
-	 *                2. Now continues using the filtered term object.
+	 * @since 4.0.2 1. Now tests for valid term ID in the term object.
+	 *              2. Now continues using the filtered term object.
 	 *
 	 * @param int    $term_id  Term ID.
 	 * @param int    $tt_id    Term Taxonomy ID.
 	 * @param string $taxonomy Taxonomy slug.
 	 * @param array  $data     The data to save.
 	 */
-	public function save_term_meta( $term_id, $tt_id, $taxonomy, array $data ) {
+	public function save_term_meta( $term_id, $tt_id, $taxonomy, $data ) {
 
 		$term = \get_term( $term_id, $taxonomy );
 
@@ -411,21 +371,6 @@ class Term_Data extends Post_Data {
 	}
 
 	/**
-	 * Delete term meta data when a term is deleted.
-	 * Deletes only the default data keys; or everything when only that is present.
-	 *
-	 * @since 4.0.0
-	 * @access private
-	 *
-	 * @param int    $term_id  Term ID.
-	 * @param int    $tt_id    Term Taxonomy ID.
-	 * @param string $taxonomy Taxonomy slug.
-	 */
-	public function _delete_term_meta( $term_id, $tt_id, $taxonomy ) { // phpcs:ignore, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		$this->delete_term_meta( $term_id );
-	}
-
-	/**
 	 * Deletes term meta.
 	 * Deletes only the default data keys; or everything when only that is present.
 	 *
@@ -440,9 +385,8 @@ class Term_Data extends Post_Data {
 		$data = \get_term_meta( $term_id, THE_SEO_FRAMEWORK_TERM_OPTIONS, true );
 
 		if ( \is_array( $data ) ) {
-			foreach ( $this->get_term_meta_defaults( $term_id ) as $key => $value ) {
+			foreach ( $this->get_term_meta_defaults( $term_id ) as $key => $value )
 				unset( $data[ $key ] );
-			}
 		}
 
 		// Only delete when no values are left, because someone else might've filtered it.
@@ -458,15 +402,16 @@ class Term_Data extends Post_Data {
 	 * Memoizes the return value.
 	 *
 	 * @since 4.1.0
+	 * @slow The queried result is not stored in WP Term's cache, which would allow
+	 *       direct access to all values of the term (if requested). This is because
+	 *       we're using `'fields' => 'ids'` instead of `'fields' => 'all'`.
 	 *
 	 * @return int Latest Category ID.
 	 */
 	public function get_latest_category_id() {
 
-		static $cat_id = null;
-
-		if ( null !== $cat_id )
-			return $cat_id;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		$cats = \get_terms( [
 			'taxonomy'   => 'category',
@@ -477,7 +422,7 @@ class Term_Data extends Post_Data {
 			'number'     => 1,
 		] );
 
-		return $cat_id = reset( $cats );
+		return memo( reset( $cats ) );
 	}
 
 	/**
@@ -491,12 +436,9 @@ class Term_Data extends Post_Data {
 	 * @return string The Taxonomy Type name/label, if found.
 	 */
 	public function get_tax_type_label( $tax_type, $singular = true ) {
-
-		$tto = \get_taxonomy( $tax_type );
-
-		return $singular
-			? ( isset( $tto->labels->singular_name ) ? $tto->labels->singular_name : '' )
-			: ( isset( $tto->labels->name ) ? $tto->labels->name : '' );
+		return \get_taxonomy( $tax_type )->labels->{
+			$singular ? 'singular_name' : 'name'
+		} ?? '';
 	}
 
 	/**
@@ -512,7 +454,7 @@ class Term_Data extends Post_Data {
 	 */
 	public function get_hierarchical_taxonomies_as( $get = 'objects', $post_type = '' ) {
 
-		$post_type = $post_type ?: $this->get_post_type_real_ID();
+		$post_type = $post_type ?: $this->get_current_post_type();
 
 		if ( ! $post_type )
 			return [];
@@ -520,7 +462,7 @@ class Term_Data extends Post_Data {
 		$taxonomies = \get_object_taxonomies( $post_type, 'objects' );
 		$taxonomies = array_filter(
 			$taxonomies,
-			function( $t ) {
+			static function( $t ) {
 				return ! empty( $t->hierarchical );
 			}
 		);

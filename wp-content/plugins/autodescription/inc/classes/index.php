@@ -4,16 +4,6 @@
  *
  * # Namespace: The_SEO_Framework
  *
- * ## Separated:
- *    - Deprecated
- *       |-> Final
- *    - Debug
- *       |-> Final
- *
- * ## Failsafe:
- *    - Silencer
- *       |-> Final
- *
  * ## Façade (bottom is called first):
  *    -  | Core
  *       | Query
@@ -35,8 +25,7 @@
  *       | Sanitize
  *       | Site_Options
  *       | Cache
- *       | Feed
  *       | Load
  *          |-> Final
- *          |-> Instanced in function `the_seo_framework()`
+ *          |-> Instanced in function `tsf()`|`the_seo_framework()`|`The_SEO_Framework\_init_tsf()`
  */

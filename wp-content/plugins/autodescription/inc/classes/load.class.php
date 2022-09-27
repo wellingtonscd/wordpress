@@ -11,7 +11,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -34,23 +34,20 @@ namespace The_SEO_Framework;
  * @since 2.8.0
  * @since 4.0.0 No longer implements an interface. It's implied.
  * @since 4.1.0 Now extends `Cache` instead of `Feed`.
+ * @since 4.1.4 Removed protected property $use_object_cache.
  */
 final class Load extends Cache {
 
 	/**
-	 * @since 2.4.3
-	 * @var bool Enable object caching.
-	 */
-	protected $use_object_cache = false;
-
-	/**
 	 * @since 2.2.9
+	 * @TODO make this 'meta_debug'
 	 * @var bool $the_seo_framework_debug Whether TSF-specific debug is enabled.
 	 */
 	public $the_seo_framework_debug = false;
 
 	/**
 	 * @since 2.2.9
+	 * @TODO make this just 'cache_transients'
 	 * @var bool $the_seo_framework_debug Whether TSF-specific transients are used.
 	 */
 	public $the_seo_framework_use_transients = true;
@@ -62,56 +59,83 @@ final class Load extends Cache {
 	public $script_debug = false;
 
 	/**
+	 * @since 4.1.4
+	 * @access protected
+	 *         DO NOT OVERWRITE, it should be 'immutable'. <https://wiki.php.net/rfc/immutability>
+	 *         Feel free to read.
+	 *         Use constant `THE_SEO_FRAMEWORK_HEADLESS` instead.
+	 * @var bool|array $is_headless Whether headless TSF is enabled.
+	 *    If not false, then array: {
+	 *      'meta'     => bool True to disable post/term-meta-data storing/fetching.
+	 *      'settings' => bool True to disable non-default setting.
+	 *      'user'     => bool True to disable SEO user-meta-data storing/fetching.
+	 *    }
+	 */
+	public $is_headless = false;
+
+	/**
 	 * Constructor, setup debug vars and then load parent constructor.
 	 *
 	 * @since 2.8.0
 	 * @since 4.0.0 Now informs developer of invalid class instancing.
+	 * @since 4.1.4.Now constructs headlessness.
 	 *
 	 * @return null If called twice or more.
 	 */
 	public function __construct() {
 
-		if ( _has_run( __METHOD__ ) ) {
+		if ( has_run( __METHOD__ ) ) {
 			// Don't construct twice, warn developer.
-			$this->_doing_it_wrong( __METHOD__, 'Do not instance this class. Use function <code>the_seo_framework()</code> instead.', '3.1.0' );
+			$this->_doing_it_wrong( __METHOD__, 'Do not instance this class. Use function <code>tsf()</code> instead.', '3.1.0' );
 			return null;
 		}
 
-		//= Setup debug vars before initializing anything else.
+		// Setup debug vars before initializing anything else.
 		$this->init_debug_vars();
 
 		if ( $this->the_seo_framework_debug ) {
-			$debug_instance = Debug::get_instance();
+			$debug_instance = Internal\Debug::get_instance();
 
 			\add_action( 'the_seo_framework_do_before_output', [ $debug_instance, '_set_debug_query_output_cache' ] );
 			\add_action( 'admin_footer', [ $debug_instance, '_debug_output' ] );
 			\add_action( 'wp_footer', [ $debug_instance, '_debug_output' ] );
 		}
 
-		//= Register the capabilities early.
+		// Register the capabilities early.
 		\add_filter( 'option_page_capability_' . THE_SEO_FRAMEWORK_SITE_OPTIONS, [ $this, 'get_settings_capability' ] );
 
-		/**
-		 * @since 2.2.2
-		 * @param bool $load_options Whether to show or hide option pages.
-		 */
-		$this->load_options = (bool) \apply_filters( 'the_seo_framework_load_options', true );
-
-		/**
-		 * @since 2.4.3
-		 * @since 2.8.0 : Uses method $this->use_object_cache() as default.
-		 * @param bool $use_object_cache Whether to enable object caching.
-		 */
-		$this->use_object_cache = (bool) \apply_filters(
-			'the_seo_framework_use_object_cache',
-			\wp_using_ext_object_cache() && $this->get_option( 'cache_object' )
-		);
-
-		//? We always use this, because we need to test whether the sitemap must be outputted.
 		$this->pretty_permalinks = '' !== \get_option( 'permalink_structure' );
 
-		//= Load plugin at init 0.
+		// Load plugin at init 0.
 		\add_action( 'init', [ $this, 'init_the_seo_framework' ], 0 );
+
+		$this->is_headless = [
+			'meta'     => false,
+			'settings' => false,
+			'user'     => false,
+		];
+
+		if ( ! \apply_filters_deprecated(
+			'the_seo_framework_load_options',
+			[ true ],
+			'4.1.4 of The SEO Framework',
+			'constant THE_SEO_FRAMEWORK_HEADLESS'
+		) ) \defined( 'THE_SEO_FRAMEWORK_HEADLESS' ) or \define( 'THE_SEO_FRAMEWORK_HEADLESS', true );
+
+		// A headless boi is a good boi. Far less annoying, they are.
+		if ( \defined( 'THE_SEO_FRAMEWORK_HEADLESS' ) ) {
+			$this->is_headless = [
+				'meta'     => true,
+				'settings' => true,
+				'user'     => true,
+			];
+
+			\is_array( THE_SEO_FRAMEWORK_HEADLESS )
+				and $this->is_headless = array_map(
+					'wp_validate_boolean',
+					array_merge( $this->is_headless, THE_SEO_FRAMEWORK_HEADLESS )
+				);
+		}
 	}
 
 	/**
@@ -122,9 +146,8 @@ final class Load extends Cache {
 	public function init_debug_vars() {
 
 		$this->the_seo_framework_debug = \defined( 'THE_SEO_FRAMEWORK_DEBUG' ) && THE_SEO_FRAMEWORK_DEBUG ?: $this->the_seo_framework_debug;
-		if ( $this->the_seo_framework_debug ) {
-			\The_SEO_Framework\Debug::_set_instance( $this->the_seo_framework_debug );
-		}
+		if ( $this->the_seo_framework_debug )
+			Internal\Debug::_set_instance( $this->the_seo_framework_debug );
 
 		$this->the_seo_framework_use_transients = \defined( 'THE_SEO_FRAMEWORK_DISABLE_TRANSIENTS' ) && THE_SEO_FRAMEWORK_DISABLE_TRANSIENTS ? false : $this->the_seo_framework_use_transients;
 
@@ -142,11 +165,6 @@ final class Load extends Cache {
 	 * @access private
 	 */
 	public function _load_early_compat_files() {
-
-		// phpcs:disable, Squiz.PHP.CommentedOutCode
-		// if ( ! extension_loaded( 'mbstring' ) )
-		// $this->_include_compat( 'mbstring', 'php' );
-		// phpcs:enable, Squiz.PHP.CommentedOutCode
 
 		// Disable Headway theme SEO.
 		\add_filter( 'headway_seo_disabled', '__return_true' );
@@ -189,21 +207,11 @@ final class Load extends Cache {
 			// Easy Digital Downloads.
 			$this->_include_compat( 'edd', 'plugin' );
 		}
-	}
 
-	/**
-	 * Mark a filter as deprecated and inform when it has been used.
-	 *
-	 * @since 2.8.0
-	 * @see $this->_deprecated_function().
-	 * @access private
-	 *
-	 * @param string $filter      The function that was called.
-	 * @param string $version     The version of WordPress that deprecated the function.
-	 * @param string $replacement Optional. The function that should have been called. Default null.
-	 */
-	public function _deprecated_filter( $filter, $version, $replacement = null ) {
-		Debug::get_instance()->_deprecated_filter( $filter, $version, $replacement );
+		if ( $this->detect_plugin( [ 'constants' => [ 'ELEMENTOR_VERSION' ] ] ) ) {
+			// Elementor
+			$this->_include_compat( 'elementor', 'plugin' );
+		}
 	}
 
 	/**
@@ -219,7 +227,8 @@ final class Load extends Cache {
 	 * @param string $replacement Optional. The function that should have been called. Default null.
 	 */
 	public function _deprecated_function( $function, $version, $replacement = null ) { // phpcs:ignore -- Wrong asserts, copied method name.
-		Debug::get_instance()->_deprecated_function( $function, $version, $replacement ); // phpcs:ignore -- Wrong asserts, copied method name.
+		// phpcs:ignore -- Wrong asserts, copied method name.
+		Internal\Debug::get_instance()->_deprecated_function( $function, $version, $replacement );
 	}
 
 	/**
@@ -235,7 +244,8 @@ final class Load extends Cache {
 	 * @param string $version  The version of WordPress where the message was added.
 	 */
 	public function _doing_it_wrong( $function, $message, $version = null ) { // phpcs:ignore -- Wrong asserts, copied method name.
-		Debug::get_instance()->_doing_it_wrong( $function, $message, $version ); // phpcs:ignore -- Wrong asserts, copied method name.
+		// phpcs:ignore -- Wrong asserts, copied method name.
+		Internal\Debug::get_instance()->_doing_it_wrong( $function, $message, $version );
 	}
 
 	/**
@@ -249,6 +259,6 @@ final class Load extends Cache {
 	 * @param string $message A message explaining what has been done incorrectly.
 	 */
 	public function _inaccessible_p_or_m( $p_or_m, $message = '' ) {
-		Debug::get_instance()->_inaccessible_p_or_m( $p_or_m, $message );
+		Internal\Debug::get_instance()->_inaccessible_p_or_m( $p_or_m, $message );
 	}
 }

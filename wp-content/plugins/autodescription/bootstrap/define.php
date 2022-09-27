@@ -9,7 +9,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2018 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2018 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -144,7 +144,7 @@ namespace The_SEO_Framework;
 	or \define( 'THE_SEO_FRAMEWORK_SETTINGS_CAP', 'manage_options' );
 
 /**
- * The user capability required to access the extension overview page.
+ * The user capability required to have SEO-fields on their profiles.
  *
  * == WARNING ==
  * When this constant is used incorrectly, you can expose your site to
@@ -163,7 +163,7 @@ namespace The_SEO_Framework;
  * @since 4.0.0
  * @see \The_SEO_Framework\Generate\robots_meta()
  */
-const ROBOTS_IGNORE_PROTECTION = 0b01;
+const ROBOTS_IGNORE_PROTECTION = 0b001;
 
 /**
  * Robots setting, ignore settings.
@@ -171,4 +171,12 @@ const ROBOTS_IGNORE_PROTECTION = 0b01;
  * @since 4.0.0
  * @see \The_SEO_Framework\Generate\robots_meta()
  */
-const ROBOTS_IGNORE_SETTINGS = 0b10;
+const ROBOTS_IGNORE_SETTINGS = 0b010;
+
+/**
+ * Robots setting, enable asserting.
+ *
+ * @since 4.2.0
+ * @see \The_SEO_Framework\Generate\robots_meta()
+ */
+const ROBOTS_ASSERT = 0b100;

@@ -8,7 +8,7 @@ namespace The_SEO_Framework\Bridges;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -48,7 +48,7 @@ final class PostSettings {
 	 */
 	public static function _prepare_meta_box( $post_type ) {
 
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		$label = $tsf->get_post_type_label( $post_type );
 
@@ -65,15 +65,15 @@ final class PostSettings {
 		 */
 		$priority = (string) \apply_filters( 'the_seo_framework_metabox_priority', 'high' );
 
-		if ( $tsf->is_front_page_by_id( $tsf->get_the_real_ID() ) ) {
+		if ( $tsf->is_real_front_page_by_id( $tsf->get_the_real_ID() ) ) {
 			if ( $tsf->can_access_settings() ) {
 				$schema = \is_rtl() ? '%2$s - %1$s' : '%1$s - %2$s';
 				$title  = sprintf(
 					$schema,
 					\esc_html__( 'Homepage SEO Settings', 'autodescription' ),
-					$tsf->make_info(
+					\The_SEO_Framework\Interpreters\HTML::make_info(
 						\__( 'The SEO Settings may take precedence over these settings.', 'autodescription' ),
-						$tsf->seo_settings_page_url(),
+						$tsf->get_seo_settings_page_url(),
 						false
 					)
 				);
@@ -89,8 +89,10 @@ final class PostSettings {
 		// Implies `\get_current_screen()->id`. Is always 'post'.
 		$screen_id = 'post';
 
-		\add_meta_box( $box_id, $title, __CLASS__ . '::_meta_box', $post_type, $context, $priority, [] );
-		\add_filter( "postbox_classes_{$screen_id}_{$box_id}", __CLASS__ . '::_add_postbox_class' );
+		$class = static::class;
+
+		\add_meta_box( $box_id, $title, "$class::_meta_box", $post_type, $context, $priority, [] );
+		\add_filter( "postbox_classes_{$screen_id}_{$box_id}", "$class::_add_postbox_class" );
 	}
 
 	/**
@@ -112,8 +114,8 @@ final class PostSettings {
 	 * @param bool   $use_tabs Whether to output tabs, only works when $tabs count is greater than 1.
 	 */
 	public static function _flex_nav_tab_wrapper( $id, $tabs = [], $use_tabs = true ) { // phpcs:ignore,VariableAnalysis
-		\the_seo_framework()->get_view( 'edit/wrap-nav', get_defined_vars() );
-		\the_seo_framework()->get_view( 'edit/wrap-content', get_defined_vars() );
+		\tsf()->get_view( 'edit/wrap-nav', get_defined_vars() );
+		\tsf()->get_view( 'edit/wrap-content', get_defined_vars() );
 	}
 
 	/**
@@ -125,7 +127,7 @@ final class PostSettings {
 
 		static::output_nonce_field();
 
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		/**
 		 * @since 2.9.0
@@ -153,9 +155,8 @@ final class PostSettings {
 	 */
 	public static function _add_postbox_class( $classes = [] ) {
 
-		if ( \the_seo_framework()->is_gutenberg_page() ) {
+		if ( \tsf()->is_gutenberg_page() )
 			$classes[] = 'tsf-is-block-editor';
-		}
 
 		return $classes;
 	}
@@ -167,7 +168,7 @@ final class PostSettings {
 	 * @since 4.0.0
 	 */
 	private static function output_nonce_field() {
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 		\wp_nonce_field( $tsf->inpost_nonce_field, $tsf->inpost_nonce_name );
 	}
 
@@ -181,7 +182,7 @@ final class PostSettings {
 		 * @since 2.9.0
 		 */
 		\do_action( 'the_seo_framework_pre_page_inpost_general_tab' );
-		\the_seo_framework()->get_view( 'edit/seo-settings-singular', [], 'general' );
+		\tsf()->get_view( 'edit/seo-settings-singular', [], 'general_tab' );
 		/**
 		 * @since 2.9.0
 		 */
@@ -198,7 +199,7 @@ final class PostSettings {
 		 * @since 2.9.0
 		 */
 		\do_action( 'the_seo_framework_pre_page_inpost_visibility_tab' );
-		\the_seo_framework()->get_view( 'edit/seo-settings-singular', [], 'visibility' );
+		\tsf()->get_view( 'edit/seo-settings-singular', [], 'visibility_tab' );
 		/**
 		 * @since 2.9.0
 		 */
@@ -215,7 +216,7 @@ final class PostSettings {
 		 * @since 2.9.0
 		 */
 		\do_action( 'the_seo_framework_pre_page_inpost_social_tab' );
-		\the_seo_framework()->get_view( 'edit/seo-settings-singular', [], 'social' );
+		\tsf()->get_view( 'edit/seo-settings-singular', [], 'social_tab' );
 		/**
 		 * @since 2.9.0
 		 */

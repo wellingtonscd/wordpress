@@ -35,6 +35,17 @@
 	};
 
 	/**
+	 * Replacemente for jQuery $.isNumeric that was deprecated on version 5.7 of WP.
+	 *
+	 * @param {string|int} number
+	 *
+	 * @returns {boolean}
+	 */
+	obj.isNumeric = function( number ) {
+		return ! isNaN( parseFloat( number ) ) && isFinite( number );
+	};
+
+	/**
 	 * Set up each constraint truth condition
 	 * Each function will be passed the value, the constraint and the dependent field
 	 *
@@ -44,28 +55,32 @@
 	 */
 	obj.constraintConditions = {
 		'condition': function ( val, constraint ) {
-			return _.isArray( constraint ) ? -1 !== constraint.indexOf( val ) : val == constraint;
+			return _.isArray( constraint ) ? -1 !== constraint.indexOf( val ) : val == constraint; // eslint-disable-line eqeqeq,max-len
 		},
 		'not_condition': function ( val, constraint ) {
-			return _.isArray( constraint ) ? -1 === constraint.indexOf( val ) : val != constraint;
+			return _.isArray( constraint ) ? -1 === constraint.indexOf( val ) : val != constraint; // eslint-disable-line eqeqeq,max-len
 		},
 		'is_not_empty': function ( val ) {
-			return '' != val;
+			return '' != val; // eslint-disable-line eqeqeq
 		},
 		'is_empty': function ( val ) {
 			return '' === val;
 		},
 		'is_numeric': function ( val ) {
-			return $.isNumeric( val );
+			return obj.isNumeric( val );
 		},
 		'is_not_numeric': function ( val ) {
-			return ! $.isNumeric( val );
+			return ! obj.isNumeric( val );
 		},
 		'is_checked': function ( _, __, $field ) {
-			return ( $field.is( ':checkbox' ) || $field.is( ':radio' ) ) ? $field.is( ':checked' ) : false;
+			return ( $field.is( ':checkbox' ) || $field.is( ':radio' ) )
+				? $field.is( ':checked' )
+				: false;
 		},
 		'is_not_checked': function ( _, __, $field ) {
-			return ( $field.is( ':checkbox' ) || $field.is( ':radio' ) ) ? ! $field.is( ':checked' ) : false;
+			return ( $field.is( ':checkbox' ) || $field.is( ':radio' ) )
+				? ! $field.is( ':checked' )
+				: false;
 		}
 	};
 
@@ -76,7 +91,7 @@
 	 *
 	 * @type  {Function}
 	 */
-	obj.verify = function( e ) {
+	obj.verify = function( e ) { // eslint-disable-line no-unused-vars
 		var $field = $( this );
 		var selector = '#' + $field.attr( 'id' );
 		var value = $field.val();
@@ -102,7 +117,9 @@
 		}
 
 		// Fetch dependent elements
-		var $dependents = $document.find( '[data-depends="' + selector + '"]' ).not( '.select2-container' );
+		var $dependents = $document
+			.find( '[data-depends="' + selector + '"]' )
+			.not( '.select2-container' );
 		if ( 0 === $dependents.length ) {
 			return;
 		}
@@ -122,6 +139,7 @@
 				$dependent = $dependentParent.find( dependent );
 			}
 
+			/* eslint-disable max-len */
 			var constraints = {
 				condition: $dependent.is( '[data-condition]' ) ? $dependent.data( 'condition' ) : false,
 				not_condition: $dependent.is( '[data-condition-not]' ) ? $dependent.data( 'conditionNot' ) : false,
@@ -132,6 +150,7 @@
 				is_checked: $dependent.data( 'conditionIsChecked' ) || $dependent.is( '[data-condition-is-checked]' ) || $dependent.data( 'conditionChecked' ) || $dependent.is( '[data-condition-checked]' ),
 				is_not_checked: $dependent.data( 'conditionIsNotChecked' ) || $dependent.is( '[data-condition-is-not-checked]' ) || $dependent.data( 'conditionNotChecked' ) || $dependent.is( '[data-condition-not-checked]' ),
 			};
+			/* eslint-enable max-len */
 
 			var activeClass       = obj.selectors.active.replace( '.', '' );
 
@@ -186,7 +205,10 @@
 					.prop( 'disabled', false );
 
 				if ( 'undefined' !== typeof $().select2 ) {
-					$dependent.find( '.tribe-dropdown, .tribe-ea-dropdown' ).select2().prop( 'disabled', false );
+					$dependent
+						.find( '.tribe-dropdown, .tribe-ea-dropdown' )
+						.select2()
+						.prop( 'disabled', false );
 				}
 			} else {
 				$dependent.removeClass( activeClass );
@@ -204,7 +226,10 @@
 				}
 
 				if ( 'undefined' !== typeof $().select2 ) {
-					$dependent.find( '.tribe-dropdown, .tribe-ea-dropdown' ).select2().prop( 'disabled', true );
+					$dependent
+						.find( '.tribe-dropdown, .tribe-ea-dropdown' )
+						.select2()
+						.prop( 'disabled', true );
 				}
 
 				if ( $dependent.is( '.tribe-dropdown, .tribe-ea-dropdown' ) ) {
@@ -240,7 +265,7 @@
 	 *
 	 * @type  {Function}
 	 */
-	obj.setup = function ( event ) {
+	obj.setup = function ( event ) { // eslint-disable-line no-unused-vars
 		// Fetch all dependents
 		var $dependents = $( obj.selectors.dependent );
 
@@ -266,8 +291,8 @@
 	 * @type  {Function}
 	 */
 	$.fn.dependency = function () {
-		return this.each( function(){
-			var $el = $(this);
+		return this.each( function() {
+			var $el = $( this );
 			var selector = $el.data( 'depends' );
 			var $selector = $( selector );
 
@@ -282,7 +307,6 @@
 			}
 		} );
 	};
-
 
 	/**
 	 * Listen on async recurrent elements.

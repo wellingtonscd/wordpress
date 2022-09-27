@@ -10,7 +10,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -38,7 +38,7 @@ class Render extends Admin_Init {
 	 * Returns the document title.
 	 *
 	 * This method serves as a callback for filter `pre_get_document_title`.
-	 * Use the_seo_framework()->get_title() instead.
+	 * Use tsf()->get_title() instead.
 	 *
 	 * @since 3.1.0
 	 * @see $this->get_title()
@@ -69,13 +69,13 @@ class Render extends Admin_Init {
 	 * Returns the document title.
 	 *
 	 * This method serves as a callback for filter `wp_title`.
-	 * Use the_seo_framework()->get_title() instead.
+	 * Use tsf()->get_title() instead.
 	 *
 	 * @since 3.1.0
 	 * @since 4.0.0 Removed extraneous, unused parameters.
 	 * @see $this->get_title()
 	 *
-	 * @param string $title       The filterable title.
+	 * @param string $title The filterable title.
 	 * @return string $title
 	 */
 	public function get_wp_title( $title = '' ) {
@@ -112,14 +112,12 @@ class Render extends Admin_Init {
 	 */
 	public function get_image_from_cache() {
 
-		$url = '';
-
 		foreach ( $this->get_image_details_from_cache( ! $this->get_option( 'multi_og_image' ) ) as $image ) {
 			$url = $image['url'];
 			if ( $url ) break;
 		}
 
-		return $url;
+		return $url ?? '';
 	}
 
 	/**
@@ -132,10 +130,104 @@ class Render extends Admin_Init {
 	 * @return string The cached Twitter card.
 	 */
 	public function get_current_twitter_card_type() {
+		return memo() ?? memo( $this->generate_twitter_card_type() );
+	}
 
-		static $cache = null;
+	/**
+	 * Renders an XHTML element. Sane drop-in for DOMDocument and whatnot.
+	 *
+	 * Even though most (if not all) WordPress sites use HTML5, we expect some still use XHTML.
+	 * We expect HTML5 fully on the back-end.
+	 *
+	 * This method should not be used by you. Eventually, it'll print or spawn demigods.
+	 *
+	 * @since 4.1.4
+	 * @access protected
+	 *         Not finished for 'public' use; method may (will) change unannounced.
+	 * @internal
+	 * @link <https://github.com/sybrew/the-seo-framework/commit/894d7d3a74e0ed6890b6e8851ef0866df15ea522>
+	 *       Which is something we eventually want to go to, but that's not ready yet.
+	 *
+	 * @param array       $attributes Associative array of tag names and tag values : {
+	 *    string $name => string $value
+	 * }
+	 * @param string      $tag      The element's tag-name.
+	 * @param bool|string $text     The element's contents, if any.
+	 * @param bool        $new_line Whether to add a new line to the end of the element.
+	 */
+	public function render_element( $attributes = [], $tag = 'meta', $text = false, $new_line = true ) {
 
-		return isset( $cache ) ? $cache : $cache = $this->generate_twitter_card_type();
+		$attr = '';
+
+		foreach ( $attributes as $_name => $_value ) {
+			if ( \in_array( $_name, [ 'href', 'xlink:href', 'src' ], true ) ) {
+				$_secure_attr_value = \esc_url_raw( $_value );
+			} else {
+				$_secure_attr_value = \esc_attr( $_value );
+			}
+
+			// phpcs:disable -- Security hint for later, left code intact; Redundant, internal... for now.
+			// elseif ( \in_array(
+			// 	$_name,
+			// 	/** @link <https://www.w3.org/TR/2011/WD-html5-20110525/elements.html> */
+			// 	[ 'onabort', 'onblur', 'oncanplay', 'oncanplaythrough', 'onchange', 'onclick', 'oncontextmenu', 'oncuechange', 'ondblclick', 'ondrag', 'ondragend', 'ondragenter', 'ondragleave', 'ondragover', 'ondragstart', 'ondrop', 'ondurationchange', 'onemptied', 'onended', 'onerror', 'onfocus', 'oninput', 'oninvalid', 'onkeydown', 'onkeypress', 'onkeyup', 'onload', 'onloadeddata', 'onloadedmetadata', 'onloadstart', 'onmousedown', 'onmousemove', 'onmouseout', 'onmouseover', 'onmouseup', 'onmousewheel', 'onpause', 'onplay', 'onplaying', 'onprogress', 'onratechange', 'onreadystatechange', 'onreset', 'onscroll', 'onseeked', 'onseeking', 'onselect', 'onshow', 'onstalled', 'onsubmit', 'onsuspend', 'ontimeupdate', 'onvolumechange', 'onwaiting' ],
+			// 	true
+			// ) ) {
+			// 	// Nope. Not this function.
+			// 	continue;
+			// }
+			// phpcs:enable
+
+			$attr .= sprintf(
+				' %s="%s"',
+				/**
+				 * @link <https://www.w3.org/TR/2011/WD-html5-20110525/syntax.html#attributes-0>
+				 * This will strip "safe" characters outside of the alphabet, 0-9, and :_-.
+				 * I don't want angry parents ringing me at home for their site didn't
+				 * support proper UTF. We can afford empty tags in rare situations -- not here.
+				 */
+				preg_replace( '/[^a-zA-Z0-9:_-]+/', '', $_name ),
+				$_secure_attr_value
+			);
+		}
+
+		if ( $text ) {
+			$el = vsprintf(
+				'<%1$s%2$s>%3$s</%1$s>',
+				[
+					/** @link <https://www.w3.org/TR/2011/WD-html5-20110525/syntax.html#syntax-tag-name> */
+					preg_replace( '/[^0-9a-zA-Z]+/', '', $tag ),
+					$attr,
+					\esc_html( $text ),
+				]
+			);
+		} else {
+			$el = vsprintf(
+				'<%s%s />',
+				[
+					/** @link <https://www.w3.org/TR/2011/WD-html5-20110525/syntax.html#syntax-tag-name> */
+					preg_replace( '/[^0-9a-zA-Z]+/', '', $tag ),
+					$attr,
+				]
+			);
+		}
+
+		return $el . ( $new_line ? "\n" : '' );
+	}
+
+	/**
+	 * Renders the 'tsf:aqp' meta tag. Useful for identifying when query-exploit detection
+	 * is triggered.
+	 *
+	 * @since 4.1.4
+	 *
+	 * @return string The advanced query protection (aqp) identifier.
+	 */
+	public function advanced_query_protection() {
+		return $this->render_element( [
+			'name'  => 'tsf:aqp',
+			'value' => '1',
+		] );
 	}
 
 	/**
@@ -152,7 +244,7 @@ class Render extends Admin_Init {
 
 		/**
 		 * @since 2.3.0
-		 * @since 2.7.0 : Added output within filter.
+		 * @since 2.7.0 Added output within filter.
 		 * @param string $description The generated description.
 		 * @param int    $id          The page or term ID.
 		 */
@@ -164,10 +256,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $description )
-			return '<meta name="description" content="' . \esc_attr( $description ) . '" />' . "\r\n";
-
-		return '';
+		return $description ? $this->render_element( [
+			'name'    => 'description',
+			'content' => $description,
+		] ) : '';
 	}
 
 	/**
@@ -198,10 +290,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $description )
-			return '<meta property="og:description" content="' . \esc_attr( $description ) . '" />' . "\r\n";
-
-		return '';
+		return $description ? $this->render_element( [
+			'property' => 'og:description',
+			'content'  => $description,
+		] ) : '';
 	}
 
 	/**
@@ -230,10 +322,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $locale )
-			return '<meta property="og:locale" content="' . \esc_attr( $locale ) . '" />' . "\r\n";
-
-		return '';
+		return $locale ? $this->render_element( [
+			'property' => 'og:locale',
+			'content'  => $locale,
+		] ) : '';
 	}
 
 	/**
@@ -264,10 +356,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $title )
-			return '<meta property="og:title" content="' . \esc_attr( $title ) . '" />' . "\r\n";
-
-		return '';
+		return $title ? $this->render_element( [
+			'property' => 'og:title',
+			'content'  => $title,
+		] ) : '';
 	}
 
 	/**
@@ -284,10 +376,10 @@ class Render extends Admin_Init {
 
 		$type = $this->get_og_type();
 
-		if ( $type )
-			return '<meta property="og:type" content="' . \esc_attr( $type ) . '" />' . "\r\n";
-
-		return '';
+		return $type ? $this->render_element( [
+			'property' => 'og:type',
+			'content'  => $type,
+		] ) : '';
 	}
 
 	/**
@@ -310,19 +402,31 @@ class Render extends Admin_Init {
 		$multi = (bool) $this->get_option( 'multi_og_image' );
 
 		foreach ( $this->get_image_details_from_cache( ! $multi ) as $image ) {
-			$output .= '<meta property="og:image" content="' . \esc_attr( $image['url'] ) . '" />' . "\r\n";
+			$output .= $this->render_element( [
+				'property' => 'og:image',
+				'content'  => $image['url'],
+			] );
 
 			if ( $image['height'] && $image['width'] ) {
-				$output .= '<meta property="og:image:width" content="' . \esc_attr( $image['width'] ) . '" />' . "\r\n";
-				$output .= '<meta property="og:image:height" content="' . \esc_attr( $image['height'] ) . '" />' . "\r\n";
+				$output .= $this->render_element( [
+					'property' => 'og:image:width',
+					'content'  => $image['width'],
+				] );
+				$output .= $this->render_element( [
+					'property' => 'og:image:height',
+					'content'  => $image['height'],
+				] );
 			}
 
 			if ( $image['alt'] ) {
-				$output .= '<meta property="og:image:alt" content="' . \esc_attr( $image['alt'] ) . '" />' . "\r\n";
+				$output .= $this->render_element( [
+					'property' => 'og:image:alt',
+					'content'  => $image['alt'],
+				] );
 			}
 
-			if ( ! $multi )
-				break;
+			// Redundant?
+			if ( ! $multi ) break;
 		}
 
 		return $output;
@@ -354,10 +458,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $sitename )
-			return '<meta property="og:site_name" content="' . \esc_attr( $sitename ) . '" />' . "\r\n";
-
-		return '';
+		return $sitename ? $this->render_element( [
+			'property' => 'og:site_name',
+			'content'  => $sitename,
+		] ) : '';
 	}
 
 	/**
@@ -365,6 +469,7 @@ class Render extends Admin_Init {
 	 *
 	 * @since 1.3.0
 	 * @since 2.9.3 Added filter
+	 * @since 4.1.4 Now uses `render_element()`, which applies `esc_attr()` on the URL.
 	 * @uses $this->get_current_canonical_url()
 	 *
 	 * @return string The Open Graph URL meta tag.
@@ -386,11 +491,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		// TODO add esc_attr()? The URL is already safe for attribute usage... I'm not sure if that'll potentially break the URL.
-		if ( $url )
-			return '<meta property="og:url" content="' . $url . '" />' . "\r\n";
-
-		return '';
+		return $url ? $this->render_element( [
+			'property' => 'og:url',
+			'content'  => $url,
+		] ) : '';
 	}
 
 	/**
@@ -406,10 +510,10 @@ class Render extends Admin_Init {
 
 		$card = $this->get_current_twitter_card_type();
 
-		if ( $card )
-			return '<meta name="twitter:card" content="' . \esc_attr( $card ) . '" />' . "\r\n";
-
-		return '';
+		return $card ? $this->render_element( [
+			'name'    => 'twitter:card',
+			'content' => $card,
+		] ) : '';
 	}
 
 	/**
@@ -437,10 +541,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $site )
-			return '<meta name="twitter:site" content="' . \esc_attr( $site ) . '" />' . "\r\n";
-
-		return '';
+		return $site ? $this->render_element( [
+			'name'    => 'twitter:site',
+			'content' => $site,
+		] ) : '';
 	}
 
 	/**
@@ -460,21 +564,21 @@ class Render extends Admin_Init {
 		/**
 		 * @since 2.3.0
 		 * @since 2.7.0 Added output within filter.
-		 * @param string $twitter_page The Twitter page creator.
-		 * @param int    $id           The current page or term ID.
+		 * @param string $creator The Twitter page creator.
+		 * @param int    $id      The current page or term ID.
 		 */
-		$twitter_page = (string) \apply_filters_ref_array(
+		$creator = (string) \apply_filters_ref_array(
 			'the_seo_framework_twittercreator_output',
 			[
-				$this->get_current_author_option( 'twitter_page' ) ?: $this->get_option( 'twitter_creator' ),
+				$this->get_current_post_author_meta_item( 'twitter_page' ) ?: $this->get_option( 'twitter_creator' ),
 				$this->get_the_real_ID(),
 			]
 		);
 
-		if ( $twitter_page )
-			return '<meta name="twitter:creator" content="' . \esc_attr( $twitter_page ) . '" />' . "\r\n";
-
-		return '';
+		return $creator ? $this->render_element( [
+			'name'    => 'twitter:creator',
+			'content' => $creator,
+		] ) : '';
 	}
 
 	/**
@@ -504,10 +608,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $title )
-			return '<meta name="twitter:title" content="' . \esc_attr( $title ) . '" />' . "\r\n";
-
-		return '';
+		return $title ? $this->render_element( [
+			'name'    => 'twitter:title',
+			'content' => $title,
+		] ) : '';
 	}
 
 	/**
@@ -537,10 +641,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $description )
-			return '<meta name="twitter:description" content="' . \esc_attr( $description ) . '" />' . "\r\n";
-
-		return '';
+		return $description ? $this->render_element( [
+			'name'    => 'twitter:description',
+			'content' => $description,
+		] ) : '';
 	}
 
 	/**
@@ -560,15 +664,27 @@ class Render extends Admin_Init {
 		$output = '';
 
 		foreach ( $this->get_image_details_from_cache( ! $this->get_option( 'multi_og_image' ) ) as $image ) {
-			$output .= '<meta name="twitter:image" content="' . \esc_attr( $image['url'] ) . '" />' . "\r\n";
+			$output .= $this->render_element( [
+				'name'    => 'twitter:image',
+				'content' => $image['url'],
+			] );
 
 			if ( $image['height'] && $image['width'] ) {
-				$output .= '<meta name="twitter:image:width" content="' . \esc_attr( $image['width'] ) . '" />' . "\r\n";
-				$output .= '<meta name="twitter:image:height" content="' . \esc_attr( $image['height'] ) . '" />' . "\r\n";
+				$output .= $this->render_element( [
+					'name'    => 'twitter:image:width',
+					'content' => $image['width'],
+				] );
+				$output .= $this->render_element( [
+					'name'    => 'twitter:image:height',
+					'content' => $image['height'],
+				] );
 			}
 
 			if ( $image['alt'] ) {
-				$output .= '<meta name="twitter:image:alt" content="' . \esc_attr( $image['alt'] ) . '" />' . "\r\n";
+				$output .= $this->render_element( [
+					'name'    => 'twitter:image:alt',
+					'content' => $image['alt'],
+				] );
 			}
 
 			// Only grab a single image. Twitter grabs the final (less favorable) image otherwise.
@@ -587,14 +703,12 @@ class Render extends Admin_Init {
 	 */
 	public function theme_color() {
 
-		$output = '';
-
 		$theme_color = $this->get_option( 'theme_color' );
 
-		if ( $theme_color )
-			$output = '<meta name="theme-color" content="' . \esc_attr( $theme_color ) . '" />' . "\r\n";
-
-		return $output;
+		return $theme_color ? $this->render_element( [
+			'name'    => 'theme-color',
+			'content' => $theme_color,
+		] ) : '';
 	}
 
 	/**
@@ -620,15 +734,15 @@ class Render extends Admin_Init {
 		$facebook_page = (string) \apply_filters_ref_array(
 			'the_seo_framework_facebookauthor_output',
 			[
-				$this->get_current_author_option( 'facebook_page' ) ?: $this->get_option( 'facebook_author' ),
+				$this->get_current_post_author_meta_item( 'facebook_page' ) ?: $this->get_option( 'facebook_author' ),
 				$this->get_the_real_ID(),
 			]
 		);
 
-		if ( $facebook_page )
-			return '<meta property="article:author" content="' . \esc_attr( \esc_url_raw( $facebook_page, [ 'https', 'http' ] ) ) . '" />' . "\r\n";
-
-		return '';
+		return $facebook_page ? $this->render_element( [
+			'property' => 'article:author',
+			'content'  => $facebook_page,
+		] ) : '';
 	}
 
 	/**
@@ -658,10 +772,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $publisher )
-			return '<meta property="article:publisher" content="' . \esc_attr( \esc_url_raw( $publisher, [ 'https', 'http' ] ) ) . '" />' . "\r\n";
-
-		return '';
+		return $publisher ? $this->render_element( [
+			'property' => 'article:publisher',
+			'content'  => $publisher,
+		] ) : '';
 	}
 
 	/**
@@ -689,10 +803,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $app_id )
-			return '<meta property="fb:app_id" content="' . \esc_attr( $app_id ) . '" />' . "\r\n";
-
-		return '';
+		return $app_id ? $this->render_element( [
+			'property' => 'fb:app_id',
+			'content'  => $app_id,
+		] ) : '';
 	}
 
 	/**
@@ -700,9 +814,9 @@ class Render extends Admin_Init {
 	 *
 	 * @since 2.2.2
 	 * @since 2.8.0 Returns empty on product pages.
-	 * @since 3.0.0 : 1. Now checks for 0000 timestamps.
-	 *                2. Now uses timestamp formats.
-	 *                3. Now uses GMT time.
+	 * @since 3.0.0 1. Now checks for 0000 timestamps.
+	 *              2. Now uses timestamp formats.
+	 *              3. Now uses GMT time.
 	 *
 	 * @return string The Article Publishing Time meta tag.
 	 */
@@ -732,60 +846,55 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $time )
-			return '<meta property="article:published_time" content="' . \esc_attr( $time ) . '" />' . "\r\n";
-
-		return '';
+		return $time ? $this->render_element( [
+			'property' => 'article:published_time',
+			'content'  => $time,
+		] ) : '';
 	}
 
 	/**
 	 * Renders Article Modified Time meta tag.
-	 * Also renders the Open Graph Updated Time meta tag if Open Graph tags are enabled.
 	 *
 	 * @since 2.2.2
 	 * @since 2.7.0 Listens to $this->get_the_real_ID() instead of WordPress Core ID determination.
 	 * @since 2.8.0 Returns empty on product pages.
-	 * @since 3.0.0 : 1. Now checks for 0000 timestamps.
-	 *                2. Now uses timestamp formats.
+	 * @since 3.0.0 1. Now checks for 0000 timestamps.
+	 *              2. Now uses timestamp formats.
+	 * @since 4.1.4 No longer renders the Open Graph Updated Time meta tag.
+	 * @see og_updated_time()
 	 *
-	 * @return string The Article Modified Time meta tag, and optionally the Open Graph Updated Time.
+	 * @return string The Article Modified Time meta tag
 	 */
 	public function article_modified_time() {
 
 		if ( ! $this->output_modified_time() ) return '';
 
-		$id = $this->get_the_real_ID();
+		$time = $this->get_modified_time();
 
-		$post              = \get_post( $id );
-		$post_modified_gmt = $post->post_modified_gmt;
+		return $time ? $this->render_element( [
+			'property' => 'article:modified_time',
+			'content'  => $time,
+		] ) : '';
+	}
 
-		if ( '0000-00-00 00:00:00' === $post_modified_gmt )
-			return '';
+	/**
+	 * Renders the Open Graph Updated Time meta tag.
+	 *
+	 * @since 4.1.4
+	 *
+	 * @return string The Article Modified Time meta tag, and optionally the Open Graph Updated Time.
+	 */
+	public function og_updated_time() {
 
-		/**
-		 * @since 2.3.0
-		 * @since 2.7.0 Added output within filter.
-		 * @param string $time The article modified time.
-		 * @param int    $id   The current page or term ID.
-		 */
-		$time = (string) \apply_filters_ref_array(
-			'the_seo_framework_modifiedtime_output',
-			[
-				$this->gmt2date( $this->get_timestamp_format(), $post_modified_gmt ),
-				$id,
-			]
-		);
+		if ( ! $this->use_og_tags() ) return '';
+		if ( ! $this->output_published_time() ) return '';
 
-		if ( $time ) {
-			$output = '<meta property="article:modified_time" content="' . \esc_attr( $time ) . '" />' . "\r\n";
+		$time = $this->get_modified_time();
 
-			if ( $this->use_og_tags() )
-				$output .= '<meta property="og:updated_time" content="' . \esc_attr( $time ) . '" />' . "\r\n";
-
-			return $output;
-		}
-
-		return '';
+		return $time ? $this->render_element( [
+			'property' => 'og:updated_time',
+			'content'  => $time,
+		] ) : '';
 	}
 
 	/**
@@ -824,11 +933,13 @@ class Render extends Admin_Init {
 			}
 		}
 
-		// TODO add esc_attr()? The URL is already safe for attribute usage... I'm not sure if that'll potentially break the URL.
-		if ( $url )
-			return '<link rel="canonical" href="' . $url . '" />' . PHP_EOL;
-
-		return '';
+		return $url ? $this->render_element(
+			[
+				'rel'  => 'canonical',
+				'href' => $url,
+			],
+			'link'
+		) : '';
 	}
 
 	/**
@@ -841,7 +952,6 @@ class Render extends Admin_Init {
 	 * @return string The LD+json Schema.org scripts.
 	 */
 	public function ld_json() {
-
 		/**
 		 * @since 2.6.0
 		 * @param string $json The JSON output. Must be escaped.
@@ -866,7 +976,6 @@ class Render extends Admin_Init {
 	 * @return string The Google Site Verification code meta tag.
 	 */
 	public function google_site_output() {
-
 		/**
 		 * @since 2.6.0
 		 * @param string $code The Google verification code.
@@ -880,10 +989,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $code )
-			return '<meta name="google-site-verification" content="' . \esc_attr( $code ) . '" />' . PHP_EOL;
-
-		return '';
+		return $code ? $this->render_element( [
+			'name'    => 'google-site-verification',
+			'content' => $code,
+		] ) : '';
 	}
 
 	/**
@@ -894,7 +1003,6 @@ class Render extends Admin_Init {
 	 * @return string The Bing Site Verification Code meta tag.
 	 */
 	public function bing_site_output() {
-
 		/**
 		 * @since 2.6.0
 		 * @param string $code The Bing verification code.
@@ -908,10 +1016,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $code )
-			return '<meta name="msvalidate.01" content="' . \esc_attr( $code ) . '" />' . PHP_EOL;
-
-		return '';
+		return $code ? $this->render_element( [
+			'name'    => 'msvalidate.01',
+			'content' => $code,
+		] ) : '';
 	}
 
 	/**
@@ -922,7 +1030,6 @@ class Render extends Admin_Init {
 	 * @return string The Yandex Site Verification code meta tag.
 	 */
 	public function yandex_site_output() {
-
 		/**
 		 * @since 2.6.0
 		 * @param string $code The Yandex verification code.
@@ -936,10 +1043,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $code )
-			return '<meta name="yandex-verification" content="' . \esc_attr( $code ) . '" />' . PHP_EOL;
-
-		return '';
+		return $code ? $this->render_element( [
+			'name'    => 'yandex-verification',
+			'content' => $code,
+		] ) : '';
 	}
 
 	/**
@@ -950,7 +1057,6 @@ class Render extends Admin_Init {
 	 * @return string The Baidu Site Verification code meta tag.
 	 */
 	public function baidu_site_output() {
-
 		/**
 		 * @since 4.0.5
 		 * @param string $code The Baidu verification code.
@@ -964,10 +1070,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $code )
-			return '<meta name="baidu-site-verification" content="' . \esc_attr( $code ) . '" />' . PHP_EOL;
-
-		return '';
+		return $code ? $this->render_element( [
+			'name'    => 'baidu-site-verification',
+			'content' => $code,
+		] ) : '';
 	}
 
 	/**
@@ -978,7 +1084,6 @@ class Render extends Admin_Init {
 	 * @return string The Pinterest Site Verification code meta tag.
 	 */
 	public function pint_site_output() {
-
 		/**
 		 * @since 2.6.0
 		 * @param string $code The Pinterest verification code.
@@ -992,10 +1097,10 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $code )
-			return '<meta name="p:domain_verify" content="' . \esc_attr( $code ) . '" />' . PHP_EOL;
-
-		return '';
+		return $code ? $this->render_element( [
+			'name'    => 'p:domain_verify',
+			'content' => $code,
+		] ) : '';
 	}
 
 	/**
@@ -1014,10 +1119,10 @@ class Render extends Admin_Init {
 
 		$meta = $this->get_robots_meta();
 
-		if ( empty( $meta ) )
-			return '';
-
-		return sprintf( '<meta name="robots" content="%s" />' . PHP_EOL, \esc_attr( implode( ',', $meta ) ) );
+		return $meta ? $this->render_element( [
+			'name'    => 'robots',
+			'content' => implode( ',', $meta ),
+		] ) : '';
 	}
 
 	/**
@@ -1029,20 +1134,19 @@ class Render extends Admin_Init {
 	 * @return array
 	 */
 	public function get_robots_meta() {
-
-		static $cache = null;
-
-		/**
-		 * @since 2.6.0
-		 * @param array $meta The robots meta.
-		 * @param int   $id   The current post or term ID.
-		 */
-		return isset( $cache ) ? $cache : $cache = (array) \apply_filters_ref_array(
-			'the_seo_framework_robots_meta',
-			[
-				$this->robots_meta(),
-				$this->get_the_real_ID(),
-			]
+		return memo() ?? memo(
+			/**
+			 * @since 2.6.0
+			 * @param array $meta The robots meta.
+			 * @param int   $id   The current post or term ID.
+			 */
+			(array) \apply_filters_ref_array(
+				'the_seo_framework_robots_meta',
+				[
+					$this->generate_robots_meta(),
+					$this->get_the_real_ID(),
+				]
+			)
 		);
 	}
 
@@ -1070,10 +1174,13 @@ class Render extends Admin_Init {
 			]
 		);
 
-		if ( $url )
-			return '<link rel="shortlink" href="' . $url . '" />' . PHP_EOL;
-
-		return '';
+		return $url ? $this->render_element(
+			[
+				'rel'  => 'shortlink',
+				'href' => $url,
+			],
+			'link'
+		) : '';
 	}
 
 	/**
@@ -1086,9 +1193,8 @@ class Render extends Admin_Init {
 	 */
 	public function paged_urls() {
 
-		$id = $this->get_the_real_ID();
-
 		$paged_urls = $this->get_paged_urls();
+		$id         = $this->get_the_real_ID();
 
 		/**
 		 * @since 2.6.0
@@ -1102,7 +1208,6 @@ class Render extends Admin_Init {
 				$id,
 			]
 		);
-
 		/**
 		 * @since 2.6.0
 		 * @param string $next The previous-page URL.
@@ -1116,13 +1221,20 @@ class Render extends Admin_Init {
 			]
 		);
 
-		$output = '';
-
-		if ( $prev )
-			$output .= '<link rel="prev" href="' . $prev . '" />' . PHP_EOL;
-
-		if ( $next )
-			$output .= '<link rel="next" href="' . $next . '" />' . PHP_EOL;
+		$output  = $prev ? $this->render_element(
+			[
+				'rel'  => 'prev',
+				'href' => $prev,
+			],
+			'link'
+		) : '';
+		$output .= $next ? $this->render_element(
+			[
+				'rel'  => 'next',
+				'href' => $next,
+			],
+			'link'
+		) : '';
 
 		return $output;
 	}
@@ -1133,60 +1245,65 @@ class Render extends Admin_Init {
 	 *
 	 * @since 2.9.2
 	 * @since 4.0.0 Added boot timers.
+	 * @since 4.2.0 1. The annotation is translatable again (regressed in 4.0.0).
+	 *              2. Is now a protected function.
+	 * @access private
 	 *
-	 * @param string $where  Determines the position of the indicator.
-	 *                       Accepts 'before' for before, anything else for after.
-	 * @param int    $timing Determines when the output started.
+	 * @param string $where                 Determines the position of the indicator.
+	 *                                      Accepts 'before' for before, anything else for after.
+	 * @param int    $meta_timer            Total meta time.
+	 * @param int    $bootstrap_timer       Total bootstrap time.
 	 * @return string The SEO Framework's HTML plugin indicator.
 	 */
-	public function get_plugin_indicator( $where = 'before', $timing = 0 ) {
+	protected function get_plugin_indicator( $where = 'before', $meta_timer = 0, $bootstrap_timer = 0 ) {
 
-		static $cache;
+		$cache = memo() ?? memo( [
+			/**
+			 * @since 2.0.0
+			 * @param bool $run Whether to run and show the plugin indicator.
+			 */
+			'run'        => (bool) \apply_filters( 'the_seo_framework_indicator', true ),
+			/**
+			 * @since 2.4.0
+			 * @param bool $show_timer Whether to show the generation time in the indicator.
+			 */
+			'show_timer' => (bool) \apply_filters( 'the_seo_framework_indicator_timing', true ),
+			'annotation' => trim( vsprintf(
+				/* translators: 1 = The SEO Framework, 2 = 'by Sybre Waaijer */
+				\esc_html__( '%1$s %2$s', 'autodescription' ),
+				[
+					'The SEO Framework',
+					/**
+					 * @since 2.4.0
+					 * @param bool $sybre Whether to show the author name in the indicator.
+					 */
+					\apply_filters( 'sybre_waaijer_<3', true ) // phpcs:ignore, WordPress.NamingConventions.ValidHookName -- Easter egg.
+						? \esc_html__( 'by Sybre Waaijer', 'autodescription' )
+						: '',
+				]
+			) ),
+		] );
 
-		if ( ! $cache ) {
-			$cache = [
-				/**
-				 * @since 2.0.0
-				 * @param bool $run Whether to run and show the plugin indicator.
-				 */
-				'run'        => (bool) \apply_filters( 'the_seo_framework_indicator', true ),
-				/**
-				 * @since 2.4.0
-				 * @param bool $sybre Whether to show the author name in the indicator.
-				 */
-				// phpcs:ignore, WordPress.NamingConventions.ValidHookName -- Easter egg.
-				'author'     => (bool) \apply_filters( 'sybre_waaijer_<3', true ) ? \esc_html__( 'by Sybre Waaijer', 'autodescription' ) : '',
-				/**
-				 * @since 2.4.0
-				 * @param bool $show_timer Whether to show the generation time in the indicator.
-				 */
-				'show_timer' => (bool) \apply_filters( 'the_seo_framework_indicator_timing', true ),
-			];
-		}
+		if ( ! $cache['run'] ) return '';
 
-		if ( false === $cache['run'] )
-			return '';
+		switch ( $where ) :
+			case 'before':
+				return "<!-- {$cache['annotation']} -->\n";
 
-		if ( 'before' === $where ) {
-			/* translators: 1 = The SEO Framework, 2 = 'by Sybre Waaijer */
-			$output = sprintf( '%1$s %2$s', 'The SEO Framework', $cache['author'] );
+			case 'after':
+			default:
+				if ( $cache['show_timer'] && $meta_timer && $bootstrap_timer ) {
+					$timers = sprintf(
+						' | %s meta | %s boot',
+						number_format( $meta_timer * 1e3, 2, null, '' ) . 'ms',
+						number_format( $bootstrap_timer * 1e3, 2, null, '' ) . 'ms'
+					);
+				} else {
+					$timers = '';
+				}
 
-			return sprintf( '<!-- %s -->', trim( $output ) ) . PHP_EOL;
-		} else {
-			if ( $cache['show_timer'] && $timing ) {
-				$timers = sprintf(
-					' | %s meta | %s boot',
-					number_format( ( microtime( true ) - $timing ) * 1e3, 2 ) . 'ms',
-					number_format( _bootstrap_timer() * 1e3, 2 ) . 'ms'
-				);
-			} else {
-				$timers = '';
-			}
-			/* translators: 1 = The SEO Framework, 2 = 'by Sybre Waaijer */
-			$output = sprintf( '%1$s %2$s', 'The SEO Framework', $cache['author'] ) . $timers;
-
-			return sprintf( '<!-- / %s -->', trim( $output ) ) . PHP_EOL;
-		}
+				return "<!-- / {$cache['annotation']}{$timers} -->\n";
+		endswitch;
 	}
 
 	/**
@@ -1227,21 +1344,23 @@ class Render extends Admin_Init {
 	 *
 	 * @since 2.6.0
 	 * @since 3.1.0 Removed cache.
-	 * @since 3.1.4 : 1. Added filter.
-	 *                2. Reintroduced cache because of filter.
-	 * @TODO add facebook validation.
+	 * @since 3.1.4 1. Added filter.
+	 *              2. Reintroduced cache because of filter.
+	 * @TODO add facebook validation? -> Not all services that use OG tags are called Facebook.
+	 *       And not all of those services require the same standards as Facebook.
 	 *
 	 * @return bool
 	 */
 	public function use_og_tags() {
-		static $cache;
-		/**
-		 * @since 3.1.4
-		 * @param bool $use
-		 */
-		return isset( $cache ) ? $cache : $cache = (bool) \apply_filters(
-			'the_seo_framework_use_og_tags',
-			(bool) $this->get_option( 'og_tags' )
+		return memo() ?? memo(
+			/**
+			 * @since 3.1.4
+			 * @param bool $use
+			 */
+			(bool) \apply_filters(
+				'the_seo_framework_use_og_tags',
+				(bool) $this->get_option( 'og_tags' )
+			)
 		);
 	}
 
@@ -1251,20 +1370,17 @@ class Render extends Admin_Init {
 	 *
 	 * @since 2.6.0
 	 * @since 3.1.0 Removed cache.
-	 * @since 3.1.4 : 1. Added filter.
-	 *                2. Reintroduced cache because of filter.
+	 * @since 3.1.4 1. Added filter.
+	 *              2. Reintroduced cache because of filter.
 	 *
 	 * @return bool
 	 */
 	public function use_facebook_tags() {
-		static $cache;
-		/**
-		 * @since 3.1.4
-		 * @param bool $use
-		 */
-		return isset( $cache ) ? $cache : $cache = (bool) \apply_filters(
-			'the_seo_framework_use_facebook_tags',
-			(bool) $this->get_option( 'facebook_tags' )
+		return memo() ?? memo(
+			(bool) \apply_filters(
+				'the_seo_framework_use_facebook_tags',
+				(bool) $this->get_option( 'facebook_tags' )
+			)
 		);
 	}
 
@@ -1279,14 +1395,11 @@ class Render extends Admin_Init {
 	 * @return bool
 	 */
 	public function use_twitter_tags() {
-		static $cache;
-		/**
-		 * @since 3.1.4
-		 * @param bool $use
-		 */
-		return isset( $cache ) ? $cache : $cache = (bool) \apply_filters(
-			'the_seo_framework_use_twitter_tags',
-			$this->get_option( 'twitter_tags' ) && $this->get_current_twitter_card_type()
+		return memo() ?? memo(
+			(bool) \apply_filters(
+				'the_seo_framework_use_twitter_tags',
+				$this->get_option( 'twitter_tags' ) && $this->get_current_twitter_card_type()
+			)
 		);
 	}
 }

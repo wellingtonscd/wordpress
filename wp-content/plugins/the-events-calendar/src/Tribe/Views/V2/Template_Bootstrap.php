@@ -57,8 +57,6 @@ class Template_Bootstrap {
 	/**
 	 * Disables the Views V1 implementation of a Template Hijack
 	 *
-	 * @todo   use a better method to remove Views V1 from been initialized
-	 *
 	 * @since  4.9.2
 	 *
 	 * @return void
@@ -66,7 +64,6 @@ class Template_Bootstrap {
 	public function disable_v1() {
 		remove_filter( 'tribe_events_before_html', [ TEC::instance(), 'before_html_data_wrapper' ] );
 		remove_filter( 'tribe_events_after_html', [ TEC::instance(), 'after_html_data_wrapper' ] );
-		remove_action( 'plugins_loaded', [ V1_Event_Templates::class, 'init' ] );
 	}
 
 	/**
@@ -116,7 +113,12 @@ class Template_Bootstrap {
 	 * @return bool Whether the current request is for the single event template or not.
 	 */
 	public function is_single_event() {
+		if( ! did_action( 'parse_query' ) ) {
+			return false;
+		}
+
 		$conditions = [
+			tribe_context()->get( 'tec_post_type' ),
 			is_singular( TEC::POSTTYPE ),
 			'single-event' === tribe_context()->get( 'view' ),
 		];
@@ -211,9 +213,9 @@ class Template_Bootstrap {
 		}
 
 		$should_display_single = (
-			'single-event' === $view_slug
+			$this->is_single_event()
 			&& ! tribe_is_showing_all()
-			&& ! V1_Templates::is_embed()
+			&& ! is_embed()
 		);
 
 		/**
@@ -260,7 +262,19 @@ class Template_Bootstrap {
 			$html = View::make( $view_slug, $context )->get_html();
 		}
 
-		return $html;
+
+		/**
+		 * Filters the HTML for the view before we do any other logic around that.
+		 *
+		 * @since 5.0.0
+		 *
+		 * @param string          $html      The html to be displayed.
+		 * @param \Tribe__Context $context   Tribe context used to setup the view.
+		 * @param string          $view_slug The slug of the View that we've built,
+		 *                                   based on the context but possibly altered in the build process.
+		 * @param \WP_Query       $query     The current WP Query object.
+		 */
+		return apply_filters( 'tribe_events_views_v2_bootstrap_html', $html, $context, $view_slug, $query );
 	}
 
 	/**
@@ -338,6 +352,10 @@ class Template_Bootstrap {
 	 * @return string Path to the File that initializes the template
 	 */
 	public function filter_template_include( $template ) {
+		if ( tec_is_full_site_editor() ) {
+			return $template;
+		}
+
 		$query   = tribe_get_global_query_object();
 		$context = tribe_context();
 
@@ -368,8 +386,7 @@ class Template_Bootstrap {
 			return $template;
 		}
 
-		$view_slug = $context->get( 'view' );
-		$is_embed  = V1_Templates::is_embed() || 'embed' === $view_slug;
+		$is_embed  = is_embed() || 'embed' === $context->get( 'view' );
 
 		if ( $is_embed ) {
 			return $this->get_v1_embed_template_path();
@@ -387,16 +404,16 @@ class Template_Bootstrap {
 	 */
 	public function filter_add_body_classes( $classes ) {
 		$setting  = $this->get_template_setting();
-		$template = $this->get_template_object()->get_path();
+		$active_theme = wp_get_theme();
 
 		if ( 'page' !== $setting ) {
 			return $classes;
 		}
 
-		$classes[] = 'page-template-' . sanitize_title( $template );
+		$classes[] = 'page-template-' . sanitize_title( $active_theme );
 
-		if ( ! is_tax() ) {
-			$key = array_search( 'archive', $classes );
+		if ( ! get_queried_object() instanceof \WP_Term ) {
+			$key = array_search( 'archive', $classes, true );
 
 			if ( false !== $key ) {
 				unset( $classes[ $key ] );

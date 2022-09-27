@@ -88,6 +88,10 @@ class Tribe__Ajax__Dropdown {
 			}
 		}
 
+		foreach ( $results as $result ) {
+			$result->text = wp_specialchars_decode( wp_kses( $result->text, [] ) );
+		}
+
 		$data['results']    = $results;
 		$data['taxonomies'] = get_taxonomies();
 
@@ -97,7 +101,7 @@ class Tribe__Ajax__Dropdown {
 	/**
 	 * Search for Posts using Select2
 	 *
-	 * @since  TBD
+	 * @since  4.12.17
 	 *
 	 * @param string|array<string,mixed> $search   Search string from Select2.
 	 * @param int                        $page     Page we want when we're dealing with pagination.
@@ -130,7 +134,7 @@ class Tribe__Ajax__Dropdown {
 	/**
 	 * Formats a given array of posts to be displayed into the Dropdown.js module with SelectWoo.
 	 *
-	 * @since TBD
+	 * @since 4.12.17
 	 *
 	 * @param array<WP_Post>    $posts
 	 * @param null|int $selected
@@ -144,7 +148,7 @@ class Tribe__Ajax__Dropdown {
 			'pagination' => $pagination,
 		];
 
-		// Skip when we dont have posts
+		// Skip when we don't have posts
 		if ( empty( $posts ) ) {
 			return $data;
 		}
@@ -271,7 +275,7 @@ class Tribe__Ajax__Dropdown {
 		if ( has_filter( $filter ) ) {
 			$data = apply_filters( $filter, [], $args->search, $args->page, $args->args, $args->source );
 		} else {
-			$data = call_user_func_array( [ $this, $args->source ], (array) $args );
+			$data = call_user_func_array( [ $this, $args->source ], array_values( (array) $args ) );
 		}
 
 		// If we've got a empty dataset we return an error.

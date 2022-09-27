@@ -37,10 +37,49 @@ class Manager {
 	 * The name of the Tribe option the default mobile Views v2 slug will live in.
 	 *
 	 * @since 4.9.11 Use v1 option.
+	 * @deprecated 5.12.3 Moved to ECP.
 	 *
 	 * @var string
 	 */
 	public static $option_mobile_default = 'mobile_default_view';
+
+	/**
+	 * Registration objects for auto-registered views.
+	 *
+	 * @since 5.7.0
+	 *
+	 * @var array
+	 */
+	private $view_registration = [];
+
+	/**
+	 * Registers a view such that sensible defaults are registered and hooked.
+	 *
+	 * @since 5.7.0
+	 * @since 5.10.0 Added optional route slug parameter to decouple from the view slug.
+	 *
+	 * @param string $slug View slug for locating the view file.
+	 * @param string $name View name.
+	 * @param string $class View class.
+	 * @param int $priority View registration priority.
+	 * @param string $route_slug The slug applied to the route for this view.
+	 *
+	 * @return View_Register
+	 */
+	public function register_view( $slug, $name, $class, $priority = 30, $route_slug = null ) {
+		return $this->view_registration[ $slug ] = new View_Register( $slug, $name, $class, $priority, $route_slug );
+	}
+
+	/**
+	 * Gets all generated View_Register objects.
+	 *
+	 * @since 5.7.0
+	 *
+	 * @return array
+	 */
+	public function get_view_registration_objects() {
+		return $this->view_registration;
+	}
 
 	/**
 	 * Returns an associative array of Views currently registered.
@@ -75,31 +114,27 @@ class Manager {
 	}
 
 	/**
-	 * Get the class name for the default registered view.
-	 *
-	 * The use of the `wp_is_mobile` function is not about screen width, but about payloads and how "heavy" a page is.
-	 * All the Views are responsive, what we want to achieve here is serving users a version of the View that is
-	 * less "heavy" on mobile devices (limited CPU and connection capabilities).
-	 * This allows users to, as an example, serve the Month View to desktop users and the day view to mobile users.
+	 * Get the slug for the default registered view.
 	 *
 	 * @since  4.9.4
 	 *
-	 * @param string|null $type The type of default View to return, either 'desktop' or 'mobile'; defaults to `mobile`.
+	 * @param string|null $type The type of default View to return, either 'desktop' or 'mobile'.
 	 *
-	 * @return string The default View slug, this value could be different depending on the requested `$type` or
-	 *                the context.
+	 * @return string The default View slug.
 	 *
-	 * @see wp_is_mobile()
-	 * @link https://developer.wordpress.org/reference/functions/wp_is_mobile/
 	 */
 	public function get_default_view_option( $type = null ) {
-		if ( null === $type ) {
-			$type = wp_is_mobile() ? 'mobile' : 'desktop';
-		}
+		$default_view = tribe_get_option( static::$option_default, 'default' );
 
-		return ( 'mobile' === $type )
-			? (string) tribe_get_option( static::$option_mobile_default, 'default' )
-			: (string) tribe_get_option( static::$option_default, 'default' );
+		/**
+		 * Allow others to hook in and alter the default view - ECP does so to allow a different view for mobile.
+		 *
+		 * @since 5.12.3
+		 *
+		 * @param string $default_view The view slug for the default view.
+		 * @param string|null $type The type of default View to return, either 'desktop' or 'mobile'.
+		 */
+		return apply_filters( 'tec_events_default_view', $default_view, $type );
 	}
 
 	/**
@@ -131,13 +166,32 @@ class Manager {
 	}
 
 	/**
+	 * Get the slug for the default registered view.
+	 *
+	 * @since 6.0.0
+	 *
+	 * @return string
+	 */
+	public function get_default_view_slug() {
+		$view = $this->get_default_view();
+
+		if ( ! $view ) {
+			return 'month';
+		}
+
+		return tribe( $view )->get_slug();
+	}
+
+	/**
 	 * Returns an associative array of Views currently registered that are publicly visible.
 	 *
 	 * @since  4.9.4
 	 *
+	 * @param bool $is_enabled Should only return enabled views or all publicly visible ones.
+	 *
 	 * @return array An array in the shape `[ <slug> => <View Class> ]`.
 	 */
-	public function get_publicly_visible_views() {
+	public function get_publicly_visible_views( bool $is_enabled = true ) {
 		$views = $this->get_registered_views();
 
 		/*
@@ -149,8 +203,8 @@ class Manager {
 
 		$views = array_filter(
 			$views,
-			static function ( $view_class, $slug ) use ( $enabled_views ) {
-				return in_array( $slug, $enabled_views, true )
+			static function ( $view_class, $slug ) use ( $enabled_views, $is_enabled ) {
+				return ( ! $is_enabled || in_array( $slug, $enabled_views, true ) )
 				       && (bool) call_user_func( [ $view_class, 'is_publicly_visible' ] );
 			},
 			ARRAY_FILTER_USE_BOTH
@@ -349,7 +403,7 @@ class Manager {
 		$domain = apply_filters( "tribe_events_views_v2_manager_{$slug}_view_label_domain", $domain, $view_class );
 
 		/**
-		 * Pass by the translation engine, dont remove.
+		 * Pass by the translation engine, don't remove.
 		 */
 		$label = __( $label, $domain );
 

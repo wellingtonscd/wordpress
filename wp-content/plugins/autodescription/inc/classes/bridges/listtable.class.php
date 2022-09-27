@@ -7,7 +7,7 @@ namespace The_SEO_Framework\Bridges;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -125,7 +125,7 @@ abstract class ListTable {
 		$pto       = $post_type ? \get_post_type_object( $post_type ) : false;
 
 		// TODO shouldn't we just use `edit_post`? See _output_column_contents_for_post && get_post_type_capabilities
-		if ( $pto && \current_user_can( 'edit_' . $pto->capability_type, (int) $_POST['post_ID'] ) )
+		if ( $pto && \current_user_can( "edit_{$pto->capability_type}", (int) $_POST['post_ID'] ) )
 			$this->init_columns_ajax();
 	}
 
@@ -142,9 +142,7 @@ abstract class ListTable {
 		|| empty( $_POST['tax_ID'] ) )
 			return;
 
-		$tax_id = (int) $_POST['tax_ID'];
-
-		if ( \current_user_can( 'edit_term', $tax_id ) )
+		if ( \current_user_can( 'edit_term', (int) $_POST['tax_ID'] ) )
 			$this->init_columns_ajax();
 	}
 
@@ -157,18 +155,18 @@ abstract class ListTable {
 	 */
 	private function init_columns( $screen ) {
 
-		if ( ! \the_seo_framework()->is_wp_lists_edit()
+		if ( ! \tsf()->is_wp_lists_edit()
 		|| empty( $screen->id ) )
 			return;
 
-		$post_type = isset( $screen->post_type ) ? $screen->post_type : '';
-		$taxonomy  = isset( $screen->taxonomy ) ? $screen->taxonomy : '';
+		$post_type = $screen->post_type ?? '';
+		$taxonomy  = $screen->taxonomy ?? '';
 
 		if ( $taxonomy ) {
-			if ( ! \the_seo_framework()->is_taxonomy_supported( $taxonomy ) )
+			if ( ! \tsf()->is_taxonomy_supported( $taxonomy ) )
 				return;
 		} else {
-			if ( ! \the_seo_framework()->is_post_type_supported( $post_type ) )
+			if ( ! \tsf()->is_post_type_supported( $post_type ) )
 				return;
 		}
 
@@ -176,9 +174,9 @@ abstract class ListTable {
 		$this->taxonomy  = $taxonomy;
 
 		if ( $taxonomy )
-			\add_filter( 'manage_' . $taxonomy . '_custom_column', [ $this, '_output_column_contents_for_term' ], 1, 3 );
+			\add_filter( "manage_{$taxonomy}_custom_column", [ $this, '_output_column_contents_for_term' ], 1, 3 );
 
-		\add_filter( 'manage_' . $screen->id . '_columns', [ $this, '_add_column' ], 10, 1 );
+		\add_filter( "manage_{$screen->id}_columns", [ $this, '_add_column' ], 10, 1 );
 		/**
 		 * Always load pages and posts.
 		 * Many CPT plugins rely on these.
@@ -202,15 +200,15 @@ abstract class ListTable {
 		$taxonomy  = isset( $_POST['taxonomy'] ) ? stripslashes( $_POST['taxonomy'] ) : '';
 		$post_type = isset( $_POST['post_type'] ) ? stripslashes( $_POST['post_type'] ) : '';
 
-		//? /wp-admin/js/inline-edit-tax.js doesn't send post_type, instead, it sends tax_type, which is the same.
+		// /wp-admin/js/inline-edit-tax.js doesn't send post_type, instead, it sends tax_type, which is the same.
 		$post_type = $post_type
 				?: ( isset( $_POST['tax_type'] ) ? stripslashes( $_POST['tax_type'] ) : '' );
 
 		if ( $taxonomy ) {
-			if ( ! \the_seo_framework()->is_taxonomy_supported( $taxonomy ) )
+			if ( ! \tsf()->is_taxonomy_supported( $taxonomy ) )
 				return;
 		} else {
-			if ( ! \the_seo_framework()->is_post_type_supported( $post_type ) )
+			if ( ! \tsf()->is_post_type_supported( $post_type ) )
 				return;
 		}
 
@@ -222,11 +220,11 @@ abstract class ListTable {
 
 		// Not elseif; either request.
 		if ( $taxonomy )
-			\add_filter( 'manage_' . $taxonomy . '_custom_column', [ $this, '_output_column_contents_for_term' ], 1, 3 );
+			\add_filter( "manage_{$taxonomy}_custom_column", [ $this, '_output_column_contents_for_term' ], 1, 3 );
 
 		if ( $screen_id ) {
 			// Everything but inline-save-tax action.
-			\add_filter( 'manage_' . $screen_id . '_columns', [ $this, '_add_column' ], 10, 1 );
+			\add_filter( "manage_{$screen_id}_columns", [ $this, '_add_column' ], 10, 1 );
 
 			/**
 			 * Always load pages and posts.
@@ -239,9 +237,9 @@ abstract class ListTable {
 			 * Action "inline-save-tax" does not POST 'screen'.
 			 *
 			 * @see WP Core wp_ajax_inline_save_tax():
-			 *    `_get_list_table( 'WP_Terms_List_Table', array( 'screen' => 'edit-' . $taxonomy ) );`
+			 *    `_get_list_table( 'WP_Terms_List_Table', array( 'screen' => "edit-$taxonomy" ) );`
 			 */
-			\add_filter( 'manage_edit-' . $taxonomy . '_columns', [ $this, '_add_column' ], 1, 1 );
+			\add_filter( "manage_edit-{$taxonomy}_columns", [ $this, '_add_column' ], 1, 1 );
 		}
 		// phpcs:enable, WordPress.Security.NonceVerification
 	}

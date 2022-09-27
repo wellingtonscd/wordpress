@@ -38,12 +38,206 @@ class Tribe__Assets {
 	public function __construct() {
 		// Hook the actual registering of.
 		add_action( 'init', [ $this, 'register_in_wp' ], 1, 0 );
+		add_filter( 'script_loader_tag', [ $this, 'filter_tag_async_defer' ], 50, 2 );
+		add_filter( 'script_loader_tag', [ $this, 'filter_modify_to_module' ], 50, 2 );
+		add_filter( 'script_loader_tag', [ $this, 'filter_print_before_after_script' ], 100, 2 );
+
+		// Enqueue late.
+		add_filter( 'script_loader_tag', [ $this, 'filter_add_localization_data' ], 500, 2 );
+	}
+
+	/**
+	 * Depending on how certain scripts are loaded and how much cross-compatibility is required we need to be able to
+	 * create noConflict backups and restore other scripts, which normally need to be printed directly on the scripts.
+	 *
+	 * @since 5.0.0
+	 *
+	 * @param string $tag    Tag we are filtering.
+	 * @param string $handle Which is the ID/Handle of the tag we are about to print.
+	 *
+	 * @return string Script tag with the before and after strings attached to it.
+	 */
+	public function filter_print_before_after_script( $tag, $handle ) : string {
+		// Only filter for our own filters.
+		if ( ! $asset = $this->get( $handle ) ) {
+			return $tag;
+		}
+
+		// Bail when not dealing with JS assets.
+		if ( 'js' !== $asset->type ) {
+			return $tag;
+		}
+
+		// Only go forward if there is any print before or after.
+		if ( empty( $asset->print_before ) && empty( $asset->print_after ) ) {
+			return $tag;
+		}
+
+		$before = '';
+		if ( ! empty( $asset->print_before ) ) {
+			$before = (string) ( is_callable( $asset->print_before ) ? call_user_func( $asset->print_before, $asset ) : $asset->print_before );
+		}
+
+		$after = '';
+		if ( ! empty( $asset->print_after ) ) {
+			$after = (string) ( is_callable( $asset->print_after ) ? call_user_func( $asset->print_after, $asset ) : $asset->print_after );
+		}
+
+		return $before . $tag . $after;
+	}
+
+	/**
+	 * Handles adding localization data, when attached to `script_loader_tag` which allows dependencies to load in their
+	 * localization data as well.
+	 *
+	 * @since 4.13.0
+	 *
+	 * @param string $tag    Tag we are filtering.
+	 * @param string $handle Which is the ID/Handle of the tag we are about to print.
+	 *
+	 * @return string Script tag with the localization variable HTML attached to it.
+	 */
+	public function filter_add_localization_data( $tag, $handle ) {
+		// Only filter for own filters.
+		if ( ! $asset = $this->get( $handle ) ) {
+			return $tag;
+		}
+
+		// Bail when not dealing with JS assets.
+		if ( 'js' !== $asset->type ) {
+			return $tag;
+		}
+
+		// Only localize on JS and if we have data.
+		if ( empty( $asset->localize ) ) {
+			return $tag;
+		}
+
+		global $wp_scripts;
+
+		// Makes sure we have an Array of Localize data.
+		if ( is_object( $asset->localize ) ) {
+			$localization = [ $asset->localize ];
+		} else {
+			$localization = (array) $asset->localize;
+		}
+
+		/**
+		 * Check to ensure we haven't already localized it before.
+		 *
+		 * @since 4.5.8
+		 */
+		foreach ( $localization as $localize ) {
+			if ( in_array( $localize->name, $this->localized ) ) {
+				continue;
+			}
+
+			// If we have a Callable as the Localize data we execute it.
+			if ( is_callable( $localize->data ) ) {
+				$localize->data = call_user_func( $localize->data, $asset );
+			}
+
+			wp_localize_script( $asset->slug, $localize->name, $localize->data );
+
+			$this->localized[] = $localize->name;
+		}
+
+		// Fetch the HTML for all the localized data.
+		ob_start();
+		$wp_scripts->print_extra_script( $asset->slug, true );
+		$localization_html = ob_get_clean();
+
+		// After printing it remove data;|
+		$wp_scripts->add_data( $asset->slug, 'data', '' );
+
+		return $localization_html . $tag;
+	}
+
+	/**
+	 * Filters the Script tags to attach Async and/or Defer based on the rules we set in our Asset class.
+	 *
+	 * @since 4.13.0
+	 *
+	 * @param string $tag    Tag we are filtering.
+	 * @param string $handle Which is the ID/Handle of the tag we are about to print.
+	 *
+	 * @return string Script tag with the defer and/or async attached.
+	 */
+	public function filter_tag_async_defer( $tag, $handle ) {
+		// Only filter for our own filters.
+		if ( ! $asset = $this->get( $handle ) ) {
+			return $tag;
+		}
+
+		// Bail when not dealing with JS assets.
+		if ( 'js' !== $asset->type ) {
+			return $tag;
+		}
+
+		// When async and defer are false we bail with the tag.
+		if ( ! $asset->defer && ! $asset->async ) {
+			return $tag;
+		}
+
+		$tag_has_async = false !== strpos( $tag, ' async ' );
+		$tag_has_defer = false !== strpos( $tag, ' defer ' );
+		$replacement = '<script ';
+
+		if ( $asset->async && ! $tag_has_async ) {
+			$replacement .= 'async ';
+		}
+
+		if ( $asset->defer && ! $tag_has_defer ) {
+			$replacement .= 'defer ';
+		}
+
+
+		return str_replace( '<script ', $replacement, $tag );
+	}
+
+	/**
+	 * Filters the Script tags to attach type=module based on the rules we set in our Asset class.
+	 *
+	 * @since 4.14.14
+	 *
+	 * @param string $tag    Tag we are filtering.
+	 * @param string $handle Which is the ID/Handle of the tag we are about to print.
+	 *
+	 * @return string Script tag with the type=module
+	 */
+	public function filter_modify_to_module( $tag, $handle ) {
+		// Only filter for own own filters.
+		if ( ! $asset = $this->get( $handle ) ) {
+			return $tag;
+		}
+
+		// Bail when not dealing with JS assets.
+		if ( 'js' !== $asset->type ) {
+			return $tag;
+		}
+
+		// When not module we bail with the tag.
+		if ( ! $asset->module ) {
+			return $tag;
+		}
+
+		// These themes already have the `type='text/javascript'` added by WordPress core.
+		if ( ! current_theme_supports( 'html5', 'script' ) ) {
+			$replacement = 'type="module"';
+
+			return str_replace( "type='text/javascript'", $replacement, $tag );
+		}
+
+		$replacement = '<script type="module" ';
+
+		return str_replace( '<script ', $replacement, $tag );
 	}
 
 	/**
 	 * Register the Assets on the correct hooks.
 	 *
 	 * @since 4.3
+	 * @param array|object|null $assets Array of asset objects, single asset object, or null.
 	 *
 	 * @return void
 	 */
@@ -68,7 +262,15 @@ class Tribe__Assets {
 					continue;
 				}
 
-				wp_register_script( $asset->slug, $asset->url, $asset->deps, $asset->version, $asset->in_footer );
+				$dependencies = $asset->deps;
+
+				// If the asset is a callable, we call the function,
+				// passing it the asset and expecting back an array of dependencies.
+				if ( is_callable( $asset->deps ) ) {
+					$dependencies = call_user_func( $asset->deps, [ $asset ] );
+				}
+
+				wp_register_script( $asset->slug, $asset->url, $dependencies, $asset->version, $asset->in_footer );
 
 				// Register that this asset is actually registered on the WP methods.
 				$asset->is_registered = wp_script_is( $asset->slug, 'registered' );
@@ -225,43 +427,28 @@ class Tribe__Assets {
 			}
 
 			if ( 'js' === $asset->type ) {
-				wp_enqueue_script( $asset->slug );
-
-				// Only localize on JS and if we have data.
-				if ( ! empty( $asset->localize ) ) {
-					// Makes sure we have an Array of Localize data.
-					if ( is_object( $asset->localize ) ) {
-						$localization = [ $asset->localize ];
-					} else {
-						$localization = (array) $asset->localize;
-					}
-
-					/**
-					 * Check to ensure we haven't already localized it before.
-					 *
-					 * @since 4.5.8
-					 */
-					foreach ( $localization as $localize ) {
-						if ( in_array( $localize->name, $this->localized ) ) {
-							continue;
-						}
-
-						// If we have a Callable as the Localize data we execute it.
-						if ( is_callable( $localize->data ) ) {
-							$localize->data = call_user_func( $localize->data, $asset );
-						}
-
-						wp_localize_script( $asset->slug, $localize->name, $localize->data );
-						$this->localized[] = $localize->name;
-					}
+				if ( $asset->print && ! $asset->already_printed ) {
+					$asset->already_printed = true;
+					wp_print_scripts( [ $asset->slug ] );
 				}
+				// We print first, and tell the system it was enqueued, WP is smart not to do it twice.
+				wp_enqueue_script( $asset->slug );
 
 				// If available, load the script translations.
 				if ( isset( $asset->translations['domain'], $asset->translations['path'] ) && function_exists( 'wp_set_script_translations' ) ) {
 					wp_set_script_translations( $asset->slug, $asset->translations['domain'], $asset->translations['path'] );
 				}
 			} else {
+				if ( $asset->print && ! $asset->already_printed ) {
+					$asset->already_printed = true;
+					wp_print_styles( [ $asset->slug ] );
+				}
+				// We print first, and tell the system it was enqueued, WP is smart not to do it twice.
 				wp_enqueue_style( $asset->slug );
+			}
+
+			if ( ! empty( $asset->after_enqueue ) && is_callable( $asset->after_enqueue ) ) {
+				call_user_func_array( $asset->after_enqueue, [ $asset ] );
 			}
 
 			$asset->already_enqueued = true;
@@ -373,7 +560,7 @@ class Tribe__Assets {
 	 * @param object            $origin    The main object for the plugin you are enqueueing the asset for.
 	 * @param string            $slug      Slug to save the asset - passes through `sanitize_title_with_dashes()`.
 	 * @param string            $file      The asset file to load (CSS or JS), including non-minified file extension.
-	 * @param array             $deps      The list of dependencies.
+	 * @param array             $deps      The list of dependencies or callable function that will return a list of dependencies.
 	 * @param string|array|null $action    The WordPress action(s) to enqueue on, such as `wp_enqueue_scripts`,
 	 *                                     `admin_enqueue_scripts`, or `login_enqueue_scripts`.
 	 * @param string|array      $arguments {
@@ -400,7 +587,7 @@ class Tribe__Assets {
 	 */
 	public function register( $origin, $slug, $file, $deps = [], $action = null, $arguments = [] ) {
 		// Prevent weird stuff here.
-		$slug = sanitize_title_with_dashes( $slug );
+		$slug = sanitize_key( $slug );
 
 		if ( $this->exists( $slug ) ) {
 			return $this->get( $slug );
@@ -439,8 +626,21 @@ class Tribe__Assets {
 			'groups'        => [],
 			'version'       => $version,
 			'media'         => 'all',
+
+			'print'         => false,
+
+			'async'         => false,
+			'defer'         => false,
+			'module'        => false,
+
+			// Print before and after.
+			'print_before'  => null,
+			'print_after'  => null,
+
 			'in_footer'     => true,
 			'is_registered' => false,
+
+			// Origin related params
 			'origin_path'   => null,
 			'origin_url'    => null,
 			'origin_name'   => null,
@@ -448,8 +648,14 @@ class Tribe__Assets {
 			// Bigger Variables at the end.
 			'localize'      => [],
 			'conditionals'  => [],
+
 			// Used to handle Translations handled in the JavaScript side of the Assets.
 			'translations'  => [],
+
+			// Execute after the asset is enqueued.
+			'after_enqueue'    => null,
+			'already_enqueued' => false,
+			'already_printed'  => false,
 		];
 
 		// Merge Arguments.
@@ -485,16 +691,6 @@ class Tribe__Assets {
 		}
 
 		/**
-		 * Deprecated filter to allow changing version based on the type of Asset.
-		 *
-		 * @todo remove on 4.6
-		 * @deprecated 4.3
-		 *
-		 * @param string $version
-		 */
-		$asset->version = apply_filters( "tribe_events_{$asset->type}_version", $asset->version );
-
-		/**
 		 * Filter to change version number on assets.
 		 *
 		 * @since 4.3
@@ -514,13 +710,13 @@ class Tribe__Assets {
 			$asset->priority = 1;
 		}
 
-		$is_vendor = strpos( $asset->file, 'vendor/' ) !== false ? true : false;
+		$is_vendor = strpos( $asset->file, 'vendor/' ) !== false || strpos( $asset->file, 'node_modules/' ) !== false ? true : false;
 
 		// Setup the actual URL.
 		if ( filter_var( $asset->file, FILTER_VALIDATE_URL ) ) {
 			$asset->url = $asset->file;
 		} else {
-			$asset->url = $this->maybe_get_min_file( tribe_resource_url( $asset->file, false, ( $is_vendor ? '' : null ), $origin ) );
+			$asset->url = static::maybe_get_min_file( tribe_resource_url( $asset->file, false, ( $is_vendor ? '' : null ), $origin ) );
 		}
 
 		// Parse the Localize asset arguments.
@@ -644,7 +840,7 @@ class Tribe__Assets {
 		if ( is_array( $slug ) ) {
 			$assets = [];
 			foreach ( $slug as $asset_slug ) {
-				$asset_slug = sanitize_title_with_dashes( $asset_slug );
+				$asset_slug = sanitize_key( $asset_slug );
 				// Skip empty assets.
 				if ( empty( $this->assets[ $asset_slug ] ) ) {
 					continue;
@@ -666,7 +862,7 @@ class Tribe__Assets {
 		}
 
 		// Prevent weird stuff here.
-		$slug = sanitize_title_with_dashes( $slug );
+		$slug = sanitize_key( $slug );
 
 		if ( ! empty( $this->assets[ $slug ] ) ) {
 			return $this->assets[ $slug ];

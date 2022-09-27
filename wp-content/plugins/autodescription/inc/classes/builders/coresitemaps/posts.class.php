@@ -8,7 +8,7 @@ namespace The_SEO_Framework\Builders\CoreSitemaps;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2020 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -40,21 +40,26 @@ class Posts extends \WP_Sitemaps_Posts {
 	 * Copied from parent and augmented slightly to return
 	 *
 	 * @since 4.1.2
+	 * @since 4.2.0 Renamed `$post_type` to `$object_subtype` to match parent class
+	 *              for PHP 8 named parameter support. (Backport WP 5.9)
 	 * @source \WP_Sitemaps_Posts\get_url_list()
 	 * @TEMP https://wordpress.slack.com/archives/CTKTGNJJW/p1604995479019700
 	 * @link <https://core.trac.wordpress.org/ticket/51860>
+	 * @link <https://core.trac.wordpress.org/changeset/51787>
 	 *
-	 * @param int    $page_num  Page of results.
-	 * @param string $post_type Optional. Post type name. Default empty.
+	 * @param int    $page_num       Page of results.
+	 * @param string $object_subtype Optional. Post type name. Default empty.
 	 * @return array Array of URLs for a sitemap.
 	 */
-	public function get_url_list( $page_num, $post_type = '' ) {
+	public function get_url_list( $page_num, $object_subtype = '' ) {
+		// Restores the more descriptive, specific name for use within this method.
+		$post_type = $object_subtype;
+
 		// Bail early if the queried post type is not supported.
 		$supported_types = $this->get_object_subtypes();
 
-		if ( ! isset( $supported_types[ $post_type ] ) ) {
+		if ( ! isset( $supported_types[ $post_type ] ) )
 			return [];
-		}
 
 		/**
 		 * Filters the posts URL list before it is generated.
@@ -75,9 +80,8 @@ class Posts extends \WP_Sitemaps_Posts {
 			$page_num
 		);
 
-		if ( null !== $url_list ) {
+		if ( null !== $url_list )
 			return $url_list;
-		}
 
 		$args          = $this->get_posts_query_args( $post_type );
 		$args['paged'] = $page_num;
@@ -89,7 +93,7 @@ class Posts extends \WP_Sitemaps_Posts {
 		/**
 		 * @augmented This differs from the inherented.
 		 */
-		$tsf              = \the_seo_framework();
+		$tsf              = \tsf();
 		$main             = Main::get_instance();
 		$show_modified    = (bool) $tsf->get_option( 'sitemaps_modified' );
 		$timestamp_format = $tsf->get_timestamp_format();
@@ -122,16 +126,19 @@ class Posts extends \WP_Sitemaps_Posts {
 							'order'        => 'DESC',
 							'offset'       => 0,
 						],
-						\OBJECT
+						OBJECT
 					);
-
-					$lastmod = isset( $latests_posts[0]->post_date_gmt ) ? $latests_posts[0]->post_date_gmt : '0000-00-00 00:00:00';
 
 					/**
 					 * @since 4.1.1
 					 * @param string $lastmod The lastmod time in SQL notation (`Y-m-d H:i:s`). Expected to explicitly follow that format!
 					 */
-					$sitemap_entry['lastmod'] = (string) \apply_filters( 'the_seo_framework_sitemap_blog_lastmod', $lastmod );
+					$sitemap_entry['lastmod'] = (string) \apply_filters_ref_array(
+						'the_seo_framework_sitemap_blog_lastmod',
+						[
+							$latests_posts[0]->post_date_gmt ?? '0000-00-00 00:00:00',
+						]
+					);
 				}
 
 				/**
@@ -146,7 +153,7 @@ class Posts extends \WP_Sitemaps_Posts {
 			}
 		}
 
-		foreach ( $query->posts as $post ) {
+		foreach ( $query->posts as $post ) :
 			/**
 			 * @augmented This if-statement prevents including the post in the sitemap when conditions apply.
 			 */
@@ -161,9 +168,9 @@ class Posts extends \WP_Sitemaps_Posts {
 			 * @augmented Adds lastmod to sitemap entry.
 			 */
 			if ( $show_modified ) {
-				$lastmod = isset( $post->post_modified_gmt ) ? $post->post_modified_gmt : false;
+				$lastmod = $post->post_modified_gmt ?? '0000-00-00 00:00:00';
 
-				if ( $lastmod && '0000-00-00 00:00:00' !== $lastmod )
+				if ( '0000-00-00 00:00:00' !== $lastmod )
 					$sitemap_entry['lastmod'] = $tsf->gmt2date( $timestamp_format, $lastmod );
 			}
 
@@ -178,7 +185,7 @@ class Posts extends \WP_Sitemaps_Posts {
 			 */
 			$sitemap_entry = \apply_filters( 'wp_sitemaps_posts_entry', $sitemap_entry, $post, $post_type );
 			$url_list[]    = $sitemap_entry;
-		}
+		endforeach;
 
 		return $url_list;
 	}

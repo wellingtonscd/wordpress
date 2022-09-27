@@ -8,6 +8,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	die( '-1' );
 }
 
+use Tribe__Date_Utils as Dates;
+use Tribe__Timezones as Timezones;
+
 if ( ! class_exists( 'Tribe__Events__API' ) ) {
 	class Tribe__Events__API {
 		public static $valid_venue_keys = [
@@ -459,14 +462,16 @@ if ( ! class_exists( 'Tribe__Events__API' ) ) {
 			}
 
 			// sanity check that start date < end date
-			$start_timestamp = strtotime( $data['EventStartDate'] );
-			$end_timestamp   = strtotime( $data['EventEndDate'] );
+			$timezone        = Timezones::build_timezone_object( $data['EventTimezone'] );
+			$start_timestamp = Dates::build_date_object( $data['EventStartDate'], $timezone )->getTimestamp();
+			$end_timestamp   = Dates::build_date_object( $data['EventEndDate'], $timezone )->getTimestamp();
 
 			if ( $start_timestamp > $end_timestamp ) {
 				$data['EventEndDate'] = $data['EventStartDate'];
+				$end_timestamp        = Dates::build_date_object( $data['EventStartDate'], $timezone )->getTimestamp();
 			}
 
-			$data['EventDuration'] = strtotime( $data['EventEndDate'] ) - $start_timestamp;
+			$data['EventDuration'] = $end_timestamp - $start_timestamp;
 
 			return $data;
 		}//end prepare_event_date_meta
@@ -479,12 +484,25 @@ if ( ! class_exists( 'Tribe__Events__API' ) ) {
 		 * range of cost values the tribe_events_event_costs filter hook should be
 		 * leveraged.
 		 *
-		 * @param $event_id
+		 * @since 5.8.2
+		 * @param array|string|int $cost Event cost.
+		 * @param int $event_id Event post ID.
+		 *
 		 */
-		public static function update_event_cost( $event_id ) {
+		public static function update_event_cost( $event_id, $cost = [] ) {
 			// Loads current event costs, on construct
 			// Tribe__Events__Tickets__Tickets->get_ticket_prices() adds them to this filter
-			$event_cost = (array) apply_filters( 'tribe_events_event_costs', [], $event_id );
+
+			/**
+			 * Allows filtering of the event cost and returns either an int or string
+			 * depending on whether the event cost is a single value or a price range
+			 *
+			 * @since 3.9
+			 *
+			 * @param array|string|int $cost Event cost.
+			 * @param int $event_id Event post ID.
+			 */
+			$event_cost = (array) apply_filters( 'tribe_events_event_costs', $cost, $event_id );
 
 			// Kill the old cost meta data
 			delete_post_meta( $event_id, '_EventCost' );

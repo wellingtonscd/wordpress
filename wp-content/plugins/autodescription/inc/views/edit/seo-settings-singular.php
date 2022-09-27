@@ -7,37 +7,37 @@
 // phpcs:disable, VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable -- includes.
 // phpcs:disable, WordPress.WP.GlobalVariablesOverride -- This isn't the global scope.
 
-use The_SEO_Framework\Bridges\PostSettings;
+use The_SEO_Framework\Bridges\PostSettings,
+	The_SEO_Framework\Interpreters\HTML,
+	The_SEO_Framework\Interpreters\Form;
 
-defined( 'THE_SEO_FRAMEWORK_PRESENT' ) and the_seo_framework()->_verify_include_secret( $_secret ) or die;
-
-// Fetch the required instance within this file.
-$instance = $this->get_view_instance( 'inpost', $instance );
+defined( 'THE_SEO_FRAMEWORK_PRESENT' ) and tsf()->_verify_include_secret( $_secret ) or die;
 
 // Setup default vars.
 $post_id = $this->get_the_real_ID(); // We also have access to object $post at the main call...
 
-$_generator_args = [
-	'id'       => $post_id,
-	'taxonomy' => '',
-];
+$_generator_args = [ 'id' => $post_id ];
 
-switch ( $instance ) :
+$_is_static_frontpage = $this->is_static_frontpage( $post_id );
+
+switch ( $this->get_view_instance( 'inpost', $instance ) ) :
 	case 'inpost_main':
+		$post_settings_class = PostSettings::class;
+
 		$default_tabs = [
 			'general'    => [
 				'name'     => __( 'General', 'autodescription' ),
-				'callback' => PostSettings::class . '::_general_tab',
+				'callback' => "$post_settings_class::_general_tab",
 				'dashicon' => 'admin-generic',
 			],
 			'social'     => [
 				'name'     => __( 'Social', 'autodescription' ),
-				'callback' => PostSettings::class . '::_social_tab',
+				'callback' => "$post_settings_class::_social_tab",
 				'dashicon' => 'share',
 			],
 			'visibility' => [
 				'name'     => __( 'Visibility', 'autodescription' ),
-				'callback' => PostSettings::class . '::_visibility_tab',
+				'callback' => "$post_settings_class::_visibility_tab",
 				'dashicon' => 'visibility',
 			],
 		];
@@ -58,7 +58,7 @@ switch ( $instance ) :
 		echo '</div>';
 		break;
 
-	case 'inpost_general':
+	case 'inpost_general_tab':
 		if ( $this->get_option( 'display_seo_bar_metabox' ) ) :
 			?>
 			<div class="tsf-flex-setting tsf-flex" id="tsf-doing-it-right-wrap">
@@ -82,25 +82,23 @@ switch ( $instance ) :
 			<?php
 		endif;
 
-		if ( $this->is_static_frontpage( $post_id ) ) {
+		if ( $_is_static_frontpage ) {
 			$_has_home_title = (bool) $this->escape_title( $this->get_option( 'homepage_title' ) );
 			$_has_home_desc  = (bool) $this->escape_title( $this->get_option( 'homepage_description' ) );
 
-			// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 			// When the homepage title is set, we can safely get the custom field.
 			$default_title     = $_has_home_title
-							   ? $this->get_custom_field_title( $_generator_args )
-							   : $this->get_filtered_raw_generated_title( $_generator_args );
+				? $this->get_custom_field_title( $_generator_args )
+				: $this->get_filtered_raw_generated_title( $_generator_args );
 			$title_ref_locked  = $_has_home_title;
 			$title_additions   = $this->get_home_title_additions();
 			$title_seplocation = $this->get_home_title_seplocation();
 
 			// When the homepage description is set, we can safely get the custom field.
 			$default_description    = $_has_home_desc
-									? $this->get_description_from_custom_field( $_generator_args )
-									: $this->get_generated_description( $_generator_args );
+				? $this->get_description_from_custom_field( $_generator_args )
+				: $this->get_generated_description( $_generator_args );
 			$description_ref_locked = $_has_home_desc;
-			// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 		} else {
 			$default_title     = $this->get_filtered_raw_generated_title( $_generator_args );
 			$title_ref_locked  = false;
@@ -119,24 +117,24 @@ switch ( $instance ) :
 						<div><strong><?php esc_html_e( 'Meta Title', 'autodescription' ); ?></strong></div>
 						<div>
 						<?php
-						$this->make_info(
+						HTML::make_info(
 							__( 'The meta title can be used to determine the title used on search engine result pages.', 'autodescription' ),
-							'https://support.google.com/webmasters/answer/35624#page-titles'
+							'https://developers.google.com/search/docs/advanced/appearance/title-link'
 						);
 						?>
 						</div>
 					</label>
 					<?php
 					$this->get_option( 'display_character_counter' )
-						and $this->output_character_counter_wrap( 'autodescription_title' );
+						and Form::output_character_counter_wrap( 'autodescription_title' );
 					$this->get_option( 'display_pixel_counter' )
-						and $this->output_pixel_counter_wrap( 'autodescription_title', 'title' );
+						and Form::output_pixel_counter_wrap( 'autodescription_title', 'title' );
 					?>
 				</div>
 			</div>
 			<div class="tsf-flex-setting-input tsf-flex">
 				<div class=tsf-title-wrap>
-					<input class="large-text" type="text" name="autodescription[_genesis_title]" id="autodescription_title" value="<?php echo $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_genesis_title', $post_id ) ); ?>" autocomplete=off />
+					<input class="large-text" type="text" name="autodescription[_genesis_title]" id="autodescription_title" value="<?= $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_genesis_title' ) ) ?>" autocomplete=off />
 					<?php
 					$this->output_js_title_elements(); // legacy
 					$this->output_js_title_data(
@@ -144,10 +142,10 @@ switch ( $instance ) :
 						[
 							'state' => [
 								'refTitleLocked'    => $title_ref_locked,
-								'defaultTitle'      => $default_title,
+								'defaultTitle'      => $this->s_title( $default_title ),
 								'addAdditions'      => $this->use_title_branding( $_generator_args ),
 								'useSocialTagline'  => $this->use_title_branding( $_generator_args, true ),
-								'additionValue'     => $this->s_title_raw( $title_additions ),
+								'additionValue'     => $this->s_title( $title_additions ),
 								'additionPlacement' => 'left' === $title_seplocation ? 'before' : 'after',
 								'hasLegacy'         => true,
 							],
@@ -159,7 +157,7 @@ switch ( $instance ) :
 				<div class="tsf-checkbox-wrapper">
 					<label for="autodescription_title_no_blogname">
 						<?php
-						if ( $this->is_static_frontpage( $post_id ) ) :
+						if ( $_is_static_frontpage ) :
 							// Disable the input, and hide the previously stored value.
 							?>
 							<input type="checkbox" id="autodescription_title_no_blogname" value="1" <?php checked( $this->get_post_meta_item( '_tsf_title_no_blogname' ) ); ?> disabled />
@@ -167,14 +165,14 @@ switch ( $instance ) :
 							<?php
 							esc_html_e( 'Remove the site title?', 'autodescription' );
 							echo ' ';
-							$this->make_info( __( 'For the homepage, this option must be managed on the SEO Settings page.', 'autodescription' ) );
+							HTML::make_info( __( 'For the homepage, this option must be managed on the SEO Settings page.', 'autodescription' ) );
 						else :
 							?>
 							<input type="checkbox" name="autodescription[_tsf_title_no_blogname]" id="autodescription_title_no_blogname" value="1" <?php checked( $this->get_post_meta_item( '_tsf_title_no_blogname' ) ); ?> />
 							<?php
 							esc_html_e( 'Remove the site title?', 'autodescription' );
 							echo ' ';
-							$this->make_info( __( 'Use this when you want to rearrange the title parts manually.', 'autodescription' ) );
+							HTML::make_info( __( 'Use this when you want to rearrange the title parts manually.', 'autodescription' ) );
 						endif;
 						?>
 					</label>
@@ -189,30 +187,30 @@ switch ( $instance ) :
 						<div><strong><?php esc_html_e( 'Meta Description', 'autodescription' ); ?></strong></div>
 						<div>
 						<?php
-						$this->make_info(
+						HTML::make_info(
 							__( 'The meta description can be used to determine the text used under the title on search engine results pages.', 'autodescription' ),
-							'https://support.google.com/webmasters/answer/35624#meta-descriptions'
+							'https://developers.google.com/search/docs/advanced/appearance/snippet'
 						);
 						?>
 						</div>
 					</label>
 					<?php
 					$this->get_option( 'display_character_counter' )
-						and $this->output_character_counter_wrap( 'autodescription_description' );
+						and Form::output_character_counter_wrap( 'autodescription_description' );
 					$this->get_option( 'display_pixel_counter' )
-						and $this->output_pixel_counter_wrap( 'autodescription_description', 'description' );
+						and Form::output_pixel_counter_wrap( 'autodescription_description', 'description' );
 					?>
 				</div>
 			</div>
 			<div class="tsf-flex-setting-input tsf-flex">
-				<textarea class="large-text" name="autodescription[_genesis_description]" id="autodescription_description" rows="4" cols="4" autocomplete=off><?php echo $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_genesis_description', $post_id ) ); ?></textarea>
+				<textarea class="large-text" name="autodescription[_genesis_description]" id="autodescription_description" rows="4" cols="4" autocomplete=off><?= $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_genesis_description' ) ) ?></textarea>
 				<?php
 				$this->output_js_description_elements(); // legacy
 				$this->output_js_description_data(
 					'autodescription_description',
 					[
 						'state' => [
-							'defaultDescription'   => $default_description,
+							'defaultDescription'   => $this->s_description( $default_description ),
 							'refDescriptionLocked' => $description_ref_locked,
 							'hasLegacy'            => true,
 						],
@@ -224,13 +222,14 @@ switch ( $instance ) :
 		<?php
 		break;
 
-	case 'inpost_visibility':
+	case 'inpost_visibility_tab':
 		$canonical             = $this->get_post_meta_item( '_genesis_canonical_uri' );
-		$canonical_placeholder = $this->create_canonical_url( $_generator_args );
+		$canonical_placeholder = $this->get_canonical_url( $_generator_args );
 
 		// Get robots defaults.
-		$r_defaults = $this->robots_meta(
+		$r_defaults = $this->generate_robots_meta(
 			$_generator_args,
+			[ 'noindex', 'nofollow', 'noarchive' ],
 			The_SEO_Framework\ROBOTS_IGNORE_SETTINGS | The_SEO_Framework\ROBOTS_IGNORE_PROTECTION
 		);
 		$r_settings = [
@@ -268,9 +267,9 @@ switch ( $instance ) :
 						<div><strong><?php esc_html_e( 'Canonical URL', 'autodescription' ); ?></strong></div>
 						<div>
 						<?php
-							$this->make_info(
+							HTML::make_info(
 								__( 'This urges search engines to go to the outputted URL.', 'autodescription' ),
-								'https://support.google.com/webmasters/answer/139066'
+								'https://developers.google.com/search/docs/advanced/crawling/consolidate-duplicate-urls'
 							);
 						?>
 						</div>
@@ -278,7 +277,7 @@ switch ( $instance ) :
 				</div>
 			</div>
 			<div class="tsf-flex-setting-input tsf-flex">
-				<input class="large-text" type="url" name="autodescription[_genesis_canonical_uri]" id="autodescription_canonical" placeholder="<?php echo esc_url( $canonical_placeholder ); ?>" value="<?php echo esc_url( $this->get_post_meta_item( '_genesis_canonical_uri' ) ); ?>" autocomplete=off />
+				<input class="large-text" type="url" name="autodescription[_genesis_canonical_uri]" id="autodescription_canonical" placeholder="<?= esc_url( $canonical_placeholder ) ?>" value="<?= esc_url( $this->get_post_meta_item( '_genesis_canonical_uri' ) ) ?>" autocomplete=off />
 			</div>
 		</div>
 
@@ -289,15 +288,15 @@ switch ( $instance ) :
 						<div><strong><?php esc_html_e( 'Robots Meta Settings', 'autodescription' ); ?></strong></div>
 						<div>
 						<?php
-							$this->make_info(
+							HTML::make_info(
 								__( 'These directives may urge robots not to display, follow links on, or create a cached copy of this page.', 'autodescription' ),
-								'https://developers.google.com/search/reference/robots_meta_tag#valid-indexing--serving-directives'
+								'https://developers.google.com/search/docs/advanced/robots/robots_meta_tag#directives'
 							);
 						?>
 						</div>
 					</div>
 					<?php
-					if ( $this->is_static_frontpage( $post_id ) ) {
+					if ( $_is_static_frontpage ) {
 						printf(
 							'<div class=tsf-flex-setting-label-sub-item><span class="description attention">%s</span></div>',
 							esc_html__( 'Warning: No public site should ever apply "noindex" or "nofollow" to the homepage.', 'autodescription' )
@@ -317,15 +316,15 @@ switch ( $instance ) :
 					<div class="tsf-flex-setting tsf-flex">
 						<div class="tsf-flex-setting-label tsf-flex">
 							<div class="tsf-flex-setting-label-inner-wrap tsf-flex">
-								<label for="<?php echo esc_attr( $_s['id'] ); ?>" class="tsf-flex-setting-label-item tsf-flex">
-									<div><strong><?php echo esc_html( $_s['label'] ); ?></strong></div>
+								<label for="<?= esc_attr( $_s['id'] ) ?>" class="tsf-flex-setting-label-item tsf-flex">
+									<div><strong><?= esc_html( $_s['label'] ) ?></strong></div>
 								</label>
 							</div>
 						</div>
 						<div class="tsf-flex-setting-input tsf-flex">
 						<?php
 							// phpcs:disable, WordPress.Security.EscapeOutput -- make_single_select_form() escapes.
-							echo $this->make_single_select_form( [
+							echo Form::make_single_select_form( [
 								'id'      => $_s['id'],
 								'class'   => 'tsf-select-block',
 								'name'    => sprintf( 'autodescription[%s]', $_s['option'] ),
@@ -399,9 +398,9 @@ switch ( $instance ) :
 						</div>
 						<div>
 							<?php
-							$this->make_info(
+							HTML::make_info(
 								__( 'This will force visitors to go to another URL.', 'autodescription' ),
-								'https://support.google.com/webmasters/answer/93633'
+								'https://developers.google.com/search/docs/advanced/crawling/301-redirects'
 							);
 							?>
 						</div>
@@ -409,119 +408,154 @@ switch ( $instance ) :
 				</div>
 			</div>
 			<div class="tsf-flex-setting-input tsf-flex">
-				<input class="large-text" type="url" name="autodescription[redirect]" id="autodescription_redirect" value="<?php echo esc_url( $this->get_post_meta_item( 'redirect' ) ); ?>" autocomplete=off />
+				<input class="large-text" type="url" name="autodescription[redirect]" id="autodescription_redirect" value="<?= esc_url( $this->get_post_meta_item( 'redirect' ) ) ?>" autocomplete=off />
 			</div>
 		</div>
 		<?php
 		break;
 
-	case 'inpost_social':
-		$social_placeholders = $this->_get_social_placeholders( $_generator_args );
-
+	case 'inpost_social_tab':
 		// Yes, this is hacky, but we don't want to lose the user's input.
 		$show_og = (bool) $this->get_option( 'og_tags' );
 		$show_tw = (bool) $this->get_option( 'twitter_tags' );
 
+		if ( $_is_static_frontpage ) {
+			$_social_title       = [
+				'og' => $this->get_option( 'homepage_og_title' )
+					 ?: $this->get_option( 'homepage_title' )
+					 ?: $this->get_generated_open_graph_title( $_generator_args, false ),
+				'tw' => $this->get_option( 'homepage_twitter_title' )
+					 ?: $this->get_option( 'homepage_og_title' )
+					 ?: $this->get_option( 'homepage_title' )
+					 ?: $this->get_generated_twitter_title( $_generator_args, false ),
+			];
+			$_social_description = [
+				'og' => $this->get_option( 'homepage_og_description' )
+					 ?: $this->get_option( 'homepage_description' )
+					 ?: $this->get_generated_open_graph_description( $_generator_args, false ),
+				'tw' => $this->get_option( 'homepage_twitter_description' )
+					 ?: $this->get_option( 'homepage_og_description' )
+					 ?: $this->get_option( 'homepage_description' )
+					 ?: $this->get_generated_twitter_description( $_generator_args, false ),
+			];
+		} else {
+			$_social_title       = [
+				'og' => $this->get_generated_open_graph_title( $_generator_args, false ),
+				'tw' => $this->get_generated_twitter_title( $_generator_args, false ),
+			];
+			$_social_description = [
+				'og' => $this->get_generated_open_graph_description( $_generator_args, false ),
+				'tw' => $this->get_generated_twitter_description( $_generator_args, false ),
+			];
+		}
+
+		$this->output_js_social_data(
+			'autodescription_social_singular',
+			[
+				'og' => [
+					'state' => [
+						'defaultTitle' => $this->s_title( $_social_title['og'] ),
+						'addAdditions' => $this->use_title_branding( $_generator_args, 'og' ),
+						'defaultDesc'  => $this->s_description( $_social_description['og'] ),
+						'titleLock'    => $_is_static_frontpage && $this->get_option( 'homepage_og_title' ),
+						'descLock'     => $_is_static_frontpage && $this->get_option( 'homepage_og_description' ),
+					],
+				],
+				'tw' => [
+					'state' => [
+						'defaultTitle' => $this->s_title( $_social_title['tw'] ),
+						'addAdditions' => $this->use_title_branding( $_generator_args, 'twitter' ),
+						'defaultDesc'  => $this->s_description( $_social_description['tw'] ),
+						'titleLock'    => $_is_static_frontpage && (bool) $this->get_option( 'homepage_twitter_title' ),
+						'descLock'     => $_is_static_frontpage && (bool) $this->get_option( 'homepage_twitter_description' ),
+					],
+				],
+			]
+		);
+
 		?>
-		<div class="tsf-flex-setting tsf-flex" <?php echo $show_og ? '' : 'style=display:none'; ?>>
+		<div class="tsf-flex-setting tsf-flex" <?= $show_og ? '' : 'style=display:none' ?>>
 			<div class="tsf-flex-setting-label tsf-flex">
 				<div class="tsf-flex-setting-label-inner-wrap tsf-flex">
 					<label for="autodescription_og_title" class="tsf-flex-setting-label-item tsf-flex">
-						<div><strong>
-							<?php
-							esc_html_e( 'Open Graph Title', 'autodescription' );
-							?>
-						</strong></div>
+						<div><strong><?php esc_html_e( 'Open Graph Title', 'autodescription' ); ?></strong></div>
 					</label>
 					<?php
 					$this->get_option( 'display_character_counter' )
-						and $this->output_character_counter_wrap( 'autodescription_og_title' );
+						and Form::output_character_counter_wrap( 'autodescription_og_title' );
 					?>
 				</div>
 			</div>
 			<div class="tsf-flex-setting-input tsf-flex">
 				<div id="tsf-og-title-wrap">
-					<input class="large-text" type="text" name="autodescription[_open_graph_title]" id="autodescription_og_title" placeholder="<?php echo esc_attr( $social_placeholders['title']['og'] ); ?>" value="<?php echo $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_open_graph_title' ) ); ?>" autocomplete=off />
+					<input class="large-text" type="text" name="autodescription[_open_graph_title]" id="autodescription_og_title" value="<?= $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_open_graph_title' ) ) ?>" autocomplete=off data-tsf-social-group=autodescription_social_singular data-tsf-social-type=ogTitle />
 				</div>
 			</div>
 		</div>
 
-		<div class="tsf-flex-setting tsf-flex" <?php echo $show_og ? '' : 'style=display:none'; ?>>
+		<div class="tsf-flex-setting tsf-flex" <?= $show_og ? '' : 'style=display:none' ?>>
 			<div class="tsf-flex-setting-label tsf-flex">
 				<div class="tsf-flex-setting-label-inner-wrap tsf-flex">
 					<label for="autodescription_og_description" class="tsf-flex-setting-label-item tsf-flex">
-						<div><strong>
-							<?php
-							esc_html_e( 'Open Graph Description', 'autodescription' );
-							?>
-						</strong></div>
+						<div><strong><?php esc_html_e( 'Open Graph Description', 'autodescription' ); ?></strong></div>
 					</label>
 					<?php
 					$this->get_option( 'display_character_counter' )
-						and $this->output_character_counter_wrap( 'autodescription_og_description' );
+						and Form::output_character_counter_wrap( 'autodescription_og_description' );
 					?>
 				</div>
 			</div>
 			<div class="tsf-flex-setting-input tsf-flex">
-				<textarea class="large-text" name="autodescription[_open_graph_description]" id="autodescription_og_description" placeholder="<?php echo esc_attr( $social_placeholders['description']['og'] ); ?>" rows="3" cols="4" autocomplete=off><?php echo $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_open_graph_description' ) ); ?></textarea>
+				<textarea class="large-text" name="autodescription[_open_graph_description]" id="autodescription_og_description" rows="3" cols="4" autocomplete=off data-tsf-social-group=autodescription_social_singular data-tsf-social-type=ogDesc><?= $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_open_graph_description' ) ) ?></textarea>
 			</div>
 		</div>
 
-		<div class="tsf-flex-setting tsf-flex" <?php echo $show_tw ? '' : 'style=display:none'; ?>>
+		<div class="tsf-flex-setting tsf-flex" <?= $show_tw ? '' : 'style=display:none' ?>>
 			<div class="tsf-flex-setting-label tsf-flex">
 				<div class="tsf-flex-setting-label-inner-wrap tsf-flex">
 					<label for="autodescription_twitter_title" class="tsf-flex-setting-label-item tsf-flex">
-						<div><strong>
-							<?php
-							esc_html_e( 'Twitter Title', 'autodescription' );
-							?>
-						</strong></div>
+						<div><strong><?php esc_html_e( 'Twitter Title', 'autodescription' ); ?></strong></div>
 					</label>
 					<?php
 					$this->get_option( 'display_character_counter' )
-						and $this->output_character_counter_wrap( 'autodescription_twitter_title' );
+						and Form::output_character_counter_wrap( 'autodescription_twitter_title' );
 					?>
 				</div>
 			</div>
 			<div class="tsf-flex-setting-input tsf-flex">
 				<div id="tsf-twitter-title-wrap">
-					<input class="large-text" type="text" name="autodescription[_twitter_title]" id="autodescription_twitter_title" placeholder="<?php echo esc_attr( $social_placeholders['title']['twitter'] ); ?>" value="<?php echo $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_twitter_title' ) ); ?>" autocomplete=off />
+					<input class="large-text" type="text" name="autodescription[_twitter_title]" id="autodescription_twitter_title" value="<?= $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_twitter_title' ) ) ?>" autocomplete=off data-tsf-social-group=autodescription_social_singular data-tsf-social-type=twTitle />
 				</div>
 			</div>
 		</div>
 
-		<div class="tsf-flex-setting tsf-flex" <?php echo $show_tw ? '' : 'style=display:none'; ?>>
+		<div class="tsf-flex-setting tsf-flex" <?= $show_tw ? '' : 'style=display:none' ?>>
 			<div class="tsf-flex-setting-label tsf-flex">
 				<div class="tsf-flex-setting-label-inner-wrap tsf-flex">
 					<label for="autodescription_twitter_description" class="tsf-flex-setting-label-item tsf-flex">
-						<div><strong>
-							<?php
-							esc_html_e( 'Twitter Description', 'autodescription' );
-							?>
-						</strong></div>
+						<div><strong><?php esc_html_e( 'Twitter Description', 'autodescription' ); ?></strong></div>
 					</label>
 					<?php
 					$this->get_option( 'display_character_counter' )
-						and $this->output_character_counter_wrap( 'autodescription_twitter_description' );
+						and Form::output_character_counter_wrap( 'autodescription_twitter_description' );
 					?>
 				</div>
 			</div>
 			<div class="tsf-flex-setting-input tsf-flex">
-				<textarea class="large-text" name="autodescription[_twitter_description]" id="autodescription_twitter_description" placeholder="<?php echo esc_attr( $social_placeholders['description']['twitter'] ); ?>" rows="3" cols="4" autocomplete=off><?php
+				<textarea class="large-text" name="autodescription[_twitter_description]" id="autodescription_twitter_description" rows="3" cols="4" autocomplete=off data-tsf-social-group=autodescription_social_singular data-tsf-social-type=twDesc><?php // phpcs:ignore, Squiz.PHP.EmbeddedPhp -- textarea element's content is input. Do not add spaces/tabs/lines: the php tag should stick to >.
 					// Textareas don't require sanitization in HTML5... other than removing the closing </textarea> tag...?
 					echo $this->esc_attr_preserve_amp( $this->get_post_meta_item( '_twitter_description' ) );
-					?></textarea>
+				// phpcs:ignore, Squiz.PHP.EmbeddedPhp
+				?></textarea>
 			</div>
 		</div>
 		<?php
 
 		// Fetch image placeholder.
-		if ( $this->is_static_frontpage( $post_id ) && $this->get_option( 'homepage_social_image_url' ) ) {
-			$image_details     = current( $this->get_image_details( $_generator_args, true, 'social', true ) );
-			$image_placeholder = isset( $image_details['url'] ) ? $image_details['url'] : '';
+		if ( $_is_static_frontpage && $this->get_option( 'homepage_social_image_url' ) ) {
+			$image_placeholder = current( $this->get_image_details( $_generator_args, true, 'social', true ) )['url'] ?? '';
 		} else {
-			$image_details     = current( $this->get_generated_image_details( $_generator_args, true, 'social', true ) );
-			$image_placeholder = isset( $image_details['url'] ) ? $image_details['url'] : '';
+			$image_placeholder = current( $this->get_generated_image_details( $_generator_args, true, 'social', true ) )['url'] ?? '';
 		}
 
 		?>
@@ -532,7 +566,7 @@ switch ( $instance ) :
 						<div><strong><?php esc_html_e( 'Social Image URL', 'autodescription' ); ?></strong></div>
 						<div>
 						<?php
-						$this->make_info(
+						HTML::make_info(
 							__( "The social image URL can be used by search engines and social networks alike. It's best to use an image with a 1.91:1 aspect ratio that is at least 1200px wide for universal support.", 'autodescription' ),
 							'https://developers.facebook.com/docs/sharing/best-practices#images'
 						);
@@ -542,12 +576,12 @@ switch ( $instance ) :
 				</div>
 			</div>
 			<div class="tsf-flex-setting-input tsf-flex">
-				<input class="large-text" type="url" name="autodescription[_social_image_url]" id="autodescription_socialimage-url" placeholder="<?php echo esc_url( $image_placeholder ); ?>" value="<?php echo esc_url( $this->get_post_meta_item( '_social_image_url' ) ); ?>" autocomplete=off />
-				<input type="hidden" name="autodescription[_social_image_id]" id="autodescription_socialimage-id" value="<?php echo absint( $this->get_post_meta_item( '_social_image_id' ) ); ?>" disabled class="tsf-enable-media-if-js" />
+				<input class="large-text" type="url" name="autodescription[_social_image_url]" id="autodescription_socialimage-url" placeholder="<?= esc_url( $image_placeholder ) ?>" value="<?= esc_url( $this->get_post_meta_item( '_social_image_url' ) ) ?>" autocomplete=off />
+				<input type="hidden" name="autodescription[_social_image_id]" id="autodescription_socialimage-id" value="<?= absint( $this->get_post_meta_item( '_social_image_id' ) ) ?>" disabled class="tsf-enable-media-if-js" />
 				<div class="hide-if-no-tsf-js tsf-social-image-buttons">
 					<?php
 					// phpcs:ignore, WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped. (phpcs is broken here?)
-					echo $this->get_social_image_uploader_form( 'autodescription_socialimage' );
+					echo Form::get_image_uploader_form( [ 'id' => 'autodescription_socialimage' ] );
 					?>
 				</div>
 			</div>

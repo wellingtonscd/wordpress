@@ -8,7 +8,7 @@
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -31,9 +31,8 @@
  * @since 4.0.0
  *
  * @constructor
- * @param {!jQuery} $ jQuery object.
  */
-window.tsfC = function( $ ) {
+window.tsfC = function() {
 
 	/**
 	 * Data property injected by WordPress l10n handler.
@@ -89,7 +88,6 @@ window.tsfC = function( $ ) {
 	 *
 	 * @function
 	 * @param {Object} test The object to test.
-	 * @return {undefined}
 	 */
 	const updateCharacterCounter = test => {
 
@@ -144,12 +142,12 @@ window.tsfC = function( $ ) {
 
 		el.innerHTML = exclaimer;
 
-		for ( let _c in classes ) {
+		for ( let _c in classes )
 			el.classList.remove( classes[ _c ] );
-		}
-		for ( let _c in counterClasses ) {
+
+		for ( let _c in counterClasses )
 			el.classList.remove( counterClasses[ _c ] );
-		}
+
 		el.classList.add( newClass );
 		el.classList.add( counterClasses[ counterType ] );
 	}
@@ -162,7 +160,6 @@ window.tsfC = function( $ ) {
 	 *
 	 * @function
 	 * @param {Object} test The object to test.
-	 * @return {undefined}
 	 */
 	const updatePixelCounter = test => {
 
@@ -253,7 +250,6 @@ window.tsfC = function( $ ) {
 	 * @access public
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const triggerCounterUpdate = () => {
 		window.dispatchEvent( new CustomEvent( 'tsf-counter-updated' ) );
@@ -267,7 +263,6 @@ window.tsfC = function( $ ) {
 	 *
 	 * @function
 	 * @param {(undefined|boolean)} countUp Whether to add one.
-	 * @return {undefined}
 	 */
 	const updateCounterClasses = countUp => {
 
@@ -284,13 +279,12 @@ window.tsfC = function( $ ) {
 	 * Updates the counter type.
 	 *
 	 * @since 4.0.0
+	 * @since 4.2.0 Now uses wp.ajax, instead of jQuery.ajax
 	 * @access private
 	 *
 	 * @function
-	 * @param {Event} event
-	 * @return {undefined}
 	 */
-	const _counterUpdate = event => {
+	const _counterUpdate = () => {
 
 		// Update counters locally, and add a number.
 		//! We don't want this to be promised after the AJAX call, that'll resolve separately.
@@ -305,43 +299,34 @@ window.tsfC = function( $ ) {
 		// Set ajax loader.
 		tsf.setAjaxLoader( target );
 
-		// Setup external update.
-		let settings = {
-			method: 'POST',
-			url: ajaxurl,
-			datatype: 'json',
-			data: {
-				action: 'the_seo_framework_update_counter',
-				nonce:  tsf.l10n.nonces.edit_posts,
-				val:    counterType,
-			},
-			async: true,
-			success: response => {
-
-				response = tsf.convertJSONResponse( response );
-
-				// I could do value check, but that will simply lag behind. Unless an annoying execution delay is added.
-				if ( 'success' === response.type )
-					status = 1;
-
-				switch ( status ) {
-					case 0:
-						tsf.unsetAjaxLoader( target, false );
-						break;
-					case 1:
-						tsf.unsetAjaxLoader( target, true );
-						break;
-					default:
-						tsf.resetAjaxLoader( target );
-						break;
-				}
-			},
-			error: () => {
-				tsf.unsetAjaxLoader( target, false );
+		wp.ajax.post(
+			'tsf_update_counter',
+			{
+				nonce: tsf.l10n.nonces.edit_posts,
+				val:   counterType,
 			}
-		}
+		).done( response => {
 
-		$.ajax( settings );
+			response = tsf.convertJSONResponse( response );
+
+			// I could do value check, but that will simply lag behind. Unless an annoying execution delay is added.
+			if ( 'success' === response.type )
+				status = 1;
+
+			switch ( status ) {
+				case 0:
+					tsf.unsetAjaxLoader( target, false );
+					break;
+				case 1:
+					tsf.unsetAjaxLoader( target, true );
+					break;
+				default:
+					tsf.resetAjaxLoader( target );
+					break;
+			}
+		} ).fail( () => {
+			tsf.unsetAjaxLoader( target, false );
+		} );
 	}
 
 	/**
@@ -351,7 +336,6 @@ window.tsfC = function( $ ) {
 	 * @access public
 	 *
 	 * @function
-	 * @return {jQuery}
 	 */
 	const resetCounterListener = () => document.querySelectorAll( '.tsf-counter' ).forEach(
 		el => el.addEventListener( 'click', _counterUpdate )
@@ -364,7 +348,6 @@ window.tsfC = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initCounters = () => {
 		// Any edit screen
@@ -380,7 +363,6 @@ window.tsfC = function( $ ) {
 		 * @access protected
 		 *
 		 * @function
-		 * @return {undefined}
 		 */
 		load: () => {
 			document.body.addEventListener( 'tsf-onload', _initCounters );
@@ -395,5 +377,5 @@ window.tsfC = function( $ ) {
 		counterClasses,
 		l10n,
 	} );
-}( jQuery );
+}();
 window.tsfC.load();

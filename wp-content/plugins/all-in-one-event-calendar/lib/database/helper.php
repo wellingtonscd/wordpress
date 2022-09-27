@@ -663,9 +663,11 @@ class Ai1ec_Database_Helper {
                 $type_db  = strtolower(
                     preg_replace( '#\s+#', '', $type_db )
                 );
+                $type_db = preg_replace( '/int\((20|10)\)/', 'int', $type_db );
                 $type_req = strtolower(
                     preg_replace( '#\s+#', '', $type_req )
                 );
+                $type_req = preg_replace( '/int\((20|10)\)/', 'int', $type_req );
                 if ( 0 !== strcmp( $type_db, $type_req ) ) {
                     throw new Ai1ec_Database_Error(
                         'Field `' . $table . '`.`' . $column->Field .

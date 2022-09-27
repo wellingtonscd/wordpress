@@ -8,7 +8,7 @@
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -31,9 +31,8 @@
  * @since 4.0.0
  *
  * @constructor
- * @param {!jQuery} $ jQuery object.
  */
-window.tsfAys = function( $ ) {
+window.tsfAys = function() {
 
 	/**
 	 * Data property injected by WordPress l10n handler.
@@ -101,11 +100,10 @@ window.tsfAys = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @param {(Element|string|Array<number,string>)} elements
-	 * @return {(Array<number,Element>)}
+	 * @param {Element|Document|string|string[]} elements
+	 * @return {(Element|Document)[]}
 	 */
-	const _getNodeArray = elements =>
-		( elements instanceof Element || elements instanceof Document )
+	const _getNodeArray = elements => ( elements instanceof Element || elements instanceof Document )
 		? [ elements ]
 		: [ ...document.querySelectorAll( Array.isArray( elements ) ? elements.join( ', ' ) : elements ) ];
 
@@ -116,7 +114,6 @@ window.tsfAys = function( $ ) {
 	 * @access public
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const registerChange = () => {
 		_settingsChanged = true;
@@ -129,7 +126,6 @@ window.tsfAys = function( $ ) {
 	 * @access public
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const deregisterChange = () => {
 		_settingsChanged = false;
@@ -146,7 +142,6 @@ window.tsfAys = function( $ ) {
 	 * @access public
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const reset = () => {
 		deregisterChange();
@@ -165,7 +160,6 @@ window.tsfAys = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _triggerUnload = () => {
 
@@ -189,7 +183,6 @@ window.tsfAys = function( $ ) {
 	 *
 	 * @function
 	 * @param {event} event
-	 * @return {undefined}
 	 */
 	const _triggerChange = event => {
 		if ( ! event.isTrusted ) return;
@@ -205,7 +198,6 @@ window.tsfAys = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _exemptFutureChanges = () => {
 		_registeredChangeListeners.forEach( ( eventType, element ) => {
@@ -224,9 +216,8 @@ window.tsfAys = function( $ ) {
 	 * @access public
 	 *
 	 * @function
-	 * @param {(Element|string|Array<number,string>)} elements  The elements to register.
-	 * @param {string}                                eventType The event type to listen to.
-	 * @return {undefined}
+	 * @param {(Element|string|string[])} elements  The elements to register.
+	 * @param {string}                    eventType The event type to listen to.
 	 */
 	const registerChangeListener = ( elements, eventType ) => {
 		_getNodeArray( elements )
@@ -245,9 +236,8 @@ window.tsfAys = function( $ ) {
 	 * @access public
 	 *
 	 * @function
-	 * @param {(Element|string|Array<number,string>)} elements  The elements to register.
-	 * @param {string}                                eventType The event type to listen to.
-	 * @return {undefined}
+	 * @param {(Element|string|string[])} elements  The elements to register.
+	 * @param {string}                    eventType The event type to listen to.
 	 */
 	const registerResetListener = ( elements, eventType ) => {
 		_getNodeArray( elements ).forEach( el => {
@@ -263,9 +253,8 @@ window.tsfAys = function( $ ) {
 	 * @access public
 	 *
 	 * @function
-	 * @param {(Element|string|Array<number,string>)} elements  The elements to register.
-	 * @param {string}                                eventType The event type to listen to.
-	 * @return {undefined}
+	 * @param {(Element|string|string[])} elements  The elements to register.
+	 * @param {string}                    eventType The event type to listen to.
 	 */
 	const registerUnloadListener = ( elements, eventType ) => {
 		_getNodeArray( elements ).forEach( el => {
@@ -281,7 +270,6 @@ window.tsfAys = function( $ ) {
 	 * @access public
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const reloadDefaultListeners = () => {
 
@@ -367,7 +355,6 @@ window.tsfAys = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _readyAys = () => {
 		// Initialise form field changing flag.
@@ -390,7 +377,6 @@ window.tsfAys = function( $ ) {
 		 * @access protected
 		 *
 		 * @function
-		 * @return {undefined}
 		 */
 		load: () => {
 			document.body.addEventListener( 'tsf-interactive', _readyAys );
@@ -408,5 +394,5 @@ window.tsfAys = function( $ ) {
 	}, {
 		l10n
 	} );
-}( jQuery );
+}();
 window.tsfAys.load();

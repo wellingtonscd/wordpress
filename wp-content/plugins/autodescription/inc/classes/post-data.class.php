@@ -10,7 +10,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -48,6 +48,18 @@ class Post_Data extends Detect {
 	public $inpost_nonce_field = 'tsf_inpost_nonce';
 
 	/**
+	 * Initializes post meta data handlers.
+	 *
+	 * @since 4.1.4
+	 */
+	protected function init_post_meta() {
+		// Save post data.
+		\add_action( 'save_post', [ $this, '_update_post_meta' ], 1, 2 );
+		\add_action( 'edit_attachment', [ $this, '_update_attachment_meta' ], 1 );
+		\add_action( 'save_post', [ $this, '_save_inpost_primary_term' ], 1, 2 );
+	}
+
+	/**
 	 * Returns a post SEO meta item by key.
 	 *
 	 * Unlike other post meta calls, no \WP_Post object is accepted as an input value,
@@ -62,12 +74,10 @@ class Post_Data extends Detect {
 	 * @param string $item      The item to get.
 	 * @param int    $post_id   The post ID.
 	 * @param bool   $use_cache Whether to use caching.
+	 * @return mixed The post meta item's value. Null when item isn't registered.
 	 */
 	public function get_post_meta_item( $item, $post_id = 0, $use_cache = true ) {
-
-		$meta = $this->get_post_meta( $post_id ?: $this->get_the_real_ID(), $use_cache );
-
-		return isset( $meta[ $item ] ) ? $meta[ $item ] : null;
+		return $this->get_post_meta( $post_id ?: $this->get_the_real_ID(), $use_cache )[ $item ] ?? null;
 	}
 
 	/**
@@ -82,6 +92,8 @@ class Post_Data extends Detect {
 	 *
 	 * @since 4.0.0
 	 * @since 4.0.2 Now tests for valid post ID in the post object.
+	 * @since 4.1.4 1. Now returns an empty array when the post type isn't supported.
+	 *              2. Now considers headlessness.
 	 *
 	 * @param int  $post_id   The post ID.
 	 * @param bool $use_cache Whether to use caching.
@@ -89,18 +101,17 @@ class Post_Data extends Detect {
 	 */
 	public function get_post_meta( $post_id, $use_cache = true ) {
 
-		if ( $use_cache ) {
-			static $cache = [];
-
-			if ( isset( $cache[ $post_id ] ) )
-				return $cache[ $post_id ];
-		}
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( $use_cache && ( $memo = umemo( __METHOD__, null, $post_id ) ) ) return $memo;
 
 		// get_post_meta() requires a valid post ID. Make sure that post exists.
 		$post = \get_post( $post_id );
 
-		if ( empty( $post->ID ) )
-			return $cache[ $post_id ] = [];
+		// We test post type support for "post_query"-queries might get past this point.
+		if ( empty( $post->ID ) || ! $this->is_post_type_supported( $post->post_type ) ) {
+			// Do not overwrite cache when not requested. Otherwise, we'd have two "initial" states, causing incongruities.
+			return $use_cache ? umemo( __METHOD__, [], $post_id ) : [];
+		}
 
 		/**
 		 * We can't trust the filter to always contain the expected keys.
@@ -111,33 +122,42 @@ class Post_Data extends Detect {
 			$this->get_post_meta_defaults( $post->ID )
 		);
 
-		// Filter the post meta items based on defaults' keys.
-		$meta = array_intersect_key(
-			\get_post_meta( $post->ID ), // Gets all post meta. This is a discrepancy with get_term_meta()!
-			$defaults
-		);
+		if ( $this->is_headless['meta'] ) {
+			$meta = [];
+		} else {
+			// Filter the post meta items based on defaults' keys.
+			// Fix: <https://github.com/sybrew/the-seo-framework/issues/185>
+			$meta = array_intersect_key(
+				\get_post_meta( $post->ID ), // Gets all post meta. This is a discrepancy with get_term_meta()!
+				$defaults
+			);
 
-		// WP converts all entries to arrays, because we got ALL entries. Disarray!
-		foreach ( $meta as $key => $value ) {
-			$meta[ $key ] = $value[0];
+			// WP converts all entries to arrays, because we got ALL entries. Disarray!
+			foreach ( $meta as &$value )
+				$value = $value[0];
 		}
 
 		/**
 		 * @since 4.0.5
+		 * @since 4.1.4 1. Now considers headlessness.
+		 *              2. Now returns a 3rd parameter: boolean $headless.
 		 * @note Do not delete/unset/add indexes! It'll cause errors.
 		 * @param array $meta    The current post meta.
 		 * @param int   $post_id The post ID.
+		 * @param bool  $headless Whether the meta are headless.
 		 */
 		$meta = \apply_filters_ref_array(
 			'the_seo_framework_post_meta',
 			[
 				array_merge( $defaults, $meta ),
 				$post->ID,
+				$this->is_headless['meta'],
 			]
 		);
 
-		// Cache using the input ID, otherwise invalid queries can bypass the cache.
-		return $cache[ $post_id ] = $meta;
+		// Cache using $post_id, not $post->ID, otherwise invalid queries can bypass the cache.
+		// Do not overwrite cache when not requested. Otherwise, we'd have two "initial" states, causing incongruities.
+		return $use_cache ? umemo( __METHOD__, $meta, $post_id ) : $meta;
 	}
 
 	/**
@@ -156,17 +176,18 @@ class Post_Data extends Detect {
 	 */
 	public function get_post_meta_defaults( $post_id = 0 ) {
 		/**
-		 * @since 3.1.0
+		 * @since 4.1.4
+		 * @since 4.2.0 1. Now corrects the $post_id when none is supplied.
+		 *              2. No longer returns the third parameter.
 		 * @param array    $defaults
 		 * @param integer  $post_id Post ID.
 		 * @param \WP_Post $post    Post object.
 		 */
 		return (array) \apply_filters_ref_array(
-			'the_seo_framework_inpost_seo_save_defaults', // TODO rename to the_seo_framework_post_meta_defaults. 4.1.0?
+			'the_seo_framework_post_meta_defaults',
 			[
 				$this->get_unfiltered_post_meta_defaults(),
-				$post_id,
-				\get_post( $post_id ),
+				$post_id ?: $this->get_the_real_ID(),
 			]
 		);
 	}
@@ -181,7 +202,7 @@ class Post_Data extends Detect {
 	protected function get_unfiltered_post_meta_defaults() {
 		return [
 			'_genesis_title'          => '',
-			'_tsf_title_no_blogname'  => 0, //? The prefix I should've used from the start...
+			'_tsf_title_no_blogname'  => 0, // The prefix I should've used from the start...
 			'_genesis_description'    => '',
 			'_genesis_canonical_uri'  => '',
 			'redirect'                => '', //! Will be displayed in custom fields when set...
@@ -228,36 +249,18 @@ class Post_Data extends Detect {
 	 * Save post meta / custom field data for a singular post type.
 	 *
 	 * @since 4.0.0
+	 * @since 4.1.4 Removed deprecated filter.
 	 *
 	 * @param \WP_Post|integer $post The post object or post ID.
 	 * @param array            $data The post meta fields, will be merged with the defaults.
 	 */
-	public function save_post_meta( $post, array $data ) {
+	public function save_post_meta( $post, $data ) {
 
 		$post = \get_post( $post );
 
 		if ( ! $post ) return;
 
 		$data = (array) \wp_parse_args( $data, $this->get_post_meta_defaults( $post->ID ) );
-		$data = $this->s_post_meta( $data );
-
-		if ( \has_filter( 'the_seo_framework_save_custom_fields' ) ) {
-			$this->_deprecated_filter( 'the_seo_framework_save_custom_fields', '4.0.0', 'the_seo_framework_save_post_meta' );
-			/**
-			 * @since 3.1.0
-			 * @since 4.0.0 Deprecated.
-			 * @deprecated
-			 * @param array    $data The data that's going to be saved.
-			 * @param \WP_Post $post The post object.
-			 */
-			$data = (array) \apply_filters_ref_array(
-				'the_seo_framework_save_custom_fields',
-				[
-					$data,
-					$post,
-				]
-			);
-		}
 
 		/**
 		 * @since 4.0.0
@@ -267,7 +270,7 @@ class Post_Data extends Detect {
 		$data = (array) \apply_filters_ref_array(
 			'the_seo_framework_save_post_meta',
 			[
-				$data,
+				$this->s_post_meta( $data ),
 				$post,
 			]
 		);
@@ -279,6 +282,7 @@ class Post_Data extends Detect {
 			if ( $value || ( \is_string( $value ) && \strlen( $value ) ) ) {
 				\update_post_meta( $post->ID, $field, $value );
 			} else {
+				// All empty values are deleted here, even if they never existed... is this the best way to handle this?
 				// This is fine for as long as we merge the getter values with the defaults.
 				\delete_post_meta( $post->ID, $field );
 			}
@@ -525,23 +529,18 @@ class Post_Data extends Detect {
 		// Can this even fail?
 		if ( ! $post_type ) return;
 
-		$_taxonomies = $this->get_hierarchical_taxonomies_as( 'names', $post_type );
-		$values      = [];
+		foreach ( $this->get_hierarchical_taxonomies_as( 'names', $post_type ) as $_taxonomy ) {
+			$_post_key = "_primary_term_{$_taxonomy}";
 
-		foreach ( $_taxonomies as $_taxonomy ) {
-			$_post_key = '_primary_term_' . $_taxonomy;
-
-			$values[ $_taxonomy ] = [
-				'action' => $this->inpost_nonce_field . '_pt',
-				'name'   => $this->inpost_nonce_name . '_pt_' . $_taxonomy,
-				'value'  => isset( $_POST['autodescription'][ $_post_key ] ) ? \absint( $_POST['autodescription'][ $_post_key ] ) : 0,
-			];
-		}
-
-		foreach ( $values as $t => $v ) {
-			if ( ! isset( $_POST[ $v['name'] ] ) ) continue;
-			if ( \wp_verify_nonce( $_POST[ $v['name'] ], $v['action'] ) ) { // Redundant. Fortified.
-				$this->update_primary_term_id( $post->ID, $t, $v['value'] );
+			if ( \wp_verify_nonce(
+				$_POST[ "{$this->inpost_nonce_name}_pt_{$_taxonomy}" ] ?? '', // If empty, wp_verify_nonce will return false.
+				$this->inpost_nonce_field . '_pt'
+			) ) { // Redundant. Fortified.
+				$this->update_primary_term_id(
+					$post->ID,
+					$_taxonomy,
+					\absint( $_POST['autodescription'][ $_post_key ] ?? 0 )
+				);
 			}
 		}
 	}
@@ -551,17 +550,18 @@ class Post_Data extends Detect {
 	 * Memoizes the return value.
 	 *
 	 * @since 2.4.3
-	 * @since 2.9.3 : 1. Removed object caching.
-	 *              : 2. It now uses WP_Query, instead of wpdb.
+	 * @since 2.9.3 1. Removed object caching.
+	 *              2. It now uses WP_Query, instead of wpdb.
+	 * @slow The queried result is not stored in WP Post's cache, which would allow
+	 *       direct access to all values of the post (if requested). This is because
+	 *       we're using `'fields' => 'ids'` instead of `'fields' => 'all'`.
 	 *
 	 * @return int Latest Post ID.
 	 */
 	public function get_latest_post_id() {
 
-		static $post_id = null;
-
-		if ( null !== $post_id )
-			return $post_id;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		$query = new \WP_Query( [
 			'posts_per_page'   => 1,
@@ -575,7 +575,7 @@ class Post_Data extends Detect {
 			'no_found_rows'    => true,
 		] );
 
-		return $post_id = reset( $query->posts );
+		return memo( reset( $query->posts ) );
 	}
 
 	/**
@@ -588,71 +588,8 @@ class Post_Data extends Detect {
 	 * @return string The post content.
 	 */
 	public function get_post_content( $id = 0 ) {
-		$post = \get_post( $id ?: $this->get_the_real_ID() );
-		return empty( $post->post_content ) ? '' : $post->post_content;
-	}
-
-	/**
-	 * Determines whether the post has a page builder attached to it.
-	 * Doesn't use plugin detection features as some builders might be incorporated within themes.
-	 *
-	 * Detects the following builders:
-	 * - Elementor by Elementor LTD
-	 * - Divi Builder by Elegant Themes
-	 * - Visual Composer by WPBakery
-	 * - Page Builder by SiteOrigin
-	 * - Beaver Builder by Fastline Media
-	 *
-	 * @since 2.6.6
-	 * @since 3.1.0 Added Elementor detection
-	 * @since 4.0.0 Now detects page builders before looping over the meta.
-	 * @TODO deprecate?
-	 * @ignore unused.
-	 *
-	 * @param int $post_id The post ID to check.
-	 * @return bool
-	 */
-	public function uses_page_builder( $post_id ) {
-
-		$meta = \get_post_meta( $post_id );
-
-		/**
-		 * @since 2.6.6
-		 * @since 3.1.0 : 1. Now defaults to `null`
-		 *                2. Now, when a boolean (either true or false) is defined, it'll short-circuit this function.
-		 * @param boolean|null $detected Whether a builder should be detected.
-		 * @param int          $post_id The current Post ID.
-		 * @param array        $meta The current post meta.
-		 */
-		$detected = \apply_filters( 'the_seo_framework_detect_page_builder', null, $post_id, $meta );
-
-		if ( \is_bool( $detected ) )
-			return $detected;
-
-		if ( ! $this->detect_page_builder() )
-			return false;
-
-		if ( empty( $meta ) )
-			return false;
-
-		if ( isset( $meta['_elementor_edit_mode'][0] ) && '' !== $meta['_elementor_edit_mode'][0] && \defined( 'ELEMENTOR_VERSION' ) ) :
-			// Elementor by Elementor LTD
-			return true;
-		elseif ( isset( $meta['_et_pb_use_builder'][0] ) && 'on' === $meta['_et_pb_use_builder'][0] && \defined( 'ET_BUILDER_VERSION' ) ) :
-			// Divi Builder by Elegant Themes
-			return true;
-		elseif ( isset( $meta['_wpb_vc_js_status'][0] ) && 'true' === $meta['_wpb_vc_js_status'][0] && \defined( 'WPB_VC_VERSION' ) ) :
-			// Visual Composer by WPBakery
-			return true;
-		elseif ( isset( $meta['panels_data'][0] ) && '' !== $meta['panels_data'][0] && \defined( 'SITEORIGIN_PANELS_VERSION' ) ) :
-			// Page Builder by SiteOrigin
-			return true;
-		elseif ( isset( $meta['_fl_builder_enabled'][0] ) && '1' === $meta['_fl_builder_enabled'][0] && \defined( 'FL_BUILDER_VERSION' ) ) :
-			// Beaver Builder by Fastline Media...
-			return true;
-		endif;
-
-		return false;
+		// '0' is not deemed content. Return empty string for it's a slippery slope.
+		return ( \get_post( $id ?: $this->get_the_real_ID() )->post_content ?? '' ) ?: '';
 	}
 
 	/**
@@ -683,16 +620,14 @@ class Post_Data extends Detect {
 		if ( \is_bool( $detected ) )
 			return $detected;
 
-		if ( ! $this->detect_non_html_page_builder() )
+		// If there's no meta, or no builder active, it doesn't use a builder.
+		if ( empty( $meta ) || ! $this->detect_non_html_page_builder() )
 			return false;
 
-		if ( empty( $meta ) )
-			return false;
-
-		if ( isset( $meta['_et_pb_use_builder'][0] ) && 'on' === $meta['_et_pb_use_builder'][0] && \defined( 'ET_BUILDER_VERSION' ) ) :
+		if ( 'on' === ( $meta['_et_pb_use_builder'][0] ?? '' ) && \defined( 'ET_BUILDER_VERSION' ) ) :
 			// Divi Builder by Elegant Themes
 			return true;
-		elseif ( isset( $meta['_wpb_vc_js_status'][0] ) && 'true' === $meta['_wpb_vc_js_status'][0] && \defined( 'WPB_VC_VERSION' ) ) :
+		elseif ( 'true' === ( $meta['_wpb_vc_js_status'][0] ?? '' ) && \defined( 'WPB_VC_VERSION' ) ) :
 			// Visual Composer by WPBakery
 			return true;
 		endif;
@@ -708,12 +643,13 @@ class Post_Data extends Detect {
 	 * @since 3.0.0 1. No longer checks for current query.
 	 *              2. Input parameter now default to null.
 	 *                 This currently doesn't affect how it works.
+	 * @since 4.2.0 Added caching. Can be reversed if https://core.trac.wordpress.org/ticket/50567 is fixed.
 	 *
 	 * @param int|null|\WP_Post $post The post ID or WP Post object.
 	 * @return bool True if protected or private, false otherwise.
 	 */
 	public function is_protected( $post = null ) {
-		$post = \get_post( $post ); // This is here so we don't have to create another instance in the methods called.
+		$post = \get_post( $post ); // This is here so we don't have to create another instance hereinafter.
 		return $this->is_password_protected( $post ) || $this->is_private( $post );
 	}
 
@@ -726,8 +662,8 @@ class Post_Data extends Detect {
 	 * @return bool True if protected, false otherwise.
 	 */
 	public function is_password_protected( $post = null ) {
-		$post = \get_post( $post );
-		return isset( $post->post_password ) && '' !== $post->post_password;
+		// return '' !== ( \get_post( $post )->post_password ?? '' ); // https://core.trac.wordpress.org/ticket/50567
+		return '' !== ( $post->post_password ?? \get_post( $post )->post_password ?? '' );
 	}
 
 	/**
@@ -739,8 +675,8 @@ class Post_Data extends Detect {
 	 * @return bool True if private, false otherwise.
 	 */
 	public function is_private( $post = null ) {
-		$post = \get_post( $post );
-		return isset( $post->post_status ) && 'private' === $post->post_status;
+		// return 'private' === ( \get_post( $post )->post_status ?? '' ); // https://core.trac.wordpress.org/ticket/50567
+		return 'private' === ( $post->post_status ?? \get_post( $post )->post_status ?? '' );
 	}
 
 	/**
@@ -752,8 +688,7 @@ class Post_Data extends Detect {
 	 * @return bool True if draft, false otherwise.
 	 */
 	public function is_draft( $post = null ) {
-		$post = \get_post( $post );
-		return isset( $post->post_status ) && \in_array( $post->post_status, [ 'draft', 'auto-draft', 'pending' ], true );
+		return \in_array( \get_post( $post )->post_status ?? '', [ 'draft', 'auto-draft', 'pending' ], true );
 	}
 
 	/**
@@ -789,34 +724,45 @@ class Post_Data extends Detect {
 	 * @return string The Post Type name/label, if found.
 	 */
 	public function get_post_type_label( $post_type, $singular = true ) {
-
-		$pto = \get_post_type_object( $post_type );
-
-		return $singular
-			? ( isset( $pto->labels->singular_name ) ? $pto->labels->singular_name : '' )
-			: ( isset( $pto->labels->name ) ? $pto->labels->name : '' );
+		return \get_post_type_object( $post_type )->labels->{
+			$singular ? 'singular_name' : 'name'
+		} ?? '';
 	}
 
 	/**
 	 * Returns the primary term for post.
 	 *
 	 * @since 3.0.0
+	 * @since 4.1.5   1. Added memoization.
+	 *                2. The first and second parameters are now required.
+	 * @since 4.1.5.1 1. No longer causes a PHP warning in the unlikely event a post's taxonomy gets deleted.
+	 *                2. This method now converts the post meta to an integer, making the comparison work again.
 	 *
-	 * @param int|null $post_id  The post ID.
-	 * @param string   $taxonomy The taxonomy name.
+	 * @param int    $post_id  The post ID.
+	 * @param string $taxonomy The taxonomy name.
 	 * @return \WP_Term|false The primary term. False if not set.
 	 */
-	public function get_primary_term( $post_id = null, $taxonomy = '' ) {
+	public function get_primary_term( $post_id, $taxonomy ) {
 
-		$primary_id = $this->get_primary_term_id( $post_id, $taxonomy );
+		static $primary_terms = [];
 
-		if ( ! $primary_id ) return false;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo( null, $post_id, $taxonomy ) ) return $memo;
+
+		$primary_id = (int) \get_post_meta( $post_id, "_primary_term_{$taxonomy}", true ) ?: 0;
+
+		if ( ! $primary_id ) return memo( false, $post_id, $taxonomy );
 
 		// Users can alter the term list via quick/bulk edit, but cannot set a primary term that way.
 		// Users can also delete a term from the site that was previously assigned as primary.
 		// So, test if the term still exists for the post.
+		// Although 'get_the_terms()' is an expensive function, it memoizes, and
+		// is always called by WP before we fetch a primary term. So, 0 overhead here.
 		$terms        = \get_the_terms( $post_id, $taxonomy );
 		$primary_term = false;
+
+		// Test for otherwise foreach emits a PHP warning in the unlikely event a post's taxonomy is gone.
+		if ( ! \is_array( $terms ) ) return $primary_terms[ $post_id ][ $taxonomy ] = false;
 
 		foreach ( $terms as $term ) {
 			if ( $primary_id === (int) $term->term_id ) {
@@ -825,20 +771,22 @@ class Post_Data extends Detect {
 			}
 		}
 
-		return $primary_term;
+		return memo( $primary_term, $post_id, $taxonomy );
 	}
 
 	/**
 	 * Returns the primary term ID for post.
 	 *
 	 * @since 3.0.0
+	 * @since 4.1.5 1. Now validates if the stored term ID's term exists (for the post or at all).
+	 *              2. The first and second parameters are now required.
 	 *
-	 * @param int|null $post_id  The post ID.
-	 * @param string   $taxonomy The taxonomy name.
-	 * @return int     The primary term ID. 0 if not set.
+	 * @param int    $post_id  The post ID.
+	 * @param string $taxonomy The taxonomy name.
+	 * @return int   The primary term ID. 0 if not found.
 	 */
-	public function get_primary_term_id( $post_id = null, $taxonomy = '' ) {
-		return (int) \get_post_meta( $post_id, '_primary_term_' . $taxonomy, true ) ?: 0;
+	public function get_primary_term_id( $post_id, $taxonomy ) {
+		return $this->get_primary_term( $post_id, $taxonomy )->term_id ?? 0;
 	}
 
 	/**
@@ -852,10 +800,10 @@ class Post_Data extends Detect {
 	 * @return bool True on success, false on failure.
 	 */
 	public function update_primary_term_id( $post_id = null, $taxonomy = '', $value = 0 ) {
-		if ( empty( $value ) ) {
-			$success = \delete_post_meta( $post_id, '_primary_term_' . $taxonomy );
+		if ( ! $value ) {
+			$success = \delete_post_meta( $post_id, "_primary_term_{$taxonomy}" );
 		} else {
-			$success = \update_post_meta( $post_id, '_primary_term_' . $taxonomy, $value );
+			$success = \update_post_meta( $post_id, "_primary_term_{$taxonomy}", $value );
 		}
 		return $success;
 	}

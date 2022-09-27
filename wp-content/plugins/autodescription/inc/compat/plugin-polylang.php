@@ -6,7 +6,7 @@
 
 namespace The_SEO_Framework;
 
-\defined( 'THE_SEO_FRAMEWORK_PRESENT' ) and \the_seo_framework()->_verify_include_secret( $_secret ) or die;
+\defined( 'THE_SEO_FRAMEWORK_PRESENT' ) and \tsf()->_verify_include_secret( $_secret ) or die;
 
 \add_filter( 'the_seo_framework_sitemap_base_path', __NAMESPACE__ . '\\_polylang_fix_sitemap_base_bath' );
 /**
@@ -14,6 +14,10 @@ namespace The_SEO_Framework;
  * This resolves an issue where the sitemap would otherwise return a 404 error after a
  * cookie has been set.
  *
+ * This function uses the same methods as the main filter.
+ * HOWEVER, because of the languid asinine catabolic implementation of the black/block-list in Polylang,
+ * this method returns a different value. It's truly astounding how one cannot trust the API.
+
  * @since 4.1.2
  * @access private
  *
@@ -30,7 +34,13 @@ function _polylang_fix_sitemap_base_bath( $path ) {
 				// Polylang determines language sporadically from content: can't be trusted.
 				// NOTE: Thanks to '_polylang_blocklist_tsf_urls', this yields a different value albeit the same code.
 				// That's Polylang for you: can't trust your own code.
-				$path = rtrim( parse_url( \get_home_url(), PHP_URL_PATH ), '/' );
+				$path = rtrim(
+					parse_url(
+						\get_home_url(),
+						PHP_URL_PATH
+					) ?? '',
+					'/'
+				);
 				break;
 			default:
 				// Polylang can differentiate languages by (sub)domain/directory name early. No need to interfere.
@@ -39,23 +49,6 @@ function _polylang_fix_sitemap_base_bath( $path ) {
 	}
 
 	return $path;
-}
-
-\add_filter( 'the_seo_framework_sitemap_path_prefix', __NAMESPACE__ . '\\_polylang_fix_sitemap_prefix', 99 );
-/**
- * Fixes the sitemap prefix, because setting the home URL globally requires only one filter.
- *
- * @since 4.0.0
- * @since 4.1.2 1. Now always defaults to the WP home URL. So, now supports other translation paths well,
- *                 other than solely query-strings.
- *              2. Prefixed function name with _polylang.
- * @param string $prefix The path prefix. Ideally appended with a slash.
- *                       Recommended return value: "$prefix$custompath/"
- * @return string Polylang-aware prefix.
- */
-function _polylang_fix_sitemap_prefix( $prefix = '' ) {
-	$path = parse_url( \home_url(), PHP_URL_PATH );
-	return \trailingslashit( "$prefix$path" );
 }
 
 \add_action( 'the_seo_framework_sitemap_header', __NAMESPACE__ . '\\_polylang_set_sitemap_language' );
@@ -71,11 +64,11 @@ function _polylang_fix_sitemap_prefix( $prefix = '' ) {
  */
 function _polylang_set_sitemap_language() {
 
-	if ( ! \function_exists( 'PLL' ) ) return;
+	if ( ! \function_exists( '\\PLL' ) ) return;
 	if ( ! ( \PLL() instanceof \PLL_Frontend ) ) return;
 
 	// phpcs:ignore, WordPress.Security.NonceVerification.Recommended -- Arbitrary input expected.
-	$lang = isset( $_GET['lang'] ) ? $_GET['lang'] : '';
+	$lang = $_GET['lang'] ?? '';
 
 	// Language codes are user-definable: copy Polylang's filtering.
 	// The preg_match's source: \PLL_Admin_Model::validate_lang();
@@ -101,13 +94,22 @@ function _polylang_set_sitemap_language() {
 		\PLL()->curlang = $new_lang;
 }
 
-\add_action( 'the_seo_framework_sitemap_hpt_query_args', __NAMESPACE__ . '\\_polylang_sitemap_append_non_translatables' );
-\add_action( 'the_seo_framework_sitemap_nhpt_query_args', __NAMESPACE__ . '\\_polylang_sitemap_append_non_translatables' );
+\add_filter( 'the_seo_framework_sitemap_hpt_query_args', __NAMESPACE__ . '\\_polylang_sitemap_append_non_translatables' );
+\add_filter( 'the_seo_framework_sitemap_nhpt_query_args', __NAMESPACE__ . '\\_polylang_sitemap_append_non_translatables' );
 /**
  * Appends nontranslatable post types to the sitemap query arguments.
  * Only appends when the default sitemap language is displayed.
  *
+ * TODO Should we fix this? If user unassigns a post type as translatable, previously "translated" posts are still
+ *      found "translated" by this query. This query, however, is forwarded to WP_Query, which Polylang can filter.
+ *      It wouldn't surprise me if they added another black/white list for that. So, my investigation stops here.
+ *
  * @since 4.1.2
+ * @since 4.2.0 Now relies on the term_id, instead of mixing term_taxonomy_id and term_id.
+ *              This is unlike Polylang, which relies on term_taxonomy_id somewhat consistently; however,
+ *              in this case we can use term_id since we're specifying the taxonomy directly.
+ *              WordPress 4.4.0 and later also rectifies term_id/term_taxonomy_id stratification, which is
+ *              why we couldn't find an issue whilst introducing this filter.
  * @access private
  *
  * @param array $args The query arguments.
@@ -115,7 +117,7 @@ function _polylang_set_sitemap_language() {
  */
 function _polylang_sitemap_append_non_translatables( $args ) {
 
-	if ( ! \the_seo_framework()->can_i_use( [
+	if ( ! \tsf()->can_i_use( [
 		'functions' => [
 			'PLL',
 			'pll_languages_list',
@@ -125,12 +127,13 @@ function _polylang_sitemap_append_non_translatables( $args ) {
 
 	if ( ! ( \PLL() instanceof \PLL_Frontend ) ) return $args;
 
+	// Redundantly prefixed \, OBJECT is actually a constant; however, the linter derps out, thinking it's a cast.
 	$default_lang = \pll_default_language( \OBJECT );
 
-	if ( ! isset( $default_lang->slug, $default_lang->term_taxonomy_id ) ) return $args;
+	if ( ! isset( $default_lang->slug, $default_lang->term_id ) ) return $args;
 
-	if ( \PLL()->curlang->slug === $default_lang->slug ) {
-		$args['lang'] = ''; // Select all, so that Polylang doesn't affect the query below with an AND (we need OR).
+	if ( ( \PLL()->curlang->slug ?? null ) === $default_lang->slug ) {
+		$args['lang']      = ''; // Select all lang, so that Polylang doesn't affect the query below with an AND (we need OR).
 		$args['tax_query'] = [
 			'relation' => 'OR',
 			[
@@ -140,7 +143,7 @@ function _polylang_sitemap_append_non_translatables( $args ) {
 			],
 			[
 				'taxonomy' => 'language',
-				'terms'    => $default_lang->term_taxonomy_id,
+				'terms'    => $default_lang->term_id,
 				'operator' => 'IN',
 			],
 		];
@@ -156,6 +159,7 @@ function _polylang_sitemap_append_non_translatables( $args ) {
  */
 \add_filter( 'the_seo_framework_warn_homepage_global_title', '__return_true' );
 \add_filter( 'the_seo_framework_warn_homepage_global_description', '__return_true' );
+\add_filter( 'the_seo_framework_tell_multilingual_sitemap', '__return_true' );
 
 \add_filter( 'the_seo_framework_title_from_custom_field', __NAMESPACE__ . '\\pll__' );
 \add_filter( 'the_seo_framework_title_from_generation', __NAMESPACE__ . '\\pll__' );
@@ -165,16 +169,16 @@ function _polylang_sitemap_append_non_translatables( $args ) {
  * Enables string translation support on titles and descriptions.
  *
  * @since 3.1.0
+ * @access private
  *
  * @param string $string The title or description
  * @return string
  */
 function pll__( $string ) {
-	if ( \function_exists( 'PLL' ) && \function_exists( '\\pll__' ) ) {
-		if ( \PLL() instanceof \PLL_Frontend ) {
+	if ( \function_exists( '\\PLL' ) && \function_exists( '\\pll__' ) )
+		if ( \PLL() instanceof \PLL_Frontend )
 			return \pll__( $string );
-		}
-	}
+
 	return $string;
 }
 
@@ -185,6 +189,7 @@ function pll__( $string ) {
  *
  * @since 3.2.4
  * @since 4.1.0 Renamed function and parameters to something racially neutral.
+ * @access private
  *
  * @param array $allowlist The wildcard file parts that are allowlisted.
  * @return array
@@ -203,6 +208,7 @@ function _polylang_allowlist_tsf_urls( $allowlist ) {
  * @since 3.2.4
  * @since 4.1.0 Renamed function and parameters to something racially neutral.
  * @since 4.1.2 Prefixed function name with _polylang.
+ * @access private
  *
  * @param array $blocklist The wildcard file parts that are blocklisted.
  * @return array
@@ -212,19 +218,22 @@ function _polylang_blocklist_tsf_urls( $blocklist ) {
 	return $blocklist;
 }
 
-\add_filter( 'the_seo_framework_rel_canonical_output', __NAMESPACE__ . '\\_polylang_fix_home_url', 10, 2 );
-\add_filter( 'the_seo_framework_ogurl_output', __NAMESPACE__ . '\\_polylang_fix_home_url', 10, 2 );
+\add_filter( 'the_seo_framework_rel_canonical_output', __NAMESPACE__ . '\\_polylang_fix_home_url', 10, 1 );
+\add_filter( 'the_seo_framework_ogurl_output', __NAMESPACE__ . '\\_polylang_fix_home_url', 10, 1 );
 /**
  * Adds a trailing slash to whatever's deemed as the homepage URL.
  * This fixes user_trailingslashit() issues.
  *
  * @since 3.2.4
  * @since 4.1.2 Prefixed function name with _polylang.
+ * @since 4.2.0 No longer uses the second parameter, and relies on theq query to find the homepage, instead.
+ * @access private
+ *
  * @param string $url The url to fix.
- * @param int    $id  The page or term ID.
+ * @return string The fixed home URL.
  */
-function _polylang_fix_home_url( $url, $id ) {
-	return \the_seo_framework()->is_front_page_by_ID( $id ) && \get_option( 'permalink_structure' ) ? \trailingslashit( $url ) : $url;
+function _polylang_fix_home_url( $url ) {
+	return \tsf()->is_real_front_page() && \get_option( 'permalink_structure' ) ? \trailingslashit( $url ) : $url;
 }
 
 \add_action( 'the_seo_framework_delete_cache_sitemap', __NAMESPACE__ . '\\_polylang_flush_sitemap', 10, 4 );
@@ -237,7 +246,7 @@ function _polylang_fix_home_url( $url, $id ) {
  * @access private
  *
  * @param string $type    The flush type. Comes in handy when you use a catch-all function.
- * @param int    $id      The post, page or TT ID. Defaults to the_seo_framework()->get_the_real_ID().
+ * @param int    $id      The post, page or TT ID. Defaults to tsf()->get_the_real_ID().
  * @param array  $args    Additional arguments. They can overwrite $type and $id.
  * @param bool   $success Whether the action cleared.
  */
@@ -256,8 +265,8 @@ function _polylang_flush_sitemap( $type, $id, $args, $success ) {
 			)
 		); // No cache OK. DB call ok.
 
-		//? We didn't use a wildcard after "_transient_" to reduce scans.
-		//? A second query is faster on saturated sites.
+		// We didn't use a wildcard after "_transient_" to reduce scans.
+		// A second query is faster on saturated sites.
 		$wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM $wpdb->options WHERE option_name LIKE %s",

@@ -1,5 +1,3 @@
-/* global console, jQuery */
-/* eslint-disable no-var, strict */
 var tribe_dropdowns = window.tribe_dropdowns || {};
 
 ( function( $, obj, _ ) {
@@ -12,14 +10,18 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 	};
 
 	// Setup a Dependent
-	$.fn.tribe_dropdowns = function () {
+	$.fn.tribe_dropdowns = function() {
 		obj.dropdown( this, {} );
 
 		return this;
 	};
 
 	obj.freefrom_create_search_choice = function( params ) {
-		var term = $.trim( params.term );
+		if ( 'string' !== typeof params.term ) {
+			return null;
+		}
+
+		var term = params.term.trim();
 
 		if ( '' === term ) {
 			return null;
@@ -50,21 +52,20 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 		return null;
 	};
 
-
 	/**
 	 * Better Search ID for Select2, compatible with WordPress ID from WP_Query
 	 *
 	 * @param  {object|string} e Searched object or the actual ID
 	 * @return {string}   ID of the object
 	 */
-	obj.search_id = function ( e ) {
+	obj.search_id = function( e ) {
 		var id = undefined;
 
-		if ( 'undefined' !== typeof e.id ){
+		if ( 'undefined' !== typeof e.id ) {
 			id = e.id;
-		} else if ( 'undefined' !== typeof e.ID ){
+		} else if ( 'undefined' !== typeof e.ID ) {
 			id = e.ID;
-		} else if ( 'undefined' !== typeof e.value ){
+		} else if ( 'undefined' !== typeof e.value ) {
 			id = e.value;
 		}
 		return undefined === e ? undefined : id;
@@ -77,9 +78,9 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 	 * @param  {string} text Search here
 	 * @return {boolean}
 	 */
-	obj.matcher = function ( params, data ) {
+	obj.matcher = function( params, data ) {
 		// If there are no search terms, return all of the data
-		if ( $.trim( params.term ) === '') {
+		if ( 'string' !== typeof params.term || params.term.trim() === '') {
 			return data;
 		}
 
@@ -88,7 +89,7 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 			return null;
 		}
 
-		var term = $.trim( params.term );
+		var term = params.term.trim();
 		var text = data.text;
 		var $select = $( data.element ).closest( 'select' );
 		var args = $select.data( 'dropdown' );
@@ -115,11 +116,10 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 	obj.init_selection = function( $select, make_selection ) {
 		var isMultiple = $select.is( '[multiple]' );
 		var options = $select.data( 'dropdown' );
-		var isEmpty = $select.data( 'isEmpty' );
 		var currentValues = $select.val().split( options.regexSplit );
 		var selectedItems = [];
 
-		$( currentValues ).each( function( index, value ) {
+		$( currentValues ).each( function( index, value ) { // eslint-disable-line no-unused-vars
 			var searchFor = { id: this, text: this };
 			var data = options.ajax ? $select.data( 'options' ) : options.data;
 			var locatedItem = find_item( searchFor, data );
@@ -160,15 +160,15 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 		for ( var index in haystack ) {
 			var possible_match = haystack[ index ];
 
-			if ( possible_match.hasOwnProperty( 'id' ) && possible_match.id == description.id ) {
+			if ( possible_match.hasOwnProperty( 'id' ) && possible_match.id == description.id ) { // eslint-disable-line no-prototype-builtins,eqeqeq,max-len
 				return possible_match;
 			}
 
-			if ( possible_match.hasOwnProperty( 'text' ) && possible_match.text == description.text ) {
+			if ( possible_match.hasOwnProperty( 'text' ) && possible_match.text == description.text ) { // eslint-disable-line no-prototype-builtins,eqeqeq,max-len
 				return possible_match;
 			}
 
-			if ( possible_match.hasOwnProperty( 'children' ) && _.isArray( possible_match.children ) ) {
+			if ( possible_match.hasOwnProperty( 'children' ) && _.isArray( possible_match.children ) ) { // eslint-disable-line no-prototype-builtins,max-len
 				var subsearch = find_item( description, possible_match.children );
 
 				if ( subsearch ) {
@@ -191,8 +191,8 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 
 	obj.element = function( field, args ) {
 		var $select = $( field );
-		var args = $.extend( {}, args );
-		var carryOverData = [
+		var args = $.extend( {}, args ); // eslint-disable-line no-redeclare
+		var carryOverData = [ // eslint-disable-line no-unused-vars
 			'depends',
 			'condition',
 			'conditionNot',
@@ -328,7 +328,7 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 		if ( $select.is( '[data-tags]' ) ) {
 			args.tags = $select.data( 'tags' );
 
-			args.createSearchChoice = function( term, data ) {
+			args.createSearchChoice = function( term, data ) { // eslint-disable-line no-unused-vars
 				if ( term.match( args.regexToken ) ) {
 					return { id: term, text: term };
 				}
@@ -349,7 +349,7 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 			args.data = { results: [] };
 
 			// Format for Parents breadcrumbs
-			args.formatResult = function ( item, container, query ) {
+			args.formatResult = function ( item, container, query ) { // eslint-disable-line no-unused-vars,max-len
 				if ( 'undefined' !== typeof item.breadcrumbs ) {
 					return $.merge( item.breadcrumbs, [ item.text ] ).join( ' &#187; ' );
 				}
@@ -364,9 +364,9 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 				url: obj.ajaxurl(),
 
 				// parse the results into the format expected by Select2.
-				processResults: function ( response, page, query ) {
+				processResults: function ( response, page, query ) { // eslint-disable-line no-unused-vars
 					if ( ! $.isPlainObject( response ) || 'undefined' === typeof response.success ) {
-						console.error( 'We received a malformed Object, could not complete the Select2 Search.' );
+						console.error( 'We received a malformed Object, could not complete the Select2 Search.' ); // eslint-disable-line max-len
 						return { results: [] };
 					}
 
@@ -374,7 +374,7 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 						! $.isPlainObject( response.data )
 						|| 'undefined' === typeof response.data.results
 					) {
-						console.error( 'We received a malformed results array, could not complete the Select2 Search.' );
+						console.error( 'We received a malformed results array, could not complete the Select2 Search.' ); // eslint-disable-line max-len
 						return { results: [] };
 					}
 
@@ -448,10 +448,11 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 		// Save data on Dropdown
 		$select.data( 'dropdown', args );
 
-		$container = $select.select2( args );
+		$container = $select.select2TEC( args );
 
 		// Propagating original input classes to the select2 container.
-		$container.data( 'select2' ).$container.addClass( obj.getSelectClasses( $select ).join( ' ' ) );
+		var originalClasses = obj.getSelectClasses( $select ).join( ' ' );
+		$container.data( 'select2' ).$container.addClass( originalClasses );
 
 		// Propagating original input classes to the select2 container.
 		$container.data( 'select2' ).$container.removeClass( 'hide-before-select2-init' );
@@ -485,16 +486,28 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 			return TEC.ajaxurl;
 		}
 
-		console.error( 'Dropdowns framework cannot properly do an AJAX request without the WordPress `ajaxurl` variable setup.' );
+		console.error( 'Dropdowns framework cannot properly do an AJAX request without the WordPress `ajaxurl` variable setup.' ); // eslint-disable-line max-len
 	};
 
-	obj.action_select2_open = function( event ) {
+	obj.action_select2_open = function( event ) { // eslint-disable-line no-unused-vars
 		var $select = $( this );
-		var args = $select.data( 'dropdown' );
 		var select2Data = $select.data( 'select2' );
-		var $search = select2Data.$dropdown.find( obj.selector.searchField );
+		var $search = select2Data.$dropdown.find( obj.selector.searchField ); // eslint-disable-line es5/no-es6-methods,max-len
 
-		select2Data.$dropdown.addClass( obj.selector.dropdown.className() );
+		var originalClasses = obj.getSelectClasses( select2Data.$element ).reduce(
+			function ( prev, curr, index, array ) {
+				if( 'hide-if-js' === curr ) {
+					return prev;
+				}
+				if ( 'tribe-dropdown-created' === curr ) {
+					return prev;
+				}
+
+				return prev + ' ' + curr;
+			}
+		);
+
+		select2Data.$dropdown.addClass( originalClasses );
 
 		// If we have a placeholder for search, apply it!
 		if ( $select.is( '[data-search-placeholder]' ) ) {
@@ -511,7 +524,7 @@ var tribe_dropdowns = window.tribe_dropdowns || {};
 	 * @return {jQuery}         Affected fields
 	 */
 	obj.dropdown = function( $fields, args ) {
-		var $elements = $fields.not( '.select2-offscreen, .select2-container, ' + obj.selector.created.className() );
+		var $elements = $fields.not( '.select2-offscreen, .select2-container, ' + obj.selector.created.className() ); // eslint-disable-line max-len
 
 		if ( 0 === $elements.length ) {
 			return $elements;

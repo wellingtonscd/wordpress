@@ -1,0 +1,12 @@
+{
+  "admin.js": "admin.js",
+  "admin.css": "styles/admin.css",
+  "editor.js": "editor.js",
+  "editor.css": "styles/editor.css",
+  "iframe.js": "iframe.js",
+  "iframe.css": "styles/iframe.css",
+  "login.js": "login.js",
+  "login.css": "styles/login.css",
+  "theme.js": "theme.js",
+  "theme.css": "styles/theme.css"
+}

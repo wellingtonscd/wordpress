@@ -2,12 +2,13 @@
 /**
  * Premium Content Logged Out View Child Block.
  *
- * @package Jetpack
+ * @package automattic/jetpack
  */
 
 namespace Automattic\Jetpack\Extensions\Premium_Content;
 
 use Automattic\Jetpack\Blocks;
+use Automattic\Jetpack\Status\Host;
 use Jetpack_Gutenberg;
 
 const LOGGEDOUT_VIEW_NAME = 'premium-content/logged-out-view';
@@ -21,7 +22,7 @@ require_once dirname( __DIR__ ) . '/_inc/access-check.php';
  */
 function register_loggedout_view_block() {
 	// Only load this block on WordPress.com.
-	if ( ( defined( 'IS_WPCOM' ) && IS_WPCOM ) || jetpack_is_atomic_site() ) {
+	if ( ( defined( 'IS_WPCOM' ) && IS_WPCOM ) || ( new Host() )->is_woa_site() ) {
 		// Determine required `context` key based on Gutenberg version.
 		$deprecated = function_exists( 'gutenberg_get_post_from_context' );
 		$uses       = $deprecated ? 'context' : 'uses_context';
@@ -62,7 +63,7 @@ function render_loggedout_view_block( $attributes, $content, $block = null ) {
 
 	// Old versions of the block were rendering the subscribe/login button server-side, so we need to still support them.
 	if ( ! empty( $attributes['buttonClasses'] ) ) {
-		require_once '../_inc/legacy-buttons.php';
+		require_once __DIR__ . '/../_inc/legacy-buttons.php';
 
 		$buttons = create_legacy_buttons_markup( $attributes, $content, $block );
 		return $content . $buttons;

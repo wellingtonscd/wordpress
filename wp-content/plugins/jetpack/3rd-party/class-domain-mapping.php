@@ -2,7 +2,7 @@
 /**
  * Domain Mapping 3rd Party
  *
- * @package Jetpack.
+ * @package automattic/jetpack
  */
 
 namespace Automattic\Jetpack\Third_Party;
@@ -39,7 +39,7 @@ class Domain_Mapping {
 	 * @return Domain_Mapping|null
 	 */
 	public static function init() {
-		if ( is_null( self::$instance ) ) {
+		if ( self::$instance === null ) {
 			self::$instance = new Domain_Mapping();
 		}
 

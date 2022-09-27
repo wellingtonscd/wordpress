@@ -10,7 +10,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -39,31 +39,29 @@ class Detect extends Render {
 	 * Memoizes the return value.
 	 *
 	 * @since 2.6.1
-	 * @credits Jetpack for most code.
+	 * @credits Jetpack for some code.
 	 *
 	 * @return array List of active plugins.
 	 */
 	public function active_plugins() {
 
-		static $active_plugins = null;
-
-		if ( isset( $active_plugins ) )
-			return $active_plugins;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		$active_plugins = (array) \get_option( 'active_plugins', [] );
 
 		if ( \is_multisite() ) {
 			// Due to legacy code, active_sitewide_plugins stores them in the keys,
-			// whereas active_plugins stores them in the values.
+			// whereas active_plugins stores them in the values. array_keys() resolves the disparity.
 			$network_plugins = array_keys( \get_site_option( 'active_sitewide_plugins', [] ) );
-			if ( $network_plugins ) {
+
+			if ( $network_plugins )
 				$active_plugins = array_merge( $active_plugins, $network_plugins );
-			}
 		}
 
 		sort( $active_plugins );
 
-		return $active_plugins = array_unique( $active_plugins );
+		return memo( $active_plugins );
 	}
 
 	/**
@@ -78,34 +76,26 @@ class Detect extends Render {
 
 		$conflicting_plugins = [
 			'seo_tools'    => [
-				'Yoast SEO'                  => 'wordpress-seo/wp-seo.php',
-				'Yoast SEO Premium'          => 'wordpress-seo-premium/wp-seo-premium.php',
-				'All in One SEO Pack'        => 'all-in-one-seo-pack/all_in_one_seo_pack.php',
-				'SEO Ultimate'               => 'seo-ultimate/seo-ultimate.php',
-				'Gregs High Performance SEO' => 'gregs-high-performance-seo/ghpseo.php',
-				'SEOPress'                   => 'wp-seopress/seopress.php',
-				'Rank Math'                  => 'seo-by-rank-math/rank-math.php',
-				'Smart Crawl'                => 'smartcrawl-seo/wpmu-dev-seo.php',
+				'Yoast SEO'           => 'wordpress-seo/wp-seo.php',
+				'Yoast SEO Premium'   => 'wordpress-seo-premium/wp-seo-premium.php',
+				'All in One SEO Pack' => 'all-in-one-seo-pack/all_in_one_seo_pack.php',
+				'SEO Ultimate'        => 'seo-ultimate/seo-ultimate.php',
+				'SEOPress'            => 'wp-seopress/seopress.php',
+				'Rank Math'           => 'seo-by-rank-math/rank-math.php',
+				'Smart Crawl'         => 'smartcrawl-seo/wpmu-dev-seo.php',
 			],
 			'sitemaps'     => [
-				'Google XML Sitemaps'                  => 'google-sitemap-generator/sitemap.php',
-				'Better WordPress Google XML Sitemaps' => 'bwp-google-xml-sitemaps/bwp-simple-gxs.php', // Remove?
-				'Google XML Sitemaps for qTranslate'   => 'google-xml-sitemaps-v3-for-qtranslate/sitemap.php', // Remove?
-				'XML Sitemap & Google News feeds'      => 'xml-sitemap-feed/xml-sitemap.php',
-				'Google Sitemap by BestWebSoft'        => 'google-sitemap-plugin/google-sitemap-plugin.php',
-				'Simple Wp Sitemap'                    => 'simple-wp-sitemap/simple-wp-sitemap.php',
-				'XML Sitemaps'                         => 'xml-sitemaps/xml-sitemaps.php',
+				'Google XML Sitemaps'             => 'google-sitemap-generator/sitemap.php',
+				'XML Sitemap & Google News feeds' => 'xml-sitemap-feed/xml-sitemap.php',
+				'Google Sitemap by BestWebSoft'   => 'google-sitemap-plugin/google-sitemap-plugin.php',
+				'Simple Wp Sitemap'               => 'simple-wp-sitemap/simple-wp-sitemap.php', // Remove?
 			],
 			'open_graph'   => [
 				'Facebook Open Graph Meta Tags for WordPress' => 'wonderm00ns-simple-facebook-open-graph-tags/wonderm00n-open-graph.php',
-				'Facebook Thumb Fixer'                  => 'facebook-thumb-fixer/_facebook-thumb-fixer.php',
-				'NextGEN Facebook OG'                   => 'nextgen-facebook/nextgen-facebook.php',
-				'Open Graph'                            => 'opengraph/opengraph.php',
-				'Open Graph Protocol Framework'         => 'open-graph-protocol-framework/open-graph-protocol-framework.php',
+				'Open Graph'                            => 'opengraph/opengraph.php', // Redundant.
+				'Open Graph Protocol Framework'         => 'open-graph-protocol-framework/open-graph-protocol-framework.php', // Redundant.
 				'Shareaholic2'                          => 'shareaholic/sexy-bookmarks.php',
-				'Social Sharing Toolkit'                => 'social-sharing-toolkit/social_sharing_toolkit.php',
 				'WordPress Social Sharing Optimization' => 'wpsso/wpsso.php',
-				'WP Facebook Open Graph protocol'       => 'wp-facebook-open-graph-protocol/wp-facebook-ogp.php',
 			],
 			'twitter_card' => [],
 		];
@@ -114,25 +104,31 @@ class Detect extends Render {
 		 * @since 2.6.0
 		 * @param array $conflicting_plugins The conflicting plugin list.
 		 */
-		return (array) \apply_filters( 'the_seo_framework_conflicting_plugins', $conflicting_plugins );
+		return (array) \apply_filters_ref_array( 'the_seo_framework_conflicting_plugins', [ $conflicting_plugins ] );
 	}
 
 	/**
 	 * Fetches type of conflicting plugins.
 	 *
 	 * @since 2.6.0
+	 * @since 4.2.0 Now always runs the filter, even when $type is not registered.
 	 *
 	 * @param string $type The Key from $this->conflicting_plugins()
 	 * @return array
 	 */
 	public function get_conflicting_plugins( $type = 'seo_tools' ) {
-
-		$conflicting_plugins = $this->conflicting_plugins();
-
-		if ( isset( $conflicting_plugins[ $type ] ) )
-			return (array) \apply_filters( 'the_seo_framework_conflicting_plugins_type', $conflicting_plugins[ $type ], $type );
-
-		return [];
+		/**
+		 * @since 2.6.1
+		 * @param array  $conflicting_plugins Conflicting plugins
+		 * @param string $type                The type of plugins to get.
+		*/
+		return (array) \apply_filters_ref_array(
+			'the_seo_framework_conflicting_plugins_type',
+			[
+				$this->conflicting_plugins()[ $type ] ?? [],
+				$type,
+			]
+		);
 	}
 
 	/**
@@ -141,8 +137,8 @@ class Detect extends Render {
 	 * Note: Class check is 3 times as slow as defined check. Function check is 2 times as slow.
 	 *
 	 * @since 1.3.0
-	 * @since 2.8.0 : 1. Can now check for globals.
-	 *                2. Switched detection order from FAST to SLOW.
+	 * @since 2.8.0 1. Can now check for globals.
+	 *              2. Switched detection order from FAST to SLOW.
 	 * @since 4.0.6 Can no longer autoload classes.
 	 *
 	 * @param array $plugins Array of array for constants, classes and / or functions to check for plugin existence.
@@ -150,41 +146,24 @@ class Detect extends Render {
 	 */
 	public function detect_plugin( $plugins ) {
 
-		if ( isset( $plugins['globals'] ) ) {
-			foreach ( $plugins['globals'] as $name ) {
-				if ( isset( $GLOBALS[ $name ] ) ) {
-					return true;
-				}
-			}
-		}
+		foreach ( $plugins['globals'] ?? [] as $name )
+			if ( isset( $GLOBALS[ $name ] ) )
+				return true;
 
 		// Check for constants
-		if ( isset( $plugins['constants'] ) ) {
-			foreach ( $plugins['constants'] as $name ) {
-				if ( \defined( $name ) ) {
-					return true;
-				}
-			}
-		}
+		foreach ( $plugins['constants'] ?? [] as $name )
+			if ( \defined( $name ) )
+				return true;
 
 		// Check for functions
-		if ( isset( $plugins['functions'] ) ) {
-			foreach ( $plugins['functions'] as $name ) {
-				if ( \function_exists( $name ) ) {
-					return true;
-				}
-			}
-		}
+		foreach ( $plugins['functions'] ?? [] as $name )
+			if ( \function_exists( $name ) )
+				return true;
 
 		// Check for classes
-		if ( isset( $plugins['classes'] ) ) {
-			foreach ( $plugins['classes'] as $name ) {
-				// phpcs:ignore, TSF.Performance.Functions.PHP -- we don't autoload.
-				if ( class_exists( $name, false ) ) {
-					return true;
-				}
-			}
-		}
+		foreach ( $plugins['classes'] ?? [] as $name )
+			if ( class_exists( $name, false ) ) // phpcs:ignore, TSF.Performance.Functions.PHP -- we don't autoload.
+				return true;
 
 		// No globals, constant, function, or class found to exist
 		return false;
@@ -196,44 +175,28 @@ class Detect extends Render {
 	 * Memoizes the return value for the input argument--sorts the array deeply to ensure a match.
 	 *
 	 * @since 2.5.2
+	 * @since 4.1.4 Fixed sorting algorithm from fribbling-me to resolving-me. Nothing changed but legibility.
+	 * @since 4.2.0 Rewrote sorting algorithm; now, it's actually good.
 	 * @uses $this->detect_plugin_multi()
 	 *
-	 * @param array $plugins   Array of array for globals, constants, classes
-	 *                         and/or functions to check for plugin existence.
-	 * @param bool  $use_cache Bypasses cache if false
+	 * @param array[] $plugins   Array of array for globals, constants, classes
+	 *                           and/or functions to check for plugin existence.
+	 * @param bool    $use_cache Bypasses cache if false
 	 */
-	public function can_i_use( array $plugins = [], $use_cache = true ) {
+	public function can_i_use( $plugins = [], $use_cache = true ) {
 
 		if ( ! $use_cache )
 			return $this->detect_plugin_multi( $plugins );
 
-		static $cache = [];
+		ksort( $plugins );
 
-		$mapped = [];
+		foreach ( $plugins as &$test )
+			sort( $test );
 
-		// Prepare multidimensional array for cache.
-		foreach ( $plugins as $key => $func ) {
-			if ( ! \is_array( $func ) )
-				return false; // doing it wrong...
-
-			// Sort alphanumeric by value, put values back after sorting.
-			// TODO Use asort or usort instead???
-			$func = array_flip( $func );
-			ksort( $func );
-			$func = array_flip( $func );
-
-			// Glue with underscore and space for debugging purposes.
-			$mapped[ $key ] = $key . '_' . implode( ' ', $func );
-		}
-
-		ksort( $mapped );
 		// phpcs:ignore, WordPress.PHP.DiscouragedPHPFunctions -- No objects are inserted, nor is this ever unserialized.
-		$key = serialize( $mapped );
+		$key = serialize( $test );
 
-		if ( isset( $cache[ $key ] ) )
-			return $cache[ $key ];
-
-		return $cache[ $key ] = $this->detect_plugin_multi( $plugins );
+		return memo( null, $key ) ?? memo( $this->detect_plugin_multi( $plugins ), $key );
 	}
 
 	/**
@@ -241,53 +204,38 @@ class Detect extends Render {
 	 * All parameters must match and return true.
 	 *
 	 * @since 2.5.2
-	 * @since 4.0.6 : 1. Can now check for globals.
-	 *                2. Switched detection order from FAST to SLOW.
-	 *                3. Can no longer autoload classes.
+	 * @since 4.0.6 1. Can now check for globals.
+	 *              2. Switched detection order from FAST to SLOW.
+	 *              3. Can no longer autoload classes.
 	 * This method is only used by can_i_use(), and is only effective in the Ultimate Member compat file...
 	 * @TODO deprecate?
 	 *
-	 * @param array $plugins Array of array for constants, classes and / or functions to check for plugin existence.
-	 * @return bool True if ALL functions classes and constants exists or false if plugin constant, class or function not detected.
+	 * @param array[] $plugins Array of array for constants, classes
+	 *                         and / or functions to check for plugin existence.
+	 * @return bool True if ALL functions classes and constants exists
+	 *              or false if plugin constant, class or function not detected.
 	 */
-	public function detect_plugin_multi( array $plugins ) {
+	public function detect_plugin_multi( $plugins ) {
 
 		// Check for globals
-		if ( isset( $plugins['globals'] ) ) {
-			foreach ( $plugins['globals'] as $name ) {
-				if ( ! isset( $GLOBALS[ $name ] ) ) {
-					return false;
-				}
-			}
-		}
+		foreach ( $plugins['globals'] ?? [] as $name )
+			if ( ! isset( $GLOBALS[ $name ] ) )
+				return false;
 
 		// Check for constants
-		if ( isset( $plugins['constants'] ) ) {
-			foreach ( $plugins['constants'] as $name ) {
-				if ( ! \defined( $name ) ) {
-					return false;
-				}
-			}
-		}
+		foreach ( $plugins['constants'] ?? [] as $name )
+			if ( ! \defined( $name ) )
+				return false;
 
 		// Check for functions
-		if ( isset( $plugins['functions'] ) ) {
-			foreach ( $plugins['functions'] as $name ) {
-				if ( ! \function_exists( $name ) ) {
-					return false;
-				}
-			}
-		}
+		foreach ( $plugins['functions'] ?? [] as $name )
+			if ( ! \function_exists( $name ) )
+				return false;
 
 		// Check for classes
-		if ( isset( $plugins['classes'] ) ) {
-			foreach ( $plugins['classes'] as $name ) {
-				// phpcs:ignore, TSF.Performance.Functions.PHP -- we don't autoload.
-				if ( ! class_exists( $name, false ) ) {
-					return false;
-				}
-			}
-		}
+		foreach ( $plugins['classes'] ?? [] as $name )
+			if ( ! class_exists( $name, false ) ) // phpcs:ignore, TSF.Performance.Functions.PHP -- we don't autoload.
+				return false;
 
 		// All classes, functions and constant have been found to exist
 		return true;
@@ -297,32 +245,21 @@ class Detect extends Render {
 	 * Checks if the (parent) theme name is loaded.
 	 *
 	 * @since 2.1.0
+	 * @since 4.2.0 No longer "loads" the theme; instead, simply compares input to active theme options.
 	 *
-	 * @param string|array $themes the current theme name.
+	 * @param string|array $themes The theme names to test.
 	 * @return bool is theme active.
 	 */
 	public function is_theme( $themes = '' ) {
 
-		if ( empty( $themes ) )
-			return false;
+		$active_theme = [
+			strtolower( \get_option( 'stylesheet' ) ), // Parent
+			strtolower( \get_option( 'template' ) ),   // Child
+		];
 
-		$wp_get_theme = \wp_get_theme();
-
-		$theme_parent = strtolower( $wp_get_theme->get( 'Template' ) );
-		$theme_name   = strtolower( $wp_get_theme->get( 'Name' ) );
-
-		if ( \is_string( $themes ) ) {
-			$themes = strtolower( $themes );
-			if ( $themes === $theme_parent || $themes === $theme_name )
+		foreach ( (array) $themes as $theme )
+			if ( \in_array( strtolower( $theme ), $active_theme, true ) )
 				return true;
-		} elseif ( \is_array( $themes ) ) {
-			foreach ( $themes as $theme ) {
-				$theme = strtolower( $theme );
-				if ( $theme === $theme_parent || $theme === $theme_name ) {
-					return true;
-				}
-			}
-		}
 
 		return false;
 	}
@@ -339,39 +276,37 @@ class Detect extends Render {
 	 */
 	public function detect_seo_plugins() {
 
-		static $detected = null;
-
-		if ( isset( $detected ) )
-			return $detected;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		$active_plugins = $this->active_plugins();
 
-		if ( ! empty( $active_plugins ) ) {
-			$conflicting_plugins = $this->get_conflicting_plugins( 'seo_tools' );
+		if ( ! $active_plugins ) return memo( false );
 
-			foreach ( $conflicting_plugins as $plugin_name => $plugin ) {
-				if ( \in_array( $plugin, $active_plugins, true ) ) {
-					/**
-					 * @since 2.6.1
-					 * @since 3.1.0 Added second and third parameters.
-					 * @param bool   $detected    Whether the plugin should be detected.
-					 * @param string $plugin_name The plugin name as defined in `$this->conflicting_plugins()`.
-					 * @param string $plugin      The plugin that's been detected.
-					 */
-					$detected = \apply_filters_ref_array(
-						'the_seo_framework_seo_plugin_detected',
-						[
-							true,
-							$plugin_name,
-							$plugin,
-						]
-					);
-					if ( $detected ) break;
+		foreach ( $this->get_conflicting_plugins( 'seo_tools' ) as $plugin_name => $plugin ) {
+			if ( \in_array( $plugin, $active_plugins, true ) ) {
+				/**
+				 * @since 2.6.1
+				 * @since 3.1.0 Added second and third parameters.
+				 * @param bool   $detected    Whether the plugin should be detected.
+				 * @param string $plugin_name The plugin name as defined in `$this->conflicting_plugins()`.
+				 * @param string $plugin      The plugin that's been detected.
+				 */
+				if ( \apply_filters_ref_array(
+					'the_seo_framework_seo_plugin_detected',
+					[
+						true,
+						$plugin_name,
+						$plugin,
+					]
+				) ) {
+					$detected = true;
+					break;
 				}
 			}
 		}
 
-		return $detected = (bool) $detected;
+		return memo( $detected ?? false );
 	}
 
 	/**
@@ -386,43 +321,41 @@ class Detect extends Render {
 	 */
 	public function detect_og_plugin() {
 
-		static $detected = null;
-
-		if ( isset( $detected ) )
-			return $detected;
-
 		// Detect SEO plugins beforehand.
 		if ( $this->detect_seo_plugins() )
-			return $detected = true;
+			return true;
+
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		$active_plugins = $this->active_plugins();
 
-		if ( ! empty( $active_plugins ) ) {
-			$conflicting_plugins = $this->get_conflicting_plugins( 'open_graph' );
+		if ( ! $active_plugins ) return memo( false );
 
-			foreach ( $conflicting_plugins as $plugin_name => $plugin ) {
-				if ( \in_array( $plugin, $active_plugins, true ) ) {
-					/**
-					 * @since 2.6.1
-					 * @since 3.1.0 Added second and third parameters.
-					 * @param bool   $detected    Whether the plugin should be detected.
-					 * @param string $plugin_name The plugin name as defined in `$this->conflicting_plugins()`.
-					 * @param string $plugin      The plugin that's been detected.
-					 */
-					$detected = \apply_filters_ref_array(
-						'the_seo_framework_og_plugin_detected',
-						[
-							true,
-							$plugin_name,
-							$plugin,
-						]
-					);
-					if ( $detected ) break;
+		foreach ( $this->get_conflicting_plugins( 'open_graph' ) as $plugin_name => $plugin ) {
+			if ( \in_array( $plugin, $active_plugins, true ) ) {
+				/**
+				 * @since 2.6.1
+				 * @since 3.1.0 Added second and third parameters.
+				 * @param bool   $detected    Whether the plugin should be detected.
+				 * @param string $plugin_name The plugin name as defined in `$this->conflicting_plugins()`.
+				 * @param string $plugin      The plugin that's been detected.
+				 */
+				if ( \apply_filters_ref_array(
+					'the_seo_framework_og_plugin_detected',
+					[
+						true,
+						$plugin_name,
+						$plugin,
+					]
+				) ) {
+					$detected = true;
+					break;
 				}
 			}
 		}
 
-		return $detected = (bool) $detected;
+		return memo( $detected ?? false );
 	}
 
 	/**
@@ -436,42 +369,40 @@ class Detect extends Render {
 	 */
 	public function detect_twitter_card_plugin() {
 
-		static $detected = null;
-
-		if ( isset( $detected ) )
-			return $detected;
-
 		// Detect SEO plugins beforehand.
 		if ( $this->detect_seo_plugins() )
-			return $detected = true;
+			return true;
+
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		$active_plugins = $this->active_plugins();
 
-		if ( ! empty( $active_plugins ) ) {
-			$conflicting_plugins = $this->get_conflicting_plugins( 'twitter_card' );
+		if ( ! $active_plugins ) return memo( false );
 
-			foreach ( $conflicting_plugins as $plugin_name => $plugin ) {
-				if ( \in_array( $plugin, $active_plugins, true ) ) {
-					/**
-					 * @since 2.6.1
-					 * @param bool   $detected    Whether the plugin should be detected.
-					 * @param string $plugin_name The plugin name as defined in `$this->conflicting_plugins()`.
-					 * @param string $plugin      The plugin that's been detected.
-					 */
-					$detected = \apply_filters_ref_array(
-						'the_seo_framework_twittercard_plugin_detected',
-						[
-							true,
-							$plugin_name,
-							$plugin,
-						]
-					);
-					if ( $detected ) break;
+		foreach ( $this->get_conflicting_plugins( 'twitter_card' ) as $plugin_name => $plugin ) {
+			if ( \in_array( $plugin, $active_plugins, true ) ) {
+				/**
+				 * @since 2.6.1
+				 * @param bool   $detected    Whether the plugin should be detected.
+				 * @param string $plugin_name The plugin name as defined in `$this->conflicting_plugins()`.
+				 * @param string $plugin      The plugin that's been detected.
+				 */
+				if ( \apply_filters_ref_array(
+					'the_seo_framework_twittercard_plugin_detected',
+					[
+						true,
+						$plugin_name,
+						$plugin,
+					]
+				) ) {
+					$detected = true;
+					break;
 				}
 			}
 		}
 
-		return $detected = (bool) $detected;
+		return memo( $detected ?? false );
 	}
 
 	/**
@@ -502,42 +433,40 @@ class Detect extends Render {
 	 */
 	public function detect_sitemap_plugin() {
 
-		static $detected = null;
-
-		if ( isset( $detected ) )
-			return $detected;
-
 		// Detect SEO plugins beforehand.
 		if ( $this->detect_seo_plugins() )
-			return $detected = true;
+			return true;
+
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		$active_plugins = $this->active_plugins();
 
-		if ( ! empty( $active_plugins ) ) {
-			$conflicting_plugins = $this->get_conflicting_plugins( 'sitemaps' );
+		if ( ! $active_plugins ) return memo( false );
 
-			foreach ( $conflicting_plugins as $plugin_name => $plugin ) {
-				if ( \in_array( $plugin, $active_plugins, true ) ) {
-					/**
-					 * @since 2.6.1
-					 * @param bool   $detected    Whether the plugin should be detected.
-					 * @param string $plugin_name The plugin name as defined in `$this->conflicting_plugins()`.
-					 * @param string $plugin      The plugin that's been detected.
-					 */
-					$detected = \apply_filters(
-						'the_seo_framework_sitemap_plugin_detected',
-						[
-							true,
-							$plugin_name,
-							$plugin,
-						]
-					);
-					if ( $detected ) break;
+		foreach ( $this->get_conflicting_plugins( 'sitemaps' ) as $plugin_name => $plugin ) {
+			if ( \in_array( $plugin, $active_plugins, true ) ) {
+				/**
+				 * @since 2.6.1
+				 * @param bool   $detected    Whether the plugin should be detected.
+				 * @param string $plugin_name The plugin name as defined in `$this->conflicting_plugins()`.
+				 * @param string $plugin      The plugin that's been detected.
+				 */
+				if ( \apply_filters(
+					'the_seo_framework_sitemap_plugin_detected',
+					[
+						true,
+						$plugin_name,
+						$plugin,
+					]
+				) ) {
+					$detected = true;
+					break;
 				}
 			}
 		}
 
-		return $detected = (bool) $detected;
+		return memo( $detected ?? false );
 	}
 
 	/**
@@ -549,65 +478,18 @@ class Detect extends Render {
 	 * @return bool
 	 */
 	public function use_core_sitemaps() {
-		static $use;
 
-		if ( isset( $use ) ) return $use;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		if ( $this->get_option( 'sitemaps_output' ) )
-			return $use = false;
+			return memo( false );
 
-		if ( \function_exists( '\\wp_sitemaps_get_server' ) ) {
-			$wp_sitemaps_server = \wp_sitemaps_get_server();
+		$wp_sitemaps_server = \wp_sitemaps_get_server();
 
-			return $use =
-				method_exists( $wp_sitemaps_server, 'sitemaps_enabled' )
-				&& $wp_sitemaps_server->sitemaps_enabled();
-		}
-
-		return $use = false;
-	}
-
-	/**
-	 * Detects presence of a page builder.
-	 * Memoizes the return value.
-	 *
-	 * Detects the following builders:
-	 * - Elementor by Elementor LTD
-	 * - Divi Builder by Elegant Themes
-	 * - Visual Composer by WPBakery
-	 * - Page Builder by SiteOrigin
-	 * - Beaver Builder by Fastline Media
-	 *
-	 * @since 4.0.0
-	 * @since 4.0.6 The output is now filterable.
-	 * @TODO deprecate?
-	 * @ignore unused.
-	 *
-	 * @return bool
-	 */
-	public function detect_page_builder() {
-
-		static $detected = null;
-
-		if ( isset( $detected ) ) return $detected;
-
-		/**
-		 * @since 4.0.6
-		 * @param bool $detected Whether an active page builder is detected.
-		 * @NOTE not to be confused with `the_seo_framework_detect_page_builder`, which tests
-		 *       the page builder status for each post individually.
-		 */
-		return $detected = (bool) \apply_filters(
-			'the_seo_framework_page_builder_active',
-			$this->detect_plugin( [
-				'constants' => [
-					'ELEMENTOR_VERSION',
-					'ET_BUILDER_VERSION',
-					'WPB_VC_VERSION',
-					'SITEORIGIN_PANELS_VERSION',
-					'FL_BUILDER_VERSION',
-				],
-			] )
+		return memo(
+			method_exists( $wp_sitemaps_server, 'sitemaps_enabled' )
+				&& $wp_sitemaps_server->sitemaps_enabled()
 		);
 	}
 
@@ -623,53 +505,23 @@ class Detect extends Render {
 	 * @return bool
 	 */
 	public function detect_non_html_page_builder() {
-
-		static $detected = null;
-
-		if ( isset( $detected ) ) return $detected;
-
-		/**
-		 * @since 4.1.0
-		 * @param bool $detected Whether an active page builder that renders content dynamically is detected.
-		 * @NOTE not to be confused with `the_seo_framework_detect_non_html_page_builder`, which tests
-		 *       the page builder status for each post individually.
-		 */
-		return $detected = (bool) \apply_filters(
-			'the_seo_framework_shortcode_based_page_builder_active',
-			$this->detect_plugin( [
-				'constants' => [
-					'ET_BUILDER_VERSION',
-					'WPB_VC_VERSION',
-				],
-			] )
+		return memo() ?? memo(
+			/**
+			 * @since 4.1.0
+			 * @param bool $detected Whether an active page builder that renders content dynamically is detected.
+			 * @NOTE not to be confused with `the_seo_framework_detect_non_html_page_builder`, which tests
+			 *       the page builder status for each post individually.
+			 */
+			(bool) \apply_filters(
+				'the_seo_framework_shortcode_based_page_builder_active',
+				$this->detect_plugin( [
+					'constants' => [
+						'ET_BUILDER_VERSION',
+						'WPB_VC_VERSION',
+					],
+				] )
+			)
 		);
-	}
-
-	/**
-	 * Determines whether to add a line within robots based by plugin detection, or sitemap output option.
-	 *
-	 * @since 2.6.0
-	 * @since 2.8.0 Added check_option parameter.
-	 * @since 2.9.0 Now also checks for subdirectory installations.
-	 * @since 2.9.2 Now also checks for permalinks.
-	 * @since 2.9.3 Now also checks for sitemap_robots option.
-	 * @since 3.1.0 Removed Jetpack's sitemap check -- it's no longer valid.
-	 * @since 4.0.0 : 1. Now uses has_robots_txt()
-	 *              : 2. Now uses the get_robots_txt_url() to determine validity.
-	 * FIXME This method also checks for file existence (and location...), but is only used when the file definitely doesn't exist.
-	 *
-	 * @param bool $check_option Whether to check for sitemap option.
-	 * @return bool True when no conflicting plugins are detected or when The SEO Framework's Sitemaps are output.
-	 */
-	public function can_do_sitemap_robots( $check_option = true ) {
-
-		if ( $check_option ) {
-			if ( ! $this->get_option( 'sitemaps_output' )
-			|| ! $this->get_option( 'sitemaps_robots' ) )
-				return false;
-		}
-
-		return ! $this->has_robots_txt() && \strlen( $this->get_robots_txt_url() );
 	}
 
 	/**
@@ -682,11 +534,8 @@ class Detect extends Render {
 	 * @return bool Whether the robots.txt file exists.
 	 */
 	public function has_robots_txt() {
-
-		static $has_robots = null;
-
-		if ( isset( $has_robots ) )
-			return $has_robots;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		// Ensure get_home_path() is declared.
 		if ( ! \function_exists( '\\get_home_path' ) )
@@ -695,7 +544,7 @@ class Detect extends Render {
 		$path = \get_home_path() . 'robots.txt';
 
 		// phpcs:ignore, TSF.Performance.Functions.PHP -- we use path, not URL.
-		return $has_robots = file_exists( $path );
+		return memo( file_exists( $path ) );
 	}
 
 	/**
@@ -708,11 +557,8 @@ class Detect extends Render {
 	 * @return bool Whether the sitemap.xml file exists.
 	 */
 	public function has_sitemap_xml() {
-
-		static $has_map = null;
-
-		if ( isset( $has_map ) )
-			return $has_map;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		// Ensure get_home_path() is declared.
 		if ( ! \function_exists( '\\get_home_path' ) )
@@ -721,59 +567,7 @@ class Detect extends Render {
 		$path = \get_home_path() . 'sitemap.xml';
 
 		// phpcs:ignore, TSF.Performance.Functions.PHP -- we use path, not URL.
-		return $has_map = file_exists( $path );
-	}
-
-	/**
-	 * Determines if WP is above or below a version
-	 *
-	 * @since 2.2.1
-	 * @since 2.3.8 Added caching
-	 * @since 2.8.0 No longer overwrites global $wp_version
-	 * @since 3.1.0 1. No longer caches.
-	 *              2. Removed redundant parameter checks.
-	 *              3. Now supports x.yy.zz WordPress versions.
-	 *
-	 * @param string $version the three part version to compare to WordPress
-	 * @param string $compare the comparing operator, default "$version >= Current WP Version"
-	 * @return bool True if the WordPress version comparison passes.
-	 */
-	public function wp_version( $version = '4.3.0', $compare = '>=' ) {
-
-		$wp_version = $GLOBALS['wp_version'];
-
-		/**
-		 * Add a .0 if WP outputs something like 4.3 instead of 4.3.0
-		 * Does consider 4.xx, which will become 4.xx.0
-		 */
-		if ( 1 === substr_count( $wp_version, '.' ) )
-			$wp_version = $wp_version . '.0';
-
-		return (bool) version_compare( $wp_version, $version, $compare );
-	}
-
-	/**
-	 * Checks for current theme support.
-	 *
-	 * Maintains detection cache, array and strings are mixed through foreach loops.
-	 *
-	 * @since 2.2.5
-	 * @since 3.1.0 Removed caching
-	 * @TODO deprecate me.
-	 *
-	 * @param string|array required $features The features to check for.
-	 * @return bool theme support.
-	 */
-	public function detect_theme_support( $features ) {
-
-		foreach ( (array) $features as $feature ) {
-			if ( \current_theme_supports( $feature ) ) {
-				return true;
-			}
-			continue;
-		}
-
-		return false;
+		return memo( file_exists( $path ) );
 	}
 
 	/**
@@ -782,17 +576,21 @@ class Detect extends Render {
 	 * @since 4.0.0
 	 * @since 4.0.2 Now tests for an existing post/term ID when on singular/term pages.
 	 * @since 4.0.3 Can now assert empty categories again by checking for taxonomy support.
+	 * @since 4.2.4 Added detection for AJAX, Cron, JSON, and REST queries (they're not supported as SEO-able queries).
 	 *
 	 * @return bool
 	 */
 	public function query_supports_seo() {
 
-		static $cache;
-
-		if ( isset( $cache ) ) return $cache;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		switch ( true ) :
-			case $this->is_feed():
+			case \is_feed():
+			case \wp_doing_ajax():
+			case \wp_doing_cron():
+			case \wp_is_json_request():
+			case \defined( 'REST_REQUEST' ) && REST_REQUEST:
 				$supported = false;
 				break;
 
@@ -811,10 +609,22 @@ class Detect extends Render {
 				$supported = $this->is_taxonomy_supported() && $this->get_the_real_ID();
 				break;
 
-			// Including 404.
+			// This includes 404.
 			default:
 				$supported = true;
 				break;
+
+			// TODO consider this instead of the current default? (it'd make the AJAX through REST test obsolete)
+			// Every recognized query (aside from $this->is_singular()/is_post_type_archive for we already covered those in full)
+			// case \is_404():
+			// case $this->is_search():
+			// case $this->is_real_front_page():
+			// case $this->is_archive():
+			// $supported = true;
+			// break;
+			// default:
+			// $supported = false;
+			// break;
 		endswitch;
 
 		/**
@@ -823,15 +633,14 @@ class Detect extends Render {
 		 * This protects against (accidental) negative-SEO bombarding.
 		 * Support broken queries, so we can noindex them.
 		 */
-		if ( ! $supported && $this->is_query_exploited() ) {
+		if ( ! $supported && $this->is_query_exploited() )
 			$supported = true;
-		}
 
 		/**
 		 * @since 4.0.0
 		 * @param bool $supported Whether the query supports SEO.
 		 */
-		return $cache = (bool) \apply_filters( 'the_seo_framework_query_supports_seo', $supported );
+		return memo( (bool) \apply_filters( 'the_seo_framework_query_supports_seo', $supported ) );
 	}
 
 	/**
@@ -873,16 +682,15 @@ class Detect extends Render {
 	 */
 	public function is_query_exploited() {
 
-		static $exploited;
-
-		if ( isset( $exploited ) ) return $exploited;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
 		if ( ! $this->get_option( 'advanced_query_protection' ) )
-			return $exploited = false;
+			return memo( false );
 
 		// When the page ID is not 0, a real page will always be returned.
 		if ( $this->get_the_real_ID() )
-			return $exploited = false;
+			return memo( false );
 
 		global $wp_query;
 
@@ -922,20 +730,17 @@ class Detect extends Render {
 			]
 		);
 
-		$query     = $wp_query->query;
-		$exploited = false;
+		$query = $wp_query->query;
 
 		foreach ( $exploitables as $type => $qvs ) :
 			foreach ( $qvs as $qv ) :
-				// Don't guess "empty", because falsey or empty-array is also empty.
+				// Only test isset, because falsey or empty-array is what we need to test against.
 				if ( ! isset( $query[ $qv ] ) ) continue;
 
 				switch ( $type ) :
 					case 'numeric':
-						if ( '0' === $query[ $qv ] || ! is_numeric( $query[ $qv ] ) ) {
-							$exploited = true;
-							break 3;
-						}
+						if ( '0' === $query[ $qv ] || ! is_numeric( $query[ $qv ] ) )
+							return memo( true );
 						break;
 
 					case 'numeric_array':
@@ -944,17 +749,13 @@ class Detect extends Render {
 
 						// If WordPress didn't canonical_redirect() the user yet, it's exploited.
 						// WordPress mitigates this via a 404 query when a numeric value is found.
-						if ( ! preg_match( '/[0-9]/', $query[ $qv ] ) ) {
-							$exploited = true;
-							break 3;
-						}
+						if ( ! preg_match( '/[0-9]/', $query[ $qv ] ) )
+							return memo( true );
 						break;
 
 					case 'requires_s':
-						if ( ! isset( $query['s'] ) ) {
-							$exploited = true;
-							break 3;
-						}
+						if ( ! isset( $query['s'] ) )
+							return memo( true );
 						break;
 
 					default:
@@ -963,7 +764,39 @@ class Detect extends Render {
 			endforeach;
 		endforeach;
 
-		return $exploited;
+		return memo( false );
+	}
+
+	/**
+	 * Tests if the post type archive of said post type contains public posts.
+	 * Memoizes the return value.
+	 *
+	 * @since 4.2.0
+	 * @slow The queried result is not stored in WP Post's cache, which would allow
+	 *       direct access to all values of the post (if requested). This is because
+	 *       we're using `'fields' => 'ids'` instead of `'fields' => 'all'`.
+	 *
+	 * @param string $post_type The post type to test.
+	 * @return bool True if a post is found in the archive, false otherwise.
+	 */
+	public function has_posts_in_post_type_archive( $post_type ) {
+
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo( null, $post_type ) ) return $memo;
+
+		$query = new \WP_Query( [
+			'posts_per_page' => 1,
+			'post_type'      => [ $post_type ],
+			'orderby'        => 'date',
+			'order'          => 'ASC',
+			'post_status'    => 'publish',
+			'has_password'   => false,
+			'fields'         => 'ids',
+			'cache_results'  => false,
+			'no_found_rows'  => true,
+		] );
+
+		return memo( ! empty( $query->posts ), $post_type );
 	}
 
 	/**
@@ -978,7 +811,7 @@ class Detect extends Render {
 	 */
 	public function is_post_type_supported( $post_type = '' ) {
 
-		$post_type = $post_type ?: $this->get_post_type_real_ID() ?: $this->get_admin_post_type();
+		$post_type = $post_type ?: $this->get_current_post_type();
 
 		/**
 		 * @since 2.6.2
@@ -1043,36 +876,69 @@ class Detect extends Render {
 	 */
 	public function post_type_supports_taxonomies( $post_type = '' ) {
 
-		static $cache = [];
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo( null, $post_type ) ) return $memo;
 
-		if ( isset( $cache[ $post_type ] ) )
-			return $cache[ $post_type ];
+		$post_type = $post_type ?: $this->get_current_post_type();
 
-		$post_type = $post_type ?: $this->get_post_type_real_ID() ?: $this->get_admin_post_type();
-		if ( ! $post_type ) return false;
+		// Return false if no post type if found -- do not memo that, for query call might be too early.
+		return $post_type && memo( (bool) \get_object_taxonomies( $post_type, 'names' ), $post_type );
+	}
 
-		if ( \get_object_taxonomies( $post_type, 'names' ) )
-			return $cache[ $post_type ] = true;
+	/**
+	 * Returns a list of all supported post types with archives.
+	 * Memoizes the return value.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @return string[] Supported post types with post type archive support.
+	 */
+	public function get_supported_post_type_archives() {
+		return memo() ?? memo(
+			array_values(
+				array_filter(
+					$this->get_supported_post_types(),
+					static function( $post_type ) {
+						return \get_post_type_object( $post_type )->has_archive ?? false;
+					}
+				)
+			)
+		);
+	}
 
-		return $cache[ $post_type ] = false;
+	/**
+	 * Gets all post types that have PTA and could possibly support SEO.
+	 * Memoizes the return value.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @return string[] Public post types with post type archive support.
+	 */
+	public function get_public_post_type_archives() {
+		return memo() ?? memo(
+			array_values(
+				array_filter(
+					$this->get_public_post_types(),
+					static function( $post_type ) {
+						return \get_post_type_object( $post_type )->has_archive ?? false;
+					}
+				)
+			)
+		);
 	}
 
 	/**
 	 * Returns a list of all supported post types.
 	 *
 	 * @since 3.1.0
-	 * @stativar array $cache
 	 *
-	 * @return array The supported post types.
+	 * @return string[] All supported post types.
 	 */
 	public function get_supported_post_types() {
-
-		static $cache = [];
-		// Can't be recursively empty. Right?
-		if ( $cache ) return $cache;
-
-		return $cache = array_values(
-			array_filter( $this->get_public_post_types(), [ $this, 'is_post_type_supported' ] )
+		return memo() ?? memo(
+			array_values(
+				array_filter( $this->get_public_post_types(), [ $this, 'is_post_type_supported' ] )
+			)
 		);
 	}
 
@@ -1081,48 +947,74 @@ class Detect extends Render {
 	 * Memoizes the return value.
 	 *
 	 * @since 4.1.0
+	 * @since 4.1.4 Now resets the index keys of the return value.
 	 *
-	 * @return array All public post types.
+	 * @return string[] All public post types.
 	 */
 	protected function get_public_post_types() {
-
-		static $cache = null;
-
-		return isset( $cache ) ? $cache : $cache = array_filter(
-			array_unique(
-				array_merge(
-					$this->get_forced_supported_post_types(),
-					//? array_values() because get_post_types() gives a sequential array.
-					array_values( (array) \get_post_types( [
-						'public' => true,
-					] ) )
+		return umemo( __METHOD__ )
+			?? umemo(
+				__METHOD__,
+				/**
+				 * Do not consider using this filter. Properly register your post type, noob.
+				 *
+				 * @since 4.2.0
+				 * @param string[] $post_types The public post types.
+				 */
+				\apply_filters(
+					'the_seo_framework_public_post_types',
+					array_values(
+						array_filter(
+							array_unique(
+								array_merge(
+									$this->get_forced_supported_post_types(),
+									// array_values() because get_post_types() gives a sequential array.
+									array_keys( (array) \get_post_types( [ 'public' => true ] ) )
+								)
+							),
+							'is_post_type_viewable'
+						)
+					)
 				)
-			),
-			'\\is_post_type_viewable'
-		);
+			);
 	}
 
 	/**
 	 * Returns a list of builtin public post types.
-	 * Memoizes the return value.
 	 *
 	 * @since 3.1.0
+	 * @since 4.2.0 Removed memoization.
 	 *
-	 * @return array Forced supported post types.
+	 * @return string[] Forced supported post types.
 	 */
 	protected function get_forced_supported_post_types() {
-
-		static $cache = null;
 		/**
-		 * @since 3.1.0
-		 * @param array $forced Forced supported post types
-		 */
-		return isset( $cache ) ? $cache : $cache = (array) \apply_filters(
+		* @since 3.1.0
+		* @param string[] $forced Forced supported post types
+		*/
+		return (array) \apply_filters_ref_array(
 			'the_seo_framework_forced_supported_post_types',
-			array_values( \get_post_types( [
-				'public'   => true,
-				'_builtin' => true,
-			] ) )
+			[
+				array_values( \get_post_types( [
+					'public'   => true,
+					'_builtin' => true,
+				] ) ),
+			]
+		);
+	}
+
+	/**
+	 * Returns a list of all supported taxonomies.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @return string[] All supported taxonomies.
+	 */
+	public function get_supported_taxonomies() {
+		return memo() ?? memo(
+			array_values(
+				array_filter( $this->get_public_taxonomies(), [ $this, 'is_taxonomy_supported' ] )
+			)
 		);
 	}
 
@@ -1132,51 +1024,60 @@ class Detect extends Render {
 	 *
 	 * @since 4.1.0
 	 *
-	 * @return array The taxonomies that are public.
+	 * @return string[] The taxonomies that are public.
 	 */
 	protected function get_public_taxonomies() {
-
-		static $cache = null;
-
-		return isset( $cache ) ? $cache : $cache = array_filter(
-			array_unique(
-				array_merge(
-					$this->get_forced_supported_taxonomies(),
-					//? array_values() because get_taxonomies() gives a sequential array.
-					array_values( (array) \get_taxonomies( [
-						'public'   => true,
-						'_builtin' => false,
-					] ) )
+		return umemo( __METHOD__ )
+			?? umemo(
+				__METHOD__,
+				/**
+				 * Do not consider using this filter. Properly register your taxonomy, noob.
+				 *
+				 * @since 4.2.0
+				 * @param string[] $post_types The public post types.
+				 */
+				\apply_filters(
+					'the_seo_framework_public_taxonomies',
+					array_filter(
+						array_unique(
+							array_merge(
+								$this->get_forced_supported_taxonomies(),
+								// array_values() because get_taxonomies() gives a sequential array.
+								array_values( \get_taxonomies( [
+									'public'   => true,
+									'_builtin' => false,
+								] ) )
+							)
+						),
+						'is_taxonomy_viewable'
+					)
 				)
-			),
-			'\\is_taxonomy_viewable'
-		);
+			);
 	}
 
 	/**
 	 * Returns a list of builtin public taxonomies.
-	 * Memoizes the return value.
 	 *
 	 * @since 4.1.0
+	 * @since 4.2.0 Removed memoization.
 	 *
-	 * @return array Forced supported taxonomies
+	 * @return string[] Forced supported taxonomies
 	 */
 	protected function get_forced_supported_taxonomies() {
-
-		static $cache = null;
 		/**
 		 * @since 4.1.0
-		 * @param array $forced Forced supported post types
+		 * @param string[] $forced Forced supported post types
 		 */
-		return isset( $cache ) ? $cache : $cache = (array) \apply_filters(
+		return (array) \apply_filters_ref_array(
 			'the_seo_framework_forced_supported_taxonomies',
-			array_values( \get_taxonomies( [
-				'public'   => true,
-				'_builtin' => true,
-			] ) )
+			[
+				array_values( \get_taxonomies( [
+					'public'   => true,
+					'_builtin' => true,
+				] ) ),
+			]
 		);
 	}
-
 
 	/**
 	 * Determines if the post type is disabled from SEO all optimization.
@@ -1191,18 +1092,19 @@ class Detect extends Render {
 	 */
 	public function is_post_type_disabled( $post_type = '' ) {
 
-		$post_type = $post_type ?: $this->get_post_type_real_ID() ?: $this->get_admin_post_type();
+		$post_type = $post_type ?: $this->get_current_post_type();
 
 		/**
 		 * @since 3.1.2
 		 * @param bool   $disabled
 		 * @param string $post_type
 		 */
-		return \apply_filters( 'the_seo_framework_post_type_disabled',
-			isset(
-				$this->get_option( 'disabled_post_types' )[ $post_type ]
-			),
-			$post_type
+		return \apply_filters_ref_array(
+			'the_seo_framework_post_type_disabled',
+			[
+				isset( $this->get_option( 'disabled_post_types' )[ $post_type ] ),
+				$post_type,
+			]
 		);
 	}
 
@@ -1223,16 +1125,18 @@ class Detect extends Render {
 
 		$disabled = false;
 
-		if ( isset( $this->get_option( 'disabled_taxonomies' )[ $taxonomy ] ) ) {
+		// First, test pertaining option directly.
+		if ( $taxonomy && isset( $this->get_option( 'disabled_taxonomies' )[ $taxonomy ] ) ) {
 			$disabled = true;
 		} else {
+			// Then, test some() post types.
+			// Populate $disabled within loop, for the taxonomy might not have post types at all.
 			foreach ( $this->get_post_types_from_taxonomy( $taxonomy ) as $type ) {
-				// Set here, because the taxonomy might not have post types at all.
-				$disabled = true;
 				if ( $this->is_post_type_supported( $type ) ) {
 					$disabled = false;
 					break;
 				}
+				$disabled = true;
 			}
 		}
 
@@ -1241,7 +1145,13 @@ class Detect extends Render {
 		 * @param bool   $disabled
 		 * @param string $taxonomy
 		 */
-		return \apply_filters( 'the_seo_framework_taxonomy_disabled', $disabled, $taxonomy );
+		return \apply_filters_ref_array(
+			'the_seo_framework_taxonomy_disabled',
+			[
+				$disabled,
+				$taxonomy,
+			]
+		);
 	}
 
 	/**
@@ -1260,8 +1170,8 @@ class Detect extends Render {
 	 * Detects if we're on a Gutenberg page.
 	 *
 	 * @since 3.1.0
-	 * @since 3.2.0 : 1. Now detects the WP 5.0 block editor.
-	 *                2. Method is now public.
+	 * @since 3.2.0 1. Now detects the WP 5.0 block editor.
+	 *              2. Method is now public.
 	 *
 	 * @return bool
 	 */
@@ -1299,9 +1209,8 @@ class Detect extends Render {
 	 * @return string URL location of robots.txt. Unescaped.
 	 */
 	public function get_robots_txt_url() {
-		global $wp_rewrite;
 
-		if ( $wp_rewrite->using_permalinks() && ! $this->is_subdirectory_installation() ) {
+		if ( $GLOBALS['wp_rewrite']->using_permalinks() && ! $this->is_subdirectory_installation() ) {
 			$home = \trailingslashit( $this->set_preferred_url_scheme( $this->get_home_host() ) );
 			$path = "{$home}robots.txt";
 		} elseif ( $this->has_robots_txt() ) {
@@ -1323,15 +1232,17 @@ class Detect extends Render {
 	 * @return bool
 	 */
 	public function is_subdirectory_installation() {
-
-		static $cache = null;
-
-		if ( isset( $cache ) )
-			return $cache;
-
-		$parsed_url = parse_url( \get_option( 'home' ) );
-
-		return $cache = ! empty( $parsed_url['path'] ) && ltrim( $parsed_url['path'], ' \\/' );
+		return memo() ?? memo(
+			(bool) \strlen(
+				ltrim(
+					parse_url(
+						\get_option( 'home' ),
+						PHP_URL_PATH
+					) ?? '',
+					' \\/'
+				)
+			)
+		);
 	}
 
 	/**
@@ -1348,14 +1259,12 @@ class Detect extends Render {
 		if ( false === strpos( $text, '%%' ) ) return false;
 
 		$tags_simple = [ 'date', 'title', 'parent_title', 'archive_title', 'sitename', 'sitedesc', 'excerpt', 'excerpt_only', 'tag', 'category', 'primary_category', 'category_description', 'tag_description', 'term_description', 'term_title', 'searchphrase', 'sep', 'pt_single', 'pt_plural', 'modified', 'id', 'name', 'user_description', 'page', 'pagetotal', 'pagenumber', 'caption', 'focuskw', 'term404', 'ct_product_cat', 'ct_product_tag', 'wc_shortdesc', 'wc_sku', 'wc_brand', 'wc_price' ];
-
-		$_regex = sprintf( '%%%s%%', implode( '|', $tags_simple ) );
+		$_regex      = sprintf( '%%%s%%', implode( '|', $tags_simple ) );
 
 		if ( preg_match( "/$_regex/i", $text ) ) return true;
 
 		$tags_wildcard_end = [ 'cs_', 'ct_desc_', 'ct_pa_' ];
-
-		$_regex = sprintf( '%%(%s)[^\s]*?%%', implode( '|', $tags_wildcard_end ) );
+		$_regex            = sprintf( '%%(%s)[^\s]*?%%', implode( '|', $tags_wildcard_end ) );
 
 		if ( preg_match( "/$_regex/", $text ) ) return true;
 

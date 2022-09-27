@@ -4,20 +4,21 @@
  *
  * @since   5.1.0
  *
- * @package Tribe\Events\Editory\Objects
+ * @package Tribe\Events\Editor\Objects
  */
 
 namespace Tribe\Events\Editor\Objects;
 
 use Tribe__Events__Main as TEC;
 use Tribe__Utils__Array as Arr;
+use Tribe__Date_Utils as Dates;
 
 /**
  * Class Event
  *
  * @since   5.1.0
  *
- * @package Tribe\Events\Editory\Objects
+ * @package Tribe\Events\Editor\Objects
  */
 class Event implements Editor_Object_Interface {
 	/**
@@ -59,9 +60,33 @@ class Event implements Editor_Object_Interface {
 				'is_new_post' => true,
 			];
 
+			$start_date = tribe_get_request_var( 'tribe-start-date' );
+
+			/**
+			 * Grabs the tribe-start-date query param from the url if it exists
+			 * and if its a valid date then adds it to the global window object.
+			 */
+			if ( $start_date ) {
+				$start_date = Dates::build_date_object( $start_date, null, false );
+
+				if ( $start_date ) {
+					$this->data['tribe_start_date'] = $start_date->format( Dates::DBDATEFORMAT );
+				}
+			}
+
 			if ( $this->post instanceof \WP_Post && TEC::POSTTYPE === $this->post->post_type ) {
-				$meta = Arr::flatten( (array) \get_post_meta( $this->post->ID ) );
 				$post_id = $this->post->ID;
+				$meta = Arr::flatten( (array) \get_post_meta( $post_id ) );
+
+				/**
+				 * Filters the meta data that will be localized for an Event object in the context of the Blocks editor.
+				 *
+				 * @since 6.0.0
+				 *
+				 * @param array<string,mixed> $meta    The meta data to be localized.
+				 * @param int                 $post_id The post ID of the Event.
+				 */
+				$meta = apply_filters( 'tec_events_custom_tables_v1_blocks_editor_event_meta', $meta, $post_id );
 
 				$meta_fix_map = [
 					'_EventAllDay'      => 'tribe_is_truthy',

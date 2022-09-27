@@ -9,6 +9,8 @@
 
 namespace Tribe\Events\Views\V2\Views\Traits;
 
+use Tribe\Utils\Date_I18n;
+use Tribe\Utils\Date_I18n_Immutable;
 use Tribe__Context as Context;
 use Tribe__Date_Utils as Dates;
 use Tribe__Utils__Array as Arr;
@@ -38,8 +40,8 @@ trait List_Behavior {
 			return $template_vars;
 		}
 
-		$now                 = Dates::build_date_object( Arr::get( $template_vars, 'now', 'now' ) );
-		$today               = Dates::build_date_object( Arr::get( $template_vars, 'today', 'today' ) );
+		$now   = Dates::build_date_object( Arr::get( $template_vars, 'now', 'now' ) );
+		$today = Dates::build_date_object( Arr::get( $template_vars, 'today', 'today' ) );
 		// This could yield an empty string, that we want to discard to keep "now" if that's the case.
 		$bar_date            = Arr::get( $template_vars, [ 'bar', 'date' ] ) ?: $now;
 		$user_date           = Dates::build_date_object( $bar_date );
@@ -53,6 +55,14 @@ trait List_Behavior {
 		                       && $user_date->format( Dates::DBDATEFORMAT ) === $now->format( Dates::DBDATEFORMAT );
 		$has_next_page       = ! empty( $template_vars['next_url'] );
 		$date_sorted_events  = (array) Arr::get( $template_vars, 'events', [] );
+		$date_sorted_events  = array_filter( $date_sorted_events, static function( $date ) {
+			return
+				! empty( $date->dates->start_display ) &&
+				(
+					$date->dates->start_display instanceof Date_I18n
+					|| $date->dates->start_display instanceof Date_I18n_Immutable
+				);
+		} );
 
 		/*
 		 * Events can be sorted by a number of filterable criteria: we cannot assume the first event will be the first
@@ -65,8 +75,7 @@ trait List_Behavior {
 		 * We use the "display" date as we need to build a display, user-facing string.
 		 */
 		usort( $date_sorted_events,
-			static function ( $a, $b )
-			{
+			static function ( $a, $b ) {
 				if ( $a->dates->start_display == $b->dates->start_display ) {
 					return 0;
 				}
@@ -118,8 +127,7 @@ trait List_Behavior {
 		$diff_dates = count(
 			              array_unique(
 				              array_map(
-					              static function ( $event )
-					              {
+					              static function ( $event ) {
 						              return $event->dates->start_display->format( 'Y-m-d' );
 					              },
 					              $date_sorted_events
@@ -160,6 +168,21 @@ trait List_Behavior {
 			);
 
 			$show_now = true;
+		}
+
+		if (
+			! empty( $date_sorted_events )
+			&& 1 === $page
+			&& ! $has_next_page
+			&& ! $is_past
+			&& null === $this->context->get( 'event_date' )
+		) {
+			$now_label = sprintf(
+				_x( 'Upcoming', 'The datepicker range definition when no more pages of events exist.', 'the-events-calendar' ),
+				$onwards_label_start
+			);
+
+			$now_label_mobile = $now_label;
 		}
 
 		$end_timestamp_w_offset = $end->getTimestamp() + $end->getOffset();

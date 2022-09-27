@@ -17,7 +17,8 @@ $event_id             = Tribe__Main::post_id_helper();
 $time_format          = get_option( 'time_format', Tribe__Date_Utils::TIMEFORMAT );
 $time_range_separator = tribe_get_option( 'timeRangeSeparator', ' - ' );
 $show_time_zone       = tribe_get_option( 'tribe_events_timezones_show_zone', false );
-$time_zone_label      = Tribe__Events__Timezones::get_event_timezone_abbr( $event_id );
+$local_start_time     = tribe_get_start_date( $event_id, true, Tribe__Date_Utils::DBDATETIMEFORMAT );
+$time_zone_label      = Tribe__Events__Timezones::is_mode( 'site' ) ? Tribe__Events__Timezones::wp_timezone_abbr( $local_start_time ) : Tribe__Events__Timezones::get_event_timezone_abbr( $event_id );
 
 $start_datetime = tribe_get_start_date();
 $start_date = tribe_get_start_date( null, false );
@@ -53,7 +54,7 @@ $time_formatted = apply_filters( 'tribe_events_single_event_time_formatted', $ti
 $time_title = apply_filters( 'tribe_events_single_event_time_title', __( 'Time:', 'the-events-calendar' ), $event_id );
 
 $cost = tribe_get_formatted_cost();
-$website = tribe_get_event_website_link();
+$website = tribe_get_event_website_link( $event_id );
 ?>
 
 <div class="tribe-events-meta-group tribe-events-meta-group-details">
@@ -131,7 +132,7 @@ $website = tribe_get_event_website_link();
 				<div class="tribe-events-abbr tribe-events-start-time published dtstart" title="<?php echo esc_attr( $end_ts ); ?>">
 					<?php echo $time_formatted; ?>
 					<?php if ( $show_time_zone ) : ?>
-						<span class="tribe-events-abbr tribe-events-time-zone published"><?php echo esc_html( $time_zone_label ); ?></span>
+						<span class="tribe-events-abbr tribe-events-time-zone published"><?php echo esc_html( $time_zone_label ); ?></span>w
 					<?php endif; ?>
 				</div>
 			</dd>
@@ -144,6 +145,15 @@ $website = tribe_get_event_website_link();
 			<dt> <?php esc_html_e( 'Cost:', 'the-events-calendar' ); ?> </dt>
 			<dd class="tribe-events-event-cost"> <?php echo esc_html( $cost ); ?> </dd>
 		<?php endif ?>
+
+		<?php
+		/**
+		 * Included an action where we inject Series information about the event.
+		 *
+		 * @since 6.0.0
+		 */
+		do_action( 'tribe_events_single_meta_details_section_after_datetime' );
+		?>
 
 		<?php
 		echo tribe_get_event_categories(

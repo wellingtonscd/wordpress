@@ -6,10 +6,12 @@
  * POST index: autodescription-bulk
  */
 
+use The_SEO_Framework\Interpreters\Form;
+
 // phpcs:disable, VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable -- includes.
 // phpcs:disable, WordPress.WP.GlobalVariablesOverride -- This isn't the global scope.
 
-defined( 'THE_SEO_FRAMEWORK_PRESENT' ) and the_seo_framework()->_verify_include_secret( $_secret ) or die;
+defined( 'THE_SEO_FRAMEWORK_PRESENT' ) and tsf()->_verify_include_secret( $_secret ) or die;
 
 $robots_settings = [
 	'noindex'   => [
@@ -61,7 +63,7 @@ $robots_settings = [
 					echo '<label class=clear>';
 						printf( '<span class=title>%s</span>', esc_html( $_setting['label'] ) );
 						// phpcs:disable, WordPress.Security.EscapeOutput -- make_single_select_form() escapes.
-						echo $this->make_single_select_form( [
+						echo Form::make_single_select_form( [
 							'id'      => $_setting['id'],
 							'name'    => $_setting['name'],
 							'options' => [

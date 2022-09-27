@@ -30,12 +30,11 @@ namespace The_SEO_Framework\Bootstrap;
  * compared to The SEO Framework version constant.
  *
  * @since 2.7.0
+ * @since 3.2.4 Applied namspacing to this file. All method names have changed.
  * @since 4.1.1 No longer memoizes the previous version early. This should help bypass the cache flush.
  * @access private
  * @TODO convert to class, see \TSF_Extension_Manager\Upgrader
  *       It's a generator/iterator, so we must wait to PHP>5.5 support.
- *
- * @since 3.2.4 Applied namspacing to this file. All method names have changed.
  */
 
 // phpcs:disable, TSF.Performance.Opcodes.ShouldHaveNamespaceEscape
@@ -46,12 +45,6 @@ namespace The_SEO_Framework\Bootstrap;
 \add_action( 'the_seo_framework_downgraded', __NAMESPACE__ . '\\_prepare_downgrade_notice', 99, 2 );
 
 /**
- * @since 4.1.0 Deprecated. We can no longer rely on this from WP 5.5.
- * @deprecated Use persistent notifications, instead.
- */
-\add_action( 'admin_notices', __NAMESPACE__ . '\\_output_upgrade_notices' );
-
-/**
  * Returns the default site options.
  * Memoizes the return value.
  *
@@ -60,8 +53,8 @@ namespace The_SEO_Framework\Bootstrap;
  * @return array The default site options.
  */
 function _upgrade_default_site_options() {
-	static $cache;
-	return isset( $cache ) ? $cache : $cache = \the_seo_framework()->get_default_site_options();
+	static $memo;
+	return $memo ?? ( $memo = \tsf()->get_default_site_options() );
 }
 
 /**
@@ -73,8 +66,8 @@ function _upgrade_default_site_options() {
  * @return string The prior-to-upgrade TSF db version.
  */
 function _previous_db_version() {
-	static $cache;
-	return isset( $cache ) ? $cache : $cache = \get_option( 'the_seo_framework_upgraded_db_version', '0' );
+	static $memo;
+	return $memo ?? ( $memo = \get_option( 'the_seo_framework_upgraded_db_version', '0' ) );
 }
 
 /**
@@ -105,10 +98,11 @@ function _previous_db_version() {
  *              4. Added an upgrading lock. Preventing upgrades running simultaneously.
  *                 While this lock is active, the SEO Settings can't be accessed, either.
  * @since 4.1.0 Now checks whether the lock is successfully set before proceeding. Preventing race conditions.
+ * @since 4.2.1 No longer lowers the PHP execution time limit -- only increases it.
  */
 function _do_upgrade() {
 
-	$tsf = \the_seo_framework();
+	$tsf = \tsf();
 
 	if ( ! $tsf->loaded ) return;
 	if ( \wp_doing_ajax() ) return;
@@ -119,7 +113,7 @@ function _do_upgrade() {
 		exit;
 	}
 
-	$timeout = 5 * MINUTE_IN_SECONDS;
+	$timeout = 5 * MINUTE_IN_SECONDS; // Same as WP Core, function update_core().
 
 	$lock = _set_upgrade_lock( $timeout );
 	// Lock failed to create--probably because it was already locked (or the database failed us).
@@ -131,8 +125,10 @@ function _do_upgrade() {
 	register_shutdown_function( __NAMESPACE__ . '\\_release_upgrade_lock' );
 
 	\wp_raise_memory_limit( 'tsf_upgrade' );
-	// This may lower the default timeout--which is good. Prevents overlap.
-	set_time_limit( $timeout );
+
+	$ini_max_execution_time = (int) ini_get( 'max_execution_time' );
+	if ( 0 !== $ini_max_execution_time )
+		set_time_limit( max( $ini_max_execution_time, $timeout ) );
 
 	/**
 	 * Clear the cache to prevent an update_option() from saving a stale database version to the cache.
@@ -191,7 +187,6 @@ function _do_upgrade() {
  * @return string $current_version The current database version.
  */
 function _downgrade( $previous_version ) { // phpcs:ignore,VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-
 	// We aren't (currently) expecting issues where downgrading causes mayem. 4051 did cause some, though. This was added later; just set to current.
 	return _set_to_current_version();
 }
@@ -213,15 +208,14 @@ function _upgrade( $previous_version ) {
 	$current_version = $previous_version;
 
 	//! From update 3103 henceforth, the upgrade procedures should be backward compatible.
-	//? This means no data may be erased for at least 1 major version, or 1 year, whichever is later.
-	//? We must manually delete settings that are no longer used; we merge them otherwise.
-	//? When a user upgrades beyond this scope, they aren't expected to roll back.
-	$versions = [ '1', '2701', '2802', '2900', '3001', '3103', '3300', '4051', '4103', '4110', '4120' ];
+	// This means no data may be erased for at least 1 major version, or 1 year, whichever is later.
+	// We must manually delete settings that are no longer used; we merge them otherwise.
+	// When a user upgrades beyond this scope, they aren't expected to roll back.
+	$versions = [ '1', '2701', '2802', '2900', '3001', '3103', '3300', '4051', '4103', '4110', '4120', '4200' ];
 
 	foreach ( $versions as $_version ) {
 		if ( $current_version < $_version ) {
-			// ( __NAMESPACE__ . "\\_do_upgrade_{$_version}" )(); // This is an undocumented method for variable functions. So much for that.
-			call_user_func( __NAMESPACE__ . "\\_do_upgrade_{$_version}" ); // PHP 5.6 compat
+			( __NAMESPACE__ . "\\_do_upgrade_{$_version}" )(); // This is an undocumented method for variable functions.
 			$current_version = _set_version( $_version );
 		}
 	}
@@ -364,7 +358,7 @@ function _prepare_downgrade_notice( $previous_version, $current_version ) {
 
 	// phpcs:ignore, WordPress.PHP.StrictComparisons.LooseComparison -- might be mixed types.
 	if ( $previous_version && $previous_version != $current_version ) { // User successfully downgraded.
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		$tsf->register_dismissible_persistent_notice(
 			$tsf->convert_markdown(
@@ -401,6 +395,7 @@ function _prepare_downgrade_notice( $previous_version, $current_version ) {
  * @since 4.1.0 1. Moved admin notice user capability check here.
  *              2. Now registers persistent notice for the update version.
  * @since 4.1.2 No longer can accidentally show the install notice after stale upgrade.
+ * @since 4.2.0 The installation notice is now persistent, shown twice, to users with activate_plugins capability, on the main site.
  * @TODO Add browser cache flush notice? Or set a pragma/cache-control header?
  *       Users that remove query strings (thanks to YSlow) are to blame, though.
  *       The authors of the plugin that allowed this to happen are even more to blame.
@@ -413,7 +408,7 @@ function _prepare_upgrade_notice( $previous_version, $current_version ) {
 
 	// phpcs:ignore, WordPress.PHP.StrictComparisons.LooseComparison -- might be mixed types.
 	if ( $previous_version && $previous_version != $current_version ) { // User successfully upgraded.
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		$tsf->register_dismissible_persistent_notice(
 			$tsf->convert_markdown(
@@ -440,40 +435,43 @@ function _prepare_upgrade_notice( $previous_version, $current_version ) {
 			]
 		);
 	} elseif ( ! $previous_version && $current_version ) { // User successfully installed.
-		if ( \current_user_can( 'update_plugins' ) ) {
-			\add_action( 'admin_notices', __NAMESPACE__ . '\\_do_install_notice' );
+		$network_mode = (bool) ( \get_site_option( 'active_sitewide_plugins' )[ THE_SEO_FRAMEWORK_PLUGIN_BASENAME ] ?? false );
+
+		// Only show notice when not in network mode, or on main site otherwise.
+		if ( ! $network_mode || \is_main_site() ) {
+			$tsf = \tsf();
+
+			$tsf->register_dismissible_persistent_notice(
+				sprintf(
+					'<p>%s</p><p>%s</p>',
+					\esc_html__( 'The SEO Framework automatically optimizes your website for search engines and social media.', 'autodescription' ),
+					$tsf->convert_markdown(
+						sprintf(
+							/* translators: %s = Link, markdown. */
+							\esc_html__( 'To take full advantage of all SEO features, please follow our [5-minute setup guide](%s).', 'autodescription' ),
+							'https://theseoframework.com/docs/seo-plugin-setup/' // Use https://tsf.fyi/docs/setup ? Needless redirection...
+						),
+						[ 'a' ],
+						[ 'a_internal' => false ]
+					)
+				),
+				'thank-you-installed',
+				[
+					'type'   => 'info',
+					'icon'   => false,
+					'escape' => false,
+				],
+				[
+					'screens'      => [],
+					'excl_screens' => [ 'post', 'term', 'upload', 'media', 'plugin-editor', 'plugin-install', 'themes' ],
+					'capability'   => 'activate_plugins',
+					'user'         => 0,
+					'count'        => 1,
+					'timeout'      => 2 * MINUTE_IN_SECONDS,
+				]
+			);
 		}
 	}
-}
-
-/**
- * Outputs "your site has been installed" notification to applicable plugin users on upgrade.
- *
- * @since 4.1.0
- */
-function _do_install_notice() {
-
-	$tsf = \the_seo_framework();
-
-	// Make this persistent (2x count, 1 minute timeout)?
-	$tsf->do_dismissible_notice(
-		sprintf(
-			'<p>%s</p><p>%s</p>',
-			\esc_html__( 'The SEO Framework automatically optimizes your website for search engines and social media.', 'autodescription' ),
-			$tsf->convert_markdown(
-				sprintf(
-					/* translators: %s = Link, markdown. */
-					\esc_html__( 'To take full advantage of all SEO features, please follow our [5-minute setup guide](%s).', 'autodescription' ),
-					'https://theseoframework.com/docs/seo-plugin-setup/' // Use https://tsf.fyi/docs/setup ? Needless redirection...
-				),
-				[ 'a' ],
-				[ 'a_internal' => false ]
-			)
-		),
-		'info',
-		false,
-		false
-	);
 }
 
 /**
@@ -488,52 +486,41 @@ function _do_install_notice() {
  * @param string $current_version The current version of the site.
  * @return void Early when already enqueued
  */
-function _prepare_upgrade_suggestion( $previous_version, $current_version ) {
+function _prepare_upgrade_suggestion( $previous_version, $current_version ) { // phpcs:ignore, VariableAnalysis.CodeAnalysis.VariableAnalysis
 	// Don't invoke if the user didn't upgrade.
 	if ( ! $previous_version ) return;
 
 	// Can this even run twice? Let's play it safe to prevent crashes.
-	if ( \The_SEO_Framework\_has_run( __METHOD__ ) ) return;
+	if ( \The_SEO_Framework\has_run( __METHOD__ ) ) return;
 
 	require THE_SEO_FRAMEWORK_DIR_PATH_FUNCT . 'upgrade-suggestion.php';
 }
 
 /**
- * Memoize and returns upgrade notices to be outputted in admin.
+ * Registers upgrade notices.
  *
  * @since 2.9.0
  * @since 4.1.0 Deprecated. We can no longer rely on this from WP 5.5.
- * @deprecated Use persistent notifications, instead.
+ * @since 4.2.0 1. Reinstated, and now forwards notices to the persistent-notice system.
+ *              2. No longer returns values. Removed pertaining second parameter.
  *
- * @param string $notice The upgrade notice.
- * @param bool   $get    Whether to return the upgrade notices.
- * @return array|void The notices when $get is true.
+ * @param string $notice The upgrade notice. Doesn't need to be escaped.
  */
-function _add_upgrade_notice( $notice = '', $get = false ) {
+function _add_upgrade_notice( $notice = '' ) {
 
-	// Memoize the strings for a later $get
-	static $cache = [];
+	$tsf = \tsf();
 
-	if ( $get )
-		return $cache;
-
-	$cache[] = $notice;
-}
-
-/**
- * Outputs available upgrade notices.
- *
- * @since 2.9.0
- * @since 3.0.0 Added prefix.
- * @since 4.1.0 Deprecated. We can no longer rely on this from WP 5.5.
- * @deprecated Use persistent notifications, instead.
- * @uses _add_upgrade_notice()
- */
-function _output_upgrade_notices() {
-	foreach ( _add_upgrade_notice( '', true ) as $notice ) {
-		// @TODO rtl?
-		\the_seo_framework()->do_dismissible_notice( 'SEO: ' . $notice, 'info' );
-	}
+	$tsf->register_dismissible_persistent_notice(
+		"SEO: $notice",
+		'upgrade-' . ( hash( 'md5', $notice ) ?: uniqid( '', true ) ), // if md5 is unregistered, it'll return false
+		[
+			'type' => 'info',
+		],
+		[
+			'excl_screens' => [ 'post', 'term', 'upload', 'media', 'plugin-editor', 'plugin-install', 'themes' ],
+			'capability'   => $tsf->get_settings_capability(),
+		]
+	);
 }
 
 /**
@@ -542,7 +529,7 @@ function _output_upgrade_notices() {
  * @since 3.1.0
  */
 function _do_upgrade_1() {
-	\the_seo_framework()->register_settings();
+	\tsf()->register_settings();
 }
 
 /**
@@ -561,7 +548,7 @@ function _do_upgrade_2701() {
 			\add_term_meta( $term_id, THE_SEO_FRAMEWORK_TERM_OPTIONS, $meta, true );
 		}
 
-		//= Rudimentary test for remaining ~300 users of earlier versions passed, set initial version to 2600.
+		// Rudimentary test for remaining ~300 users of earlier versions passed, set initial version to 2600.
 		\update_option( 'the_seo_framework_initial_db_version', '2600', 'no' );
 	}
 }
@@ -587,13 +574,13 @@ function _do_upgrade_2802() {
 function _do_upgrade_2900() {
 
 	if ( \get_option( 'the_seo_framework_initial_db_version' ) < '2900' ) {
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
-		$card_type = trim( \esc_attr( $tsf->get_option( 'twitter_card', false ) ) );
+		$card_type = trim( $tsf->get_option( 'twitter_card', false ) );
 		if ( 'photo' === $card_type ) {
 			$tsf->update_option( 'twitter_card', 'summary_large_image' );
 			_add_upgrade_notice(
-				\esc_html__( 'Twitter Photo Cards have been deprecated. Your site now uses Summary Cards when applicable.', 'autodescription' )
+				\__( 'Twitter Photo Cards have been deprecated. Your site now uses Summary Cards when applicable.', 'autodescription' )
 			);
 		}
 	}
@@ -611,14 +598,14 @@ function _do_upgrade_2900() {
 function _do_upgrade_3001() {
 
 	if ( \get_option( 'the_seo_framework_initial_db_version' ) < '3001' ) {
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
-		//= Only show notice if old option exists. Falls back to default upgrader otherwise.
+		// Only show notice if old option exists. Falls back to default upgrader otherwise.
 		$sitemap_timestamps = $tsf->get_option( 'sitemap_timestamps', false );
 		if ( '' !== $sitemap_timestamps ) {
 			$tsf->update_option( 'timestamps_format', (string) (int) $sitemap_timestamps );
 			_add_upgrade_notice(
-				\esc_html__( 'The previous sitemap timestamp settings have been converted into new global timestamp settings.', 'autodescription' )
+				\__( 'The previous sitemap timestamp settings have been converted into new global timestamp settings.', 'autodescription' )
 			);
 		} else {
 			$tsf->update_option( 'timestamps_format', '1' );
@@ -648,7 +635,7 @@ function _do_upgrade_3103() {
 	\add_option( THE_SEO_FRAMEWORK_SITE_CACHE, [] );
 
 	if ( \get_option( 'the_seo_framework_initial_db_version' ) < '3103' ) {
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		// Transport title separator (option name typo).
 		$tsf->update_option( 'title_separator', $tsf->get_option( 'title_seperator', false ) ?: 'hyphen' );
@@ -674,9 +661,6 @@ function _do_upgrade_3103() {
 
 		// Add non-default HTML stripping option. Defaulting to previous behavior.
 		$tsf->update_option( 'title_strip_tags', 0 ); // NOTE: Default is 1.
-
-		// Adds non-default priority option.
-		$tsf->update_option( 'sitemaps_priority', 1 ); // NOTE: Default is 0.
 	}
 }
 
@@ -695,7 +679,7 @@ function _do_upgrade_3103() {
 function _do_upgrade_3300() {
 
 	if ( \get_option( 'the_seo_framework_initial_db_version' ) < '3300' ) {
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		// Remove old rewrite rules.
 		unset(
@@ -713,7 +697,7 @@ function _do_upgrade_3300() {
 
 		if ( $tsf->get_option( 'ping_google', false ) || $tsf->get_option( 'ping_bing', false ) ) {
 			_add_upgrade_notice(
-				\esc_html__( 'A cronjob is now used to ping search engines, and it alerts them to changes in your sitemap.', 'autodescription' )
+				\__( 'A cronjob is now used to ping search engines, and it alerts them to changes in your sitemap.', 'autodescription' )
 			);
 		}
 
@@ -726,7 +710,7 @@ function _do_upgrade_3300() {
 		}
 
 		_add_upgrade_notice(
-			\esc_html__( 'The positions in the "Meta Title Additions Location" setting for the homepage have been reversed, left to right, but the output has not been changed. If you must downgrade for some reason, remember to switch the location back again.', 'autodescription' )
+			\__( 'The positions in the "Meta Title Additions Location" setting for the homepage have been reversed, left to right, but the output has not been changed. If you must downgrade for some reason, remember to switch the location back again.', 'autodescription' )
 		);
 	}
 }
@@ -744,7 +728,7 @@ function _do_upgrade_3300() {
 function _do_upgrade_4051() {
 
 	if ( \get_option( 'the_seo_framework_initial_db_version' ) < '4051' ) {
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		$tsf->update_option( 'advanced_query_protection', 0 );
 		$tsf->update_option( 'index_the_feed', 0 );
@@ -767,7 +751,7 @@ function _do_upgrade_4051() {
 function _do_upgrade_4103() {
 
 	if ( \get_option( 'the_seo_framework_initial_db_version' ) < '4103' ) {
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		$tsf->update_option( 'disabled_taxonomies', [] );
 		$tsf->update_option( 'sitemap_logo_url', '' );
@@ -809,7 +793,7 @@ function _do_upgrade_4103() {
 function _do_upgrade_4110() {
 
 	if ( \get_option( 'the_seo_framework_initial_db_version' ) < '4110' ) {
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		$tsf->update_option( 'oembed_use_og_title', 0 );
 		$tsf->update_option( 'oembed_use_social_image', 0 ); // Defaults to 1 for new sites!
@@ -823,8 +807,18 @@ function _do_upgrade_4110() {
  */
 function _do_upgrade_4120() {
 	if ( \get_option( 'the_seo_framework_initial_db_version' ) < '4120' ) {
-		$tsf = \the_seo_framework();
-
+		$tsf = \tsf();
 		$tsf->update_option( 'ping_use_cron_prerender', 0 );
+	}
+}
+
+/**
+ * Removes the global `the_seo_framework_tested_upgrade_version` option.
+ *
+ * @since 4.2.0
+ */
+function _do_upgrade_4200() {
+	if ( \get_option( 'the_seo_framework_initial_db_version' ) < '4200' ) {
+		\delete_option( 'the_seo_framework_tested_upgrade_version' );
 	}
 }

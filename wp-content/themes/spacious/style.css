@@ -1,10 +1,101 @@
+@charset "UTF-8";
+@font-face {
+	font-family: 'Lato';
+	font-style: normal;
+	font-weight: 100;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-Thin.woff) format("woff");
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: italic;
+	font-weight: 100;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-ThinItalic.woff) format("woff");
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: normal;
+	font-weight: 300;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-Light.woff) format("woff");
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: italic;
+	font-weight: 300;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-LightItalic.woff) format("woff");
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: normal;
+	font-weight: 400;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-Regular.woff) format("woff");
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: italic;
+	font-weight: 400;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-Italic.woff) format("woff");
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: normal;
+	font-weight: 700;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-Bold.woff) format("woff");
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: italic;
+	font-weight: 700;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-BoldItalic.woff) format("woff");
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: normal;
+	font-weight: 900;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-Black.woff) format("woff");
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: italic;
+	font-weight: 900;
+	font-stretch: normal;
+	font-display: fallback;
+	src: url(assets/fonts/Lato-BlackItalic.woff) format("woff");
+}
+
 /*
 Theme Name: Spacious
 Theme URI: https://themegrill.com/themes/spacious
 Author: ThemeGrill
 Author URI: https://themegrill.com
-Description: Spacious is an incredibly spacious multipurpose responsive theme coded & designed with a lot of care and love. You can use it for your business, portfolio, blogging or any type of site. It has 4 page layouts, 2 page templates, 4 blog display types, 13 widgets areas, 5 custom widgets focusing on business template, awesome slider, primary color option to match your logo & website, boxed & wide layout, light & dark color skin, translation ready and many more. You can get free support in https://themegrill.com/support-forum/ and check the demo at https://demo.themegrill.com/spacious/.
-Version: 1.9.0
+Description: Spacious is an incredible free business WordPress theme that fits small to medium businesses. This responsive theme is optimized for speed. So, you end up with a business website that loads within 1 second. Since Spacious is compatible with WooCommerce, you can easily set up an online store for your business. It's amazing collection of 16 free starter demos makes building a complete website very beginner-friendly. Spacious theme supports Gutenberg and page builder plugins like Elementor, Brizy, Beaver Builder, SiteOrigin, etc. So, import a demo with just one click and start customizing it using a page builder of your choice. Here are the key Spacious features you get with this theme: >> Well-coded >> Translation & RTL Ready >> Sticky Menu >> Complete Documentation >> Multiple Widget Areas >> Optimized for SEO >> Compatible with Major Browsers. Try this free theme yourself to establish and grow your business’ online presence without having to rely on developers or designers. You can always reach out at https://themegrill.com/contact/ if you encounter any issues. Also, explore all the available free starter sites at https://themegrilldemos.com/spacious-demos.
+Version: 1.9.5
 Tested up to: 5.5
 Requires PHP: 5.6
 License: GNU General Public License v2 or later
@@ -3175,9 +3266,6 @@ li.default-menu {
 		float: none;
 		text-align: center;
 	}
-	#header-right-section #header-right-sidebar {
-		width: 100%;
-	}
 	.site-header .menu-toggle {
 		display: block;
 		text-align: left;
@@ -3188,8 +3276,6 @@ li.default-menu {
 	}
 	.main-navigation {
 		float: none;
-		padding-top: 0;
-		width: 100%;
 	}
 	.main-navigation.toggled .nav-menu {
 		display: block;
@@ -3295,9 +3381,6 @@ li.default-menu {
 		margin-top: 15px;
 		max-width: 100%;
 	}
-	.better-responsive-menu #header-right-section .widget {
-		margin-bottom: 10px;
-	}
 	.better-responsive-menu #site-navigation {
 		float: right;
 		margin-top: 10px;
@@ -3330,7 +3413,6 @@ li.default-menu {
 	.better-responsive-menu .site-header .menu-toggle {
 		background: #3a3a3a none repeat scroll 0 0;
 		color: #fff;
-		font: 0/0 a;
 		height: 36px;
 		margin: 0;
 		padding: 0;
@@ -3452,11 +3534,11 @@ li.default-menu {
 		float: none;
 	}
 	.better-responsive-menu #header-right-section {
-		padding-top: 10px;
 		float: none;
 	}
 	.better-responsive-menu #header-right-sidebar {
 		float: right;
+		padding-left: 20px;
 	}
 	.better-responsive-menu #site-navigation {
 		float: none;

@@ -8,7 +8,7 @@
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -56,6 +56,13 @@ window.tsfPost = function( $ ) {
 	 * @type {string}
 	 */
 	const _descId = 'autodescription_description';
+
+	/**
+	 * @since 4.2.0
+	 * @access private
+	 * @type {string}
+	 */
+	const _socialGroup = 'autodescription_social_singular';
 
 	/**
 	 * Registers on resize/orientationchange listeners and debounces to only run
@@ -108,9 +115,9 @@ window.tsfPost = function( $ ) {
 			}
 		}
 		const prepareCalculateTextOverflow = event => {
-			let target = event.detail.target || document.getElementById( 'tsf-flex-inpost-tabs-wrapper' );
-			if ( ! target ) return;
-			overflowAnimationFrame[ target.id ] = requestAnimationFrame( () => calculateTextOverflow( target ) );
+			const target = event.detail.target || document.getElementById( 'tsf-flex-inpost-tabs-wrapper' );
+			if ( target )
+				overflowAnimationFrame[ target.id ] = requestAnimationFrame( () => calculateTextOverflow( target ) );
 		}
 		window.addEventListener( 'tsf-flex-resize', prepareCalculateTextOverflow );
 
@@ -119,7 +126,6 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {HTMLElement|undefined} target The target that's being resized. Optional.
-		 * @return {undefined}
 		 */
 		const triggerResize = target => {
 			window.dispatchEvent( new CustomEvent(
@@ -133,47 +139,26 @@ window.tsfPost = function( $ ) {
 				}
 			) );
 		}
-		if ( 'undefined' !== typeof window.ResizeObserver ) {
-			let resizeAnimationFrame = {};
-			const resizeObserver = new ResizeObserver( entries => {
-				// There should be only one entry... Nevertheless, let's loop this for we might add more metaboxes.
-				for ( const entry of entries ) {
-					let target = entry.target;
-					cancelAnimationFrame( resizeAnimationFrame[ target.id ] );
-					resizeAnimationFrame[ target.id ] = requestAnimationFrame( () => {
-						// No support for all major browsers yet. Neither for entry.contentRect.
-						// if ( ! entry.dataset.boxSizeWidth ) {
-						// 	entry.dataset.boxSizeWidth = 0;
-						// }
-						// entry.dataset.boxSizeWidth = contentBoxSize.inlineSize;
+		let resizeAnimationFrame = {};
+		const resizeObserver = new ResizeObserver( entries => {
+			// There should be only one entry... Nevertheless, let's loop this for we might add more metaboxes.
+			for ( const entry of entries ) {
+				let target = entry.target;
+				cancelAnimationFrame( resizeAnimationFrame[ target.id ] );
+				resizeAnimationFrame[ target.id ] = requestAnimationFrame( () => {
+					// No support for all major browsers yet. Neither for entry.contentRect.
+					// entry.dataset.boxSizeWidth ||= contentBoxSize.inlineSize;
 
-						if ( ! target.dataset.lastWidth ) {
-							target.dataset.lastWidth = 0;
-						}
-						if ( +target.clientWidth !== +target.dataset.lastWidth ) {
-							target.dataset.lastWidth = target.clientWidth;
-							triggerResize( target );
-						}
-					} );
-				}
-			} );
-			resizeObserver.observe( document.getElementById( 'tsf-flex-inpost-tabs-wrapper' ) );
-		} else {
-			/**
-			 * Set asynchronous timeout because we need to wait for some actions to complete.
-			 * Also forward without event data. triggerResize's first parameter may not be of type Event.
-			 */
-			const triggerEdgeResize = () => setTimeout( triggerResize, 10 );
+					target.dataset.lastWidth ||= 0;
 
-			// EdgeHTML fallback support. Microsoft, release Edge Chromium already!
-			// Not detailed, not optimized. Edge case. Ha! Get it? ...
-			$( document ).on( 'wp-window-resized orientationchange', triggerEdgeResize );
-			$( '#collapse-menu' ).on( 'click', triggerEdgeResize );
-			$( '.columns-prefs :input[type=radio]' ).on( 'change', triggerEdgeResize );
-			$( '.meta-box-sortables' ).on( 'sortupdate', triggerEdgeResize ); // Removed WP 5.5?
-			$( document ).on( 'postbox-moved', triggerEdgeResize ); // New WP 5.5?
-			$( '#tsf-inpost-box .handle-order-higher, #tsf-inpost-box .handle-order-lower' ).on( 'click', triggerEdgeResize );
-		}
+					if ( +target.clientWidth !== +target.dataset.lastWidth ) {
+						target.dataset.lastWidth = target.clientWidth;
+						triggerResize( target );
+					}
+				} );
+			}
+		} );
+		resizeObserver.observe( document.getElementById( 'tsf-flex-inpost-tabs-wrapper' ) );
 
 		// Trigger after setup
 		triggerResize();
@@ -212,18 +197,22 @@ window.tsfPost = function( $ ) {
 	 *
 	 * @since 4.0.0
 	 * @since 4.1.2 Changed name from _initCanonicalInput
+	 * @since 4.1.4 Now no longer proceeds on absence of element ID 'autodescription_noindex'.
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initVisibilityListeners = () => {
+
+		const indexSelect = document.getElementById( 'autodescription_noindex' );
+
+		if ( ! indexSelect ) return;
+
+		const canonicalInput = document.getElementById( 'autodescription_canonical' );
 
 		// Prefix with B because I don't trust using 'protected' (might become reserved).
 		const BPROTECTED = 0b01,
 		      BNOINDEX   = 0b10;
-
-		const indexSelect = document.getElementById( 'autodescription_noindex' );
 
 		let canonicalPhState = 0b00,
 			canonicalUrl     = '';
@@ -234,24 +223,22 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {string} link
-		 * @return {undefined}
 		 */
 		const updateCanonicalPlaceholder = () => {
 			clearTimeout( updateCanonicalPlaceholderDebouncer );
 			updateCanonicalPlaceholderDebouncer = setTimeout( () => {
-				let canonicalInput = document.getElementById( 'autodescription_canonical' );
 
 				if ( ! canonicalInput ) return;
 
 				// Link might not've been updated (yet). Fill it in with PHP-supplied value (if any).
-				canonicalUrl = canonicalUrl || canonicalInput.placeholder;
+				canonicalUrl ||= canonicalInput.placeholder;
 
 				if ( ( canonicalPhState & BPROTECTED ) || ( canonicalPhState & BNOINDEX ) ) {
 					canonicalInput.placeholder = '';
 				} else {
 					canonicalInput.placeholder = canonicalUrl;
 				}
-			}, 50 );
+			}, 50 ); // Magic number. Low enough to not signify a delay.
 		}
 
 		/**
@@ -259,7 +246,6 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {string} link
-		 * @return {undefined}
 		 */
 		const updateCanonical = link => {
 			canonicalUrl = link;
@@ -272,7 +258,6 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {string} visibility
-		 * @return {undefined}
 		 */
 		const setRobotsDefaultIndexingState = visibility => {
 			let _defaultIndexOption = indexSelect.querySelector( '[value="0"]' ),
@@ -292,9 +277,9 @@ window.tsfPost = function( $ ) {
 					break;
 			}
 
-			if ( _defaultIndexOption ) {
+			if ( _defaultIndexOption )
 				_defaultIndexOption.innerHTML = indexSelect.dataset.defaultI18n.replace( '%s', tsf.decodeEntities( indexDefaultValue ) );
-			}
+
 			updateCanonicalPlaceholder();
 		}
 		$( document ).on( 'tsf-updated-gutenberg-visibility', ( event, visibility ) => setRobotsDefaultIndexingState( visibility ) );
@@ -304,7 +289,6 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {Event} event
-		 * @return {undefined}
 		 */
 		const setClassicRobotsDefaultIndexingState = event => {
 			let visibility = $( '#visibility' ).find( 'input:radio:checked' ).val();
@@ -318,8 +302,8 @@ window.tsfPost = function( $ ) {
 			}
 			setRobotsDefaultIndexingState( visibility );
 		}
-		const classicVisibilityInput = document.querySelector( '#visibility .save-post-visibility' );
-		classicVisibilityInput && classicVisibilityInput.addEventListener( 'click', setClassicRobotsDefaultIndexingState );
+		document.querySelector( '#visibility .save-post-visibility' )
+			?.addEventListener( 'click', setClassicRobotsDefaultIndexingState );
 
 		if ( l10n.states.isPrivate ) {
 			setRobotsDefaultIndexingState( 'private' );
@@ -334,7 +318,6 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {Number} value
-		 * @return {undefined}
 		 */
 		const setRobotsIndexingState = value => {
 			let type = '';
@@ -359,7 +342,6 @@ window.tsfPost = function( $ ) {
 			updateCanonicalPlaceholder();
 		}
 		indexSelect.addEventListener( 'change', event => setRobotsIndexingState( event.target.value ) );
-
 		setRobotsIndexingState( indexSelect.value );
 	}
 
@@ -370,39 +352,33 @@ window.tsfPost = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initTitleListeners = () => {
 
 		const titleInput = document.getElementById( _titleId );
 		if ( ! titleInput ) return;
 
-		const blogNameTrigger = document.getElementById( 'autodescription_title_no_blogname' );
-
 		tsfTitle.setInputElement( titleInput );
 
-		let state = JSON.parse(
-			document.getElementById( 'tsf-title-data_' + _titleId ).dataset.state
-		);
+		const state = JSON.parse( document.getElementById( `tsf-title-data_${_titleId}` )?.dataset.state || 0 );
 
-		tsfTitle.updateStateOf( _titleId, 'allowReferenceChange', ! state.refTitleLocked );
-		tsfTitle.updateStateOf( _titleId, 'defaultTitle', state.defaultTitle.trim() );
-		tsfTitle.updateStateOf( _titleId, 'addAdditions', state.addAdditions );
-		tsfTitle.updateStateOf( _titleId, 'useSocialTagline', !! ( state.useSocialTagline || false ) );
-		tsfTitle.updateStateOf( _titleId, 'additionValue', state.additionValue.trim() );
-		tsfTitle.updateStateOf( _titleId, 'additionPlacement', state.additionPlacement );
-		tsfTitle.updateStateOf( _titleId, 'hasLegacy', !! ( state.hasLegacy || false ) );
+		if ( state ) {
+			tsfTitle.updateStateOf( _titleId, 'allowReferenceChange', ! state.refTitleLocked );
+			tsfTitle.updateStateOf( _titleId, 'defaultTitle', state.defaultTitle );
+			tsfTitle.updateStateOf( _titleId, 'addAdditions', state.addAdditions );
+			tsfTitle.updateStateOf( _titleId, 'additionValue', state.additionValue );
+			tsfTitle.updateStateOf( _titleId, 'additionPlacement', state.additionPlacement );
+			tsfTitle.updateStateOf( _titleId, 'hasLegacy', !! ( state.hasLegacy || false ) );
+		}
 
 		/**
 		 * Updates title additions, based on singular settings change.
 		 *
 		 * @function
 		 * @param {Event} event
-		 * @return {undefined}
 		 */
 		const updateTitleAdditions = event => {
-			let prevAddAdditions = tsfTitle.getStateOf( _titleId, 'addAdditions' ),
-				addAdditions     = ! event.target.checked;
+			let addAdditions = ! event.target.checked;
 
 			if ( l10n.params.additionsForcedDisabled ) {
 				addAdditions = false;
@@ -410,10 +386,9 @@ window.tsfPost = function( $ ) {
 				addAdditions = true;
 			}
 
-			if ( prevAddAdditions !== addAdditions ) {
-				tsfTitle.updateStateOf( _titleId, 'addAdditions', addAdditions );
-			}
+			tsfTitle.updateStateOf( _titleId, 'addAdditions', addAdditions );
 		}
+		const blogNameTrigger = document.getElementById( 'autodescription_title_no_blogname' );
 		if ( blogNameTrigger ) {
 			blogNameTrigger.addEventListener( 'change', updateTitleAdditions );
 			blogNameTrigger.dispatchEvent( new Event( 'change' ) );
@@ -424,11 +399,9 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {string} visibility
-		 * @return {undefined}
 		 */
 		const setTitleVisibilityPrefix = visibility => {
-			let oldPrefixValue = tsfTitle.getStateOf( _titleId, 'prefixValue' ),
-				prefixValue    = '';
+			let prefixValue = '';
 
 			switch ( visibility ) {
 				case 'password':
@@ -445,8 +418,7 @@ window.tsfPost = function( $ ) {
 					break;
 			}
 
-			if ( prefixValue !== oldPrefixValue )
-				tsfTitle.updateStateOf( _titleId, 'prefixValue', prefixValue );
+			tsfTitle.updateStateOf( _titleId, 'prefixValue', prefixValue );
 		}
 		$( document ).on( 'tsf-updated-gutenberg-visibility', ( event, visibility ) => setTitleVisibilityPrefix( visibility ) );
 
@@ -455,7 +427,6 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {Event} event
-		 * @return {undefined}
 		 */
 		const setClassicTitleVisibilityPrefix = event => {
 			let visibility = $( '#visibility' ).find( 'input:radio:checked' ).val();
@@ -469,8 +440,8 @@ window.tsfPost = function( $ ) {
 			}
 			setTitleVisibilityPrefix( visibility );
 		}
-		const classicVisibilityInput = document.querySelector( '#visibility .save-post-visibility' );
-		classicVisibilityInput && classicVisibilityInput.addEventListener( 'click', setClassicTitleVisibilityPrefix );
+		document.querySelector( '#visibility .save-post-visibility' )
+			?.addEventListener( 'click', setClassicTitleVisibilityPrefix );
 
 		if ( l10n.states.isPrivate ) {
 			setTitleVisibilityPrefix( 'private' );
@@ -483,16 +454,13 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {string} value
-		 * @return {undefined}
 		 */
 		const updateDefaultTitle = val => {
-			val = typeof val === 'string' && val.trim() || '';
+			val = val?.trim() || '';
 
 			let defaultTitle = tsfTitle.stripTitleTags ? tsf.stripTags( val ) : val
 
-			defaultTitle = defaultTitle || tsfTitle.untitledTitle;
-
-			tsfTitle.updateStateOf( _titleId, 'defaultTitle', defaultTitle );
+			tsfTitle.updateStateOf( _titleId, 'defaultTitle', defaultTitle || tsfTitle.untitledTitle );
 		}
 		//= The homepage listens to a static preset value. Update all others.
 		if ( ! l10n.params.isFront ) {
@@ -513,22 +481,21 @@ window.tsfPost = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initDescriptionListeners = () => {
 
-		let descInput = document.getElementById( _descId );
+		const descInput = document.getElementById( _descId );
 		if ( ! descInput ) return;
-
-		let state = JSON.parse(
-			document.getElementById( 'tsf-description-data_' + _descId ).dataset.state
-		);
 
 		tsfDescription.setInputElement( descInput );
 
-		tsfDescription.updateStateOf( _descId, 'allowReferenceChange', ! state.refDescriptionLocked );
-		tsfDescription.updateStateOf( _descId, 'defaultDescription', state.defaultDescription.trim() );
-		tsfDescription.updateStateOf( _descId, 'hasLegacy', !! ( state.hasLegacy || false ) );
+		const state = JSON.parse( document.getElementById( `tsf-description-data_${_descId}` )?.dataset.state || 0 );
+
+		if ( state ) {
+			tsfDescription.updateStateOf( _descId, 'allowReferenceChange', ! state.refDescriptionLocked );
+			tsfDescription.updateStateOf( _descId, 'defaultDescription', state.defaultDescription.trim() );
+			tsfDescription.updateStateOf( _descId, 'hasLegacy', !! ( state.hasLegacy || false ) );
+		}
 
 		tsfDescription.enqueueUnregisteredInputTrigger( _descId );
 
@@ -537,7 +504,6 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {string} visibility
-		 * @return {undefined}
 		 */
 		const setDescriptionVisibility = visibility => {
 			let oldUseDefaultDescription = tsfDescription.getStateOf( _descId, 'useDefaultDescription' ),
@@ -565,9 +531,8 @@ window.tsfPost = function( $ ) {
 		 *
 		 * @function
 		 * @param {Event} event
-		 * @return {undefined}
 		 */
-		const setClassicTitleVisibilityPrefix = event => {
+		const setClassicDescriptionVisibilityPrefix = event => {
 			let visibility = $( '#visibility' ).find( 'input:radio:checked' ).val();
 			if ( 'password' === visibility ) {
 				let pass = $( '#visibility' ).find( '#post_password' ).val();
@@ -579,14 +544,55 @@ window.tsfPost = function( $ ) {
 			}
 			setDescriptionVisibility( visibility );
 		}
-		const classicVisibilityInput = document.querySelector( '#visibility .save-post-visibility' );
-		classicVisibilityInput && classicVisibilityInput.addEventListener( 'click', setClassicTitleVisibilityPrefix );
+		document.querySelector( '#visibility .save-post-visibility' )
+			?.addEventListener( 'click', setClassicDescriptionVisibilityPrefix );
 
 		if ( l10n.states.isPrivate ) {
 			setDescriptionVisibility( 'private' );
 		} else if ( l10n.states.isProtected ) {
 			setDescriptionVisibility( 'password' );
 		}
+	}
+
+	/**
+	 * Initializes social meta input listeners.
+	 *
+	 * @since 4.2.0
+	 * @access private
+	 *
+	 * @function
+	 */
+	const _initSocialListeners = () => {
+
+		tsfSocial.setInputInstance( _socialGroup, _titleId, _descId );
+
+		const groupData = JSON.parse(
+			document.getElementById( `tsf-social-data_${_socialGroup}` )?.dataset.settings || 0
+		);
+
+		if ( ! groupData ) return;
+
+		tsfSocial.updateStateOf( _socialGroup, 'addAdditions', groupData.og.state.addAdditions ); // tw Also has one. Maybe future.
+		tsfSocial.updateStateOf(
+			_socialGroup,
+			'defaults',
+			{
+				ogTitle: groupData.og.state.defaultTitle,
+				twTitle: groupData.tw.state.defaultTitle,
+				ogDesc:  groupData.og.state.defaultDesc,
+				twDesc:  groupData.tw.state.defaultDesc,
+			}
+		);
+		tsfSocial.updateStateOf(
+			_socialGroup,
+			'inputLocks',
+			{
+				ogTitle: groupData.og.state?.titleLock || false,
+				twTitle: groupData.tw.state?.titleLock || false,
+				ogDesc:  groupData.og.state?.descLock || false,
+				twDesc:  groupData.tw.state?.descLock || false,
+			}
+		);
 	}
 
 	/**
@@ -597,7 +603,6 @@ window.tsfPost = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initGeneralListeners = () => {
 
@@ -618,7 +623,6 @@ window.tsfPost = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initTooltipBoundaries = () => {
 
@@ -639,7 +643,6 @@ window.tsfPost = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initUpdateMetaBox = () => {
 
@@ -650,92 +653,82 @@ window.tsfPost = function( $ ) {
 		// We only use this because it looks nice. The rest is implied via the counter updates.
 		const seobarAjaxLoader = document.querySelector( '#tsf-doing-it-right-wrap .tsf-ajax' );
 
-		const desc   = document.getElementById( _descId ),
-			  ogDesc = document.getElementById( 'autodescription_og_description' ),
-			  twDesc = document.getElementById( 'autodescription_twitter_description' );
-
 		const imageUrl = document.getElementById( 'autodescription_socialimage-url' );
+
+		const _ogDescription = tsfSocial.getInputInstance( _socialGroup )?.inputs?.ogDesc;
+		const _twDescription = tsfSocial.getInputInstance( _socialGroup )?.inputs?.twDesc;
 
 		const getData = {
 			seobar:          !! seobar,
-			metadescription: !! desc,
-			ogdescription:   !! ogDesc,
-			twdescription:   !! twDesc,
+			metadescription: !! document.getElementById( _descId ),
+			ogdescription:   !! _ogDescription,
+			twdescription:   !! _twDescription,
 			imageurl:        !! imageUrl,
-		};
+		}
 
 		const onSuccess = response => {
 
 			response = tsf.convertJSONResponse( response );
 
-			switch ( response.type ) {
-				case 'success':
-					// Wait the same amount of time as the SEO Bar, so to sync the changes.
-					const fadeTime = 75;
+			// Wait the same amount of time as the SEO Bar, so to sync the changes.
+			const fadeTime = 75;
 
-					setTimeout( () => {
-						if ( tsfDescription ) {
-							tsfDescription.updateStateOf( _descId, 'defaultDescription', response.data.metadescription.trim() );
-						}
-						if ( tsfSocial ) {
-							tsfSocial.updateState( 'ogDescPlaceholder', response.data.ogdescription.trim() );
-							tsfSocial.updateState( 'twDescPlaceholder', response.data.twdescription.trim() );
-						}
+			setTimeout( () => {
+				if ( 'tsfDescription' in window ) {
+					tsfDescription.updateStateOf( _descId, 'defaultDescription', response.data.metadescription.trim() );
+				}
+				if ( 'tsfSocial' in window ) {
+					const socialDefaults = tsfSocial.getStateOf( _socialGroup, 'defaults' );
+					socialDefaults.ogDesc = response.data.ogdescription.trim();
+					socialDefaults.twDesc = response.data.twdescription.trim();
+					tsfSocial.updateStateOf( _socialGroup, 'defaults', socialDefaults );
+				}
+				if ( imageUrl ) {
+					// Is this necessary? It's safer than assuming, though :)
+					imageUrl.placeholder = tsf.decodeEntities( response.data.imageurl );
+					imageUrl.dispatchEvent( new Event( 'change' ) );
+				}
 
-						// Is this necessary? It's safer, though :)
-						imageUrl.placeholder = tsf.decodeEntities( response.data.imageurl );
-						imageUrl.dispatchEvent( new Event( 'change' ) );
+				'tsfAys' in window && tsfAys.reset();
+			}, fadeTime );
 
-						'tsfAys' in window && tsfAys.reset();
-					}, fadeTime );
-
-					$( seobar )
-						.fadeOut( fadeTime, () => {
-							seobarAjaxLoader && tsf.unsetAjaxLoader( seobarAjaxLoader, true );
-						} )
-						.html( response.data.seobar )
-						.fadeIn( 500, () => {
-							'tsfTT' in window && tsfTT.triggerReset();
-						} );
-					break;
-				case 'failure':
-					seobarAjaxLoader && tsf.unsetAjaxLoader( seobarAjaxLoader, false );
-					break;
-				default:
-					seobarAjaxLoader && tsf.resetAjaxLoader( seobarAjaxLoader );
-					break;
-			}
+			$( seobar )
+				.fadeOut(
+					fadeTime,
+					() => {
+						seobarAjaxLoader && tsf.unsetAjaxLoader( seobarAjaxLoader, true );
+						seobar.innerHTML = response.data.seobar
+					}
+				).fadeIn(
+					250, // Magic number: Feels fast, but slow enough to grab attention.
+					() => {
+						'tsfTT' in window && tsfTT.triggerReset();
+					}
+				);
 		};
 
 		const onFailure = () => {
 			seobarAjaxLoader && tsf.unsetAjaxLoader( seobarAjaxLoader, false );
-		};
+		}
 
-		document.addEventListener( 'tsf-gutenberg-onsave', event => {
-
+		document.addEventListener( 'tsf-gutenberg-onsave', () => {
 			// Reset ajax loader, we only do that for the SEO Bar.
 			seobarAjaxLoader && tsf.resetAjaxLoader( seobarAjaxLoader );
 
 			// Set ajax loader.
 			seobarAjaxLoader && tsf.setAjaxLoader( seobarAjaxLoader );
 
-			let settings = {
-				method:   'POST',
-				url:      ajaxurl,
-				datatype: 'json',
-				data:     {
-					action:  'the_seo_framework_update_post_data',
-					nonce:   tsf.l10n.nonces.edit_posts,
-					post_id: l10n.states.id,
-					get:     getData,
-				},
-				async:    true,
-				timeout:  7000,
-				success:  onSuccess,
-				error:    onFailure,
-			}
-
-			$.ajax( settings );
+			wp.ajax.send(
+				'tsf_update_post_data',
+				{
+					data: {
+						nonce:   tsf.l10n.nonces.edit_posts,
+						post_id: l10n.states.id,
+						get:     getData,
+					},
+					timeout: 7000,
+				}
+			).done( onSuccess ).fail( onFailure );
 		} );
 	}
 
@@ -746,12 +739,12 @@ window.tsfPost = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _loadSettings = () => {
 		_initVisibilityListeners();
 		_initTitleListeners();
 		_initDescriptionListeners();
+		_initSocialListeners();
 		_initGeneralListeners();
 	}
 
@@ -763,7 +756,6 @@ window.tsfPost = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _readySettings = () => {
 		// Initializes flex tab resize listeners.
@@ -777,21 +769,6 @@ window.tsfPost = function( $ ) {
 
 		// Set Gutenberg update listeners.
 		_initUpdateMetaBox();
-
-		tsfSocial.initTitleInputs( {
-			ref:   document.getElementById( 'tsf-title-reference_' + _titleId ),
-			refNa: document.getElementById( 'tsf-title-noadditions-reference_' + _titleId ),
-			meta:  document.getElementById( _titleId ),
-			og:    document.getElementById( 'autodescription_og_title' ),
-			tw:    document.getElementById( 'autodescription_twitter_title' ),
-		} );
-
-		tsfSocial.initDescriptionInputs( {
-			ref:  document.getElementById( 'tsf-description-reference_' + _descId ),
-			meta: document.getElementById( _descId ),
-			og:   document.getElementById( 'autodescription_og_description' ),
-			tw:   document.getElementById( 'autodescription_twitter_description' ),
-		} );
 	}
 
 	return Object.assign( {
@@ -803,14 +780,11 @@ window.tsfPost = function( $ ) {
 		 * @access protected
 		 *
 		 * @function
-		 * @return {undefined}
 		 */
 		load: () => {
 			document.body.addEventListener( 'tsf-onload', _loadSettings );
 			document.body.addEventListener( 'tsf-ready', _readySettings );
 		}
-	}, {
-		// No public methods.
 	}, {
 		l10n
 	} );

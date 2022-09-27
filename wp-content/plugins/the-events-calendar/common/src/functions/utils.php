@@ -144,7 +144,26 @@ if ( ! function_exists( 'tribe_get_request_var' ) ) {
 	 * @return mixed
 	 */
 	function tribe_get_request_var( $var, $default = null ) {
-		$unsafe = Tribe__Utils__Array::get_in_any( [ $_GET, $_POST, $_REQUEST ], $var, $default );
+		$requests = [];
+
+		// Prevent a slew of warnings every time we call this.
+		if ( isset( $_REQUEST ) ) {
+			$requests[] = (array) $_REQUEST;
+		}
+
+		if ( isset( $_GET ) ) {
+			$requests[] = (array) $_GET;
+		}
+
+		if ( isset( $_POST ) ) {
+			$requests[] = (array) $_POST;
+		}
+
+		if ( empty( $requests ) ) {
+			return $default;
+		}
+
+		$unsafe = Tribe__Utils__Array::get_in_any( $requests, $var, $default );
 		return tribe_sanitize_deep( $unsafe );
 	}
 }
@@ -171,6 +190,45 @@ if ( ! function_exists( 'tribe_get_global_query_object' ) ) {
 		}
 
 		return null;
+	}
+}
+
+if ( ! function_exists( 'tribe_null_or_truthy' ) ) {
+	/**
+	 * Validation of Null or Truthy values for Shortcode Attributes.
+	 *
+	 * @since 5.1.4
+	 *
+	 * @param mixed $value Which value will be validated.
+	 *
+	 * @return bool|null   Sanitizes the value passed as a boolean or null.
+	 */
+	function tribe_null_or_truthy( $value = null ) {
+		if ( null === $value || 'null' === $value ) {
+			return null;
+		}
+
+		return tribe_is_truthy( $value );
+	}
+}
+
+if ( ! function_exists( 'tribe_null_or_number' ) ) {
+	/**
+	 * Validation of Null or Numerical values for Shortcode Attributes.
+	 * We don't use absint() since -1 is a common number used to indicate "all" or "infinite".
+	 *
+	 * @since 4.13.2
+	 *
+	 * @param mixed $value Which value will be validated.
+	 *
+	 * @return int|null   Sanitizes the value passed as an integer or null.
+	 */
+	function tribe_null_or_number( $value = null ) {
+		if ( null === $value || 'null' === $value ) {
+			return null;
+		}
+
+		return (int) $value;
 	}
 }
 
@@ -525,6 +583,17 @@ if ( ! function_exists( 'tribe_is_regex' ) ) {
 	 */
 	function tribe_is_regex( $candidate ) {
 		if ( ! is_string( $candidate ) ) {
+			return false;
+		}
+
+		$n = strlen( $candidate );
+		// regex must be at least 2 delimiters + 1 character - invalid regex.
+		if ( $n < 3 ) {
+			return false;
+		}
+
+		// Missing or mismatched delimiters - invalid regex.
+		if ( $candidate[0] !== $candidate[ $n - 1 ] ) {
 			return false;
 		}
 
@@ -1057,7 +1126,7 @@ if ( ! function_exists( 'tribe_sanitize_deep' ) ) {
 			return $value;
 		}
 		if ( is_string( $value ) ) {
-			$value = filter_var( $value, FILTER_SANITIZE_STRING );
+			$value = filter_var( $value, FILTER_SANITIZE_STRING, FILTER_FLAG_NO_ENCODE_QUOTES );
 			return $value;
 		}
 		if ( is_int( $value ) ) {
@@ -1165,7 +1234,7 @@ if ( ! function_exists( 'tribe_without_filters' ) ) {
 	 * The function will infer the priority of the filter, required for its correct detachment and re-attachment, on
 	 * its own.
 	 *
-	 * @since 5.12.12
+	 * @since 4.12.12
 	 *
 	 * @param string   $filter_tag      The filter tag to suspend.
 	 * @param callable $filter_callback The filter_callback currently attached to the filter.
@@ -1189,4 +1258,24 @@ if ( ! function_exists( 'tribe_without_filters' ) ) {
 
 		return $result;
 	}
+}
+
+/**
+ * Get the next increment of a cached incremental value.
+ *
+ * @since 4.14.7
+ *
+ * @param string $key Cache key for the incrementor.
+ * @param string $expiration_trigger The trigger that causes the cache key to expire.
+ * @param int $default The default value of the incrementor.
+ *
+ * @return int
+ **/
+function tribe_get_next_cached_increment( $key, $expiration_trigger = '', $default = 0 ) {
+	$cache = tribe( 'cache' );
+	$value = (int) $cache->get( $key, $expiration_trigger, $default );
+	$value++;
+	$cache->set( $key, $value, \Tribe__Cache::NON_PERSISTENT, $expiration_trigger );
+
+	return $value;
 }

@@ -8,7 +8,7 @@
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -29,6 +29,7 @@
  * Holds tsfPT (tsf primary term) values in an object to avoid polluting global namespace.
  *
  * This is a self-constructed function assigned as an object.
+ * This also is deprecated in favor for `pt-gb.js`. We might de-jQuery-fy this, though.
  *
  * @since 3.1.0
  *
@@ -54,7 +55,6 @@ window.tsfPT = function( $ ) {
 	 *              2 : Added tab visibility checkers.
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initPrimaryTerm = () => {
 
@@ -117,7 +117,7 @@ window.tsfPT = function( $ ) {
 					   ? tab.offsetWidth - tab.clientWidth + 25 - 2 // 2px is padding or something?
 					   : 25;
 
-			if ( tsf.l10n.states.isRTL ) {
+			if ( window.isRtl ) {
 				wrap.querySelector( '.tsf-primary-term-selector-help-wrap' ).style.left = offset + 'px';
 			} else {
 				wrap.querySelector( '.tsf-primary-term-selector-help-wrap' ).style.right = offset + 'px';
@@ -248,12 +248,12 @@ window.tsfPT = function( $ ) {
 			} );
 		}
 		const addCheckedNode = ( taxonomy, element ) => {
-			checked$[ taxonomy ]       = checked$[ taxonomy ].add( '[value="' + element.value + '"]' );
+			checked$[ taxonomy ]       = checked$[ taxonomy ].add( `[value="${element.value}"]` );
 			uniqueChecked$[ taxonomy ] = uniqueChecked$[ taxonomy ].add( element );
 		}
 		const removeCheckedNode = ( taxonomy, element ) => {
-			checked$[ taxonomy ]       = checked$[ taxonomy ].not( '[value="' + element.value + '"]' );
-			uniqueChecked$[ taxonomy ] = uniqueChecked$[ taxonomy ].not( '[value="' + element.value + '"]' );
+			checked$[ taxonomy ]       = checked$[ taxonomy ].not( `[value="${element.value}"]` );
+			uniqueChecked$[ taxonomy ] = uniqueChecked$[ taxonomy ].not( `[value="${element.value}"]` );
 		}
 		const togglePostbox = ( event, postbox ) => {
 			fixHelpPos( event.data.taxonomy );
@@ -287,8 +287,8 @@ window.tsfPT = function( $ ) {
 		const initActions = ( taxonomy ) => {
 			let data      = { 'taxonomy': taxonomy },
 				$box     = getBox( taxonomy ),
-				$div     = $( '#' + taxonomy + 'div' ),
-				$tabs    = $( '#' + taxonomy + '-tabs' ),
+				$div     = $( `#${taxonomy}div` ),
+				$tabs    = $( `#${taxonomy}-tabs` ),
 				$postbox = $box.closest( '.postbox' );
 
 			let defaultClickAction = nsAction( 'click', taxonomy );
@@ -298,7 +298,7 @@ window.tsfPT = function( $ ) {
 				.on( defaultClickAction, '.tsf-primary-term-selector', data, setPrimary );
 
 			$div.off( nsAction( 'wpListAddEnd', taxonomy ) )
-				.on( nsAction( 'wpListAddEnd', taxonomy ), '#' + taxonomy + 'checklist', updateList );
+				.on( nsAction( 'wpListAddEnd', taxonomy ), `#${taxonomy}checklist`, updateList );
 
 			$tabs.off( defaultClickAction )
 				.on( defaultClickAction, 'a', data, fixHelpPosOnTabToggle );
@@ -313,10 +313,10 @@ window.tsfPT = function( $ ) {
 				} );
 
 			if ( primaries[ taxonomy ] ) {
-				//? One has been set previously via this script, reselect it.
+				// One has been set previously via this script, reselect it.
 				makePrimary( taxonomy, primaries[ taxonomy ] );
 			} else {
-				//? Select one according to WordPress's term list sorting.
+				// Select one according to WordPress's term list sorting.
 				makeFirstPrimary( taxonomy );
 			}
 		}
@@ -327,10 +327,10 @@ window.tsfPT = function( $ ) {
 				} );
 
 			if ( taxonomies[ taxonomy ].primary ) {
-				//? One has been saved earlier via this script.
+				// One has been saved earlier via this script.
 				makePrimary( taxonomy, taxonomies[ taxonomy ].primary );
 			} else {
-				//? Select one according to WordPress's term list sorting.
+				// Select one according to WordPress's term list sorting.
 				makeFirstPrimary( taxonomy );
 			}
 		}
@@ -359,13 +359,10 @@ window.tsfPT = function( $ ) {
 		 * @access protected
 		 *
 		 * @function
-		 * @return {undefined}
 		 */
 		load: () => {
 			document.body.addEventListener( 'tsf-onload', _initPrimaryTerm );
 		}
-	}, {
-
 	}, {
 		l10n
 	} );

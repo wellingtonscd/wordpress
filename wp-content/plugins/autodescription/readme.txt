@@ -1,11 +1,11 @@
-=== The SEO Framework ===
+=== The SEO Framework – Fast, Automated, Effortless. ===
 Contributors: Cybr
 Donate link: https://github.com/sponsors/sybrew
-Tags: seo, xml sitemap, google search, open graph, schema.org, twitter card, performance
-Requires at least: 5.1.0
-Tested up to: 5.6
-Requires PHP: 5.6.0
-Stable tag: 4.1.3
+Tags: seo, xml sitemap, google search, open graph, schema.org, twitter card, performance, headless
+Requires at least: 5.5
+Tested up to: 6.0
+Requires PHP: 7.2.0
+Stable tag: 4.2.5
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -109,8 +109,8 @@ The SEO Framework works on many things without notifying you, because the best s
 
 **The SEO Framework supports:**
 
-* PHP 5.6 and higher.
-* WordPress 5.1 and higher.
+* PHP 7.2 and higher.
+* WordPress 5.5 and higher.
 * Internationalization through WordPress.org.
 * Unicode (UTF-8) character recognition and rendering, including Emoji and CJKV (Chinese, Japanese, Korean, Vietnamese).
 * Right to Left (RTL) languages (Arabic, Hebrew, Farsi, et al.), through its interface and metatag generation.
@@ -126,6 +126,7 @@ The SEO Framework works on many things without notifying you, because the best s
 * Translation plugins like WPML, Polylang, WPGlobus, and MultilingualPress.
 * E-commerce plugins, like WooCommerce and Easy Digital Downloads.
 * Editing posts and terms via WordPress's native bulk-and-quick-edit interfaces.
+* Headless mode via a single [constant definition](https://kb.theseoframework.com/?p=136).
 
 = Copyright legislation notice =
 
@@ -139,8 +140,8 @@ If you wish to learn more, please refer to the [EU commission on copyright](http
 
 = This plugin requires: =
 
-* PHP 5.6 or higher.
-* WordPress 5.1 or higher.
+* PHP 7.2 or higher.
+* WordPress 5.5 or higher.
 * Any modern browser for administration.
 
 = Installation instructions: =
@@ -226,7 +227,7 @@ In the meantime, you can disable SEO for the unwanted entries via the "General S
 
 = Why aren't focus keywords included? =
 
-[Google warns](https://support.google.com/webmasters/answer/66358) about the keyword stuffing approach implemented by some other SEO plugins. It forces users to write unnatural content, and it can have adverse effects on your site's ranking.
+[Google warns](https://developers.google.com/search/docs/advanced/guidelines/irrelevant-keywords) about the keyword stuffing approach implemented by some other SEO plugins. It forces users to write unnatural content, and it can have adverse effects on your site's ranking.
 
 Modern search engines use AI to understand the context of your articles. This means that as long as you write relevant content, you shouldn't have to worry about keywords.
 
@@ -246,104 +247,75 @@ If you wish to display breadcrumbs, then your theme should provide this. Alterna
 
 == Changelog ==
 
-= 4.1.3 =
+= 4.2.5 =
 
-Before heading into 2021, we wanted to [set free four bugs](https://theseoframework.com/?p=3660#detailed).
+This minor update addresses a change in WordPress 6.0 that causes taxonomy sitemaps to crash, allows paginated deindexing to supersede forced indexing, and improves image cropping by [preserving metadata](https://theseoframework.com/?p=3929).
 
-Pro tip: If you can no longer switch TSF's settings tabs, try hitting 'CMD+SHIFT+R' (Mac) or 'CTRL+SHIFT+R' (Windows); these keyboard shortcuts will force-fetch the latest scripts from your server.
+= 4.2.4 =
 
-= 4.1.2 =
+This minor update improves image processing, reducing TSF's load impact by roughly 20% when generating metadata. We also added WordPress 6.0 support for image filesizes, making social sharing [even more robust](https://theseoframework.com/?p=3903).
 
-In this minor update, we ensured compatibility with PHP 8 and WP 5.6. TSF now also fully integrates with WordPress Core Sitemaps, which you can configure via the SEO settings. If you decide to keep using TSF's optimized sitemap, you can now enjoy prerendering, DoS protection, and full Polylang integration. Lastly, you'll find various accessibility improvements, and we fixed [about a dozen bugs](https://theseoframework.com/?p=3650#detailed).
+= 4.2.3 =
 
-We included a single-line self-destructing notification about our [Cyber Monday sale](https://theseoframework.com/?p=3527). We hope you'll opt to support our continuous efforts. But we're also kindly asking you to understand we must promote our premium extensions to make TSF possible. We are apprehensive about any embedded advertising and self-promotion in the plugin, so we must rely on notifications until a better system is available in WordPress.
+This minor update addresses a regression where the singular-archive canonical URLs always [pointed to the first page](https://theseoframework.com/?p=3858).
 
-= 4.1.1 =
+= 4.2.2 =
 
-In this major-minor update, we improved browser performance by up to 99% (not a typo) by exchanging over 300 jQuery calls for vanilla JS ones. We also added two new options for oEmbed, freed a dozen bugs that got stuck in the UI and generators, and [improved accessibility](https://theseoframework.com/?p=3623#detailed).
+This minor update addresses a regression where the homepage canonical URL was [missing a trailing slash](https://theseoframework.com/?p=3841).
 
-= 4.1.0 - Grace =
+= 4.2.1 =
 
-*Happiness can be found, even in the darkest of times, if one only remembers to turn on the light. - [J.K. Rowling &amp; Steve Kloves](https://www.warnerbros.com/movies/harry-potter-and-prisoner-azkaban)*
+This minor update addresses a few regressions brought in v4.2.0; it fixes the canonical URL for paginated categories, corrects an API typo, and [rectifies a few edge cases](https://theseoframework.com/?p=3836). TSF now also supports PHP 8.1.
+
+= 4.2.0 - Perfect =
+
+*Come with me, and you'll be in a world of pure imagination. - [Gene Wilder, Anthony Newley, Leslie Bricusse](https://www.youtube.com/watch?v=SVi3-PrQ0pY)*
 
 **Release highlights**
 
-* This update brings you up to 96% faster browser interaction, up to 30% faster browser rendering times, and up to 26% faster server response times.
-* You can now use quick-edit to adjust meta titles and descriptions of all your posts and terms.
-* New custom taxonomy settings are added, so you can quickly deindex custom taxonomies, or exclude SEO for them entirely.
-* Well-known page builders that aren't built upon shortcodes, like Elementor, Beaver Builder, and Siteorigin's, now support meta description generation.
-* The description generator is now far more intelligent--it can now recognize contractions, and other complex punctuations and marks (¡¿Que?! Y'all'dn't've!? 「やった！」).
-* WordPress 5.5 support is now integrated deeply. To get there, we had to implement new query listeners, browser observers, and persistent notices.
+* This update brings new post-type-archive settings. You can now edit their titles, descriptions, social and visibility settings, and even add redirects on the SEO Settings page.
+* Fancy a custom site title for SEO purposes only? Check out the new title settings.
+* You will find that the sitemap's stylesheet now has its URLs centered; it also supports mobile devices.
+* Developers can now enjoy using the new `tsf()` function -- an alias of `the_seo_framework()`.
+* If you're a developer, you should also check out our perfectly tuned `memo()`. `umemo()`, and `fmemo()` [functions](https://github.com/sybrew/the-seo-framework/blob/4.2.0/inc/functions/api.php#L155-L335), which help make TSF so performant.
 
-**Graciously graceful**
+*Psst: Check out our [Cyber Sale](https://theseoframework.com/?p=3527).*
 
-This update's name is Grace, and for a good reason: the plugin listens to your inputs respectfully and does everything as you incline, as you would expect.
+**Perfect**
 
-The SEO Framework's response-and rendering times have substantially been reduced; everything's much smoother and swifter since 5 years ago--back when it had fewer than 1&#160;000 users.
+TSF is finally what I (Sybre) envisioned it to become when I first named it "The SEO Framework": It's lightning-fast, hassle-free, and has all necessary options while giving you the best in class experience. I hope you enjoy what I believe is a perfect product!
 
-At first glance, you probably won't notice anything new after updating to 4.1. But, when you look closer, among 350 QOL changes, you'll find improvements such as:
+To me, The SEO Framework is finished. Done. It's excellent. This doesn't mean its journey ends here. Now, it's time to add features *you* want. A restyled interface, migration support, custom title generation, more structured data fields, and many other community proposals are under consideration.
 
-* Tapping a tooltip no longer accidentally activates related inputs.
-* Only necessary REST-requests are made for primary-term support.
-* Browser animations execute more naturally, like removing a notification.
-* Switching a settings-tab can no longer cause staggered tab-content.
-* The description generator now detects deeply nested HTML, improving the accuracy of intent.
+**A perfect tip**
 
-You'll also find many obscure new features, such as:
-
-* A new accessible SEO Bar color has been added: Gray. It exclaims there was nothing to process.
-* Fancy a custom sitemap stylesheet logo? Now you can upload one.
-* You can now remove branding from social meta titles.
-* Persistent notices may now show up, gracefully (more on this below).
-
-You can find more than 340 other noteworthy changes in the [detailed log](https://theseoframework.com/?p=3598#detailed).
-
-**Persistent notices**
-
-TSF now stores some notices in your database, so they can be shown to you later, and sometimes even more than once. We call these "persistent notices".
-
-Persistent notices are awfully annoying. We know that. However, since plugin auto-updates are part of WordPress 5.5, we can no longer expect you to invoke an update manually.
-
-These notices are used when we expect them to go unnoticed otherwise--they are conditional, and may only show up when **all** of these conditions are met:
-
-* You have sufficient administrative capabilities or a matching user ID. For example, you must be able to install plugins.
-* You are (or aren't) on a specific administrative page. For example, we won't show some notices on the block-editor.
-* The time limit hasn't expired. For example, the update-notice won't show up after 7 days from updating.
-* The view count hasn't been reached, regardless of who has seen it. For example, we only show some notices 3 times.
-* You haven't dismissed it. There's an X-button at the top-right.
-
-If you find a notice reappearing indefinitely, you might have a stubborn caching plugin enabled. So, clear your site's cache.
-
-**Core Sitemaps support**
-
-WordPress 5.5 brings new sitemaps. We added support for them, but we didn't integrate with them. To explain briefly:
-
-* Support: When you enable TSF's sitemap, Core Sitemaps are disabled. When you disable TSF's sitemap, Core Sitemaps will become accessible again.
-* Integrate: Core Sitemaps does not listen to the indexing state enforced by TSF. This will cause issues with search engines.
-
-Regardless, we don't believe the Core Sitemaps are beneficial for most WordPress sites. We stubbornly kept our sitemap simple; it's easier for us to maintain and faster search engines to process. Search engines crawl your pages more quickly using TSF's sitemap, no matter your website's size.
-
-Nevertheless, TSF will integrate with Core Sitemaps in a future update. Since we had fewer than two months to anticipate their integration, we couldn't make this happen now.
+This update comes with updated browser styles and scripts. Not all browsers get these for you; so, the interface might appear broken (and your "inputs" seem to be "removed"). Try a different browser, or [clear your favorite browser's cache](https://kinsta.com/knowledgebase/how-to-clear-browser-cache/#how-to-force-refresh-a-single-page). That ought to do the trick.
 
 **Environment upgrade notes**
 
-WordPress 4.9 and 5.0 are no longer supported. Here's why:
+WordPress 5.1 through 5.4 are no longer supported. Here's why:
 
-* [Almost 75% of all WordPress sites](https://wordpress.org/about/stats/) are using version 5.1 or later.
+* [Over 66% of all WordPress sites](https://wordpress.org/about/stats/) are using WordPress v5.5 or later.
 * Newer versions of WordPress are faster, more reliable, and easier to work with; for both you and us.
 * Supporting past versions takes time away that's better used implementing new features.
 
+PHP 5.6 through 7.1 are no longer supported. Here's why:
+
+* [Almost 80% of all WordPress sites](https://wordpress.org/about/stats/) are using PHP v7.2 or later.
+* Newer versions of PHP are faster and more secure. For us, they're also easier to work with.
+* Again, supporting past versions takes time away that's better used implementing new features.
+
 **Support the development**
 
-We hope you'll love this update as much as we do. Please consider supporting us by giving [an awesome review](https://wordpress.org/support/plugin/autodescription/reviews/#new-topic-0), [get a license](https://theseoframework.com/pricing/), or convince your friends and colleagues that TSF is amazing!
+We hope you'll love this update as much as we do. Please consider supporting us by sharing [a fantastic review](https://wordpress.org/support/plugin/autodescription/reviews/#new-topic-0), [get a license](https://theseoframework.com/pricing/), or do your friends and colleagues a favor by installing TSF for them.
 
 **Detailed log**
 
-Fast and steady [wins the race](https://theseoframework.com/?p=3598#detailed).
+Practice makes perfect. So does [working 16 hours a day](https://theseoframework.com/?p=3815#detailed).
 
 = Full changelog =
 
-* **The full changelog can be found [here](http://theseoframework.com/?cat=2).**
+* **You can find the full changelog [here](https://theseoframework.com/?cat=2).**
 
 == Upgrade Notice ==
 

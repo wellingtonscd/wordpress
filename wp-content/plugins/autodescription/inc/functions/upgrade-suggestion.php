@@ -8,7 +8,7 @@ namespace The_SEO_Framework\Suggestion;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2018 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2018 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -45,7 +45,6 @@ _prepare( $previous_version, $current_version );
  *    1. The constant 'TSF_DISABLE_SUGGESTIONS' is not defined or false.
  *    2. The current dashboard is the main site's.
  *    3. TSFEM isn't already installed.
- *    4. PHP and WP requirements of TSFEM are met.
  *
  * The notice is automatically dismissed after X views, and it can be ignored without reappearing.
  *
@@ -57,6 +56,7 @@ _prepare( $previous_version, $current_version );
  *              5. Now tests if the upgrade actually happened, before invoking the suggestion.
  * @since 4.1.2 Can now communicate with Extension Manager for the edge-case sale.
  * @since 4.1.3 Commented out sale notification conditions, as those can't be met anyway.
+ * @since 4.2.1 No longer tests WP and PHP requirements for Extension Manager.
  * @access private
  *
  * @param string $previous_version The previous version the site upgraded from, if any.
@@ -64,17 +64,16 @@ _prepare( $previous_version, $current_version );
  */
 function _prepare( $previous_version, $current_version ) {
 
-	//? 0
+	// 0
 	// phpcs:ignore, WordPress.PHP.StrictComparisons.LooseComparison -- might be mixed types.
 	if ( $previous_version == $current_version ) return;
-	//? 1
+	// 1
 	if ( \defined( 'TSF_DISABLE_SUGGESTIONS' ) && TSF_DISABLE_SUGGESTIONS ) return;
-	//? 2
+	// 2
 	if ( ! \is_main_site() ) return;
 
-	// phpcs:disable, Squiz.PHP.CommentedOutCode, Squiz.Commenting.InlineComment
+	// phpcs:disable -- There is no sale, leftover code.
 	// $show_sale = true;
-
 	// if ( \function_exists( '\\tsf_extension_manager' ) && method_exists( \tsf_extension_manager(), 'is_connected_user' ) ) {
 	// 	$show_sale = ! \tsf_extension_manager()->is_connected_user();
 	// }
@@ -82,33 +81,16 @@ function _prepare( $previous_version, $current_version ) {
 	// 	// phpcs:ignore, TSF.Performance.Opcodes.ShouldHaveNamespaceEscape
 	// 	_suggest_temp_sale( $previous_version, $current_version );
 	// }
-	// phpcs:enable, Squiz.PHP.CommentedOutCode, Squiz.Commenting.InlineComment
+	// phpcs:enable
 
-	//? 3a
+	// 3a
 	if ( \defined( 'TSF_EXTENSION_MANAGER_VERSION' ) ) return;
 
 	if ( ! \function_exists( '\\get_plugins' ) )
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 
-	//? 3b
+	// 3b
 	if ( ! empty( \get_plugins()['the-seo-framework-extension-manager/the-seo-framework-extension-manager.php'] ) ) return;
-
-	/** @source https://github.com/sybrew/The-SEO-Framework-Extension-Manager/blob/08db1ab7410874c47d8f05b15479ce923857c35e/bootstrap/envtest.php#L68-L77 */
-	// We can forgo this test, since TSF has a higher requirement. We'll probably keep the plugins in line henceforth...
-	$requirements = [
-		'php' => 50605,
-		'wp'  => '4.9-dev',
-	];
-
-	// phpcs:disable, Generic.Formatting.MultipleStatementAlignment, WordPress.WhiteSpace.PrecisionAlignment
-	//? PHP_VERSION_ID is definitely defined, but let's keep it homonymous with the envtest of TSFEM.
-	   ! \defined( 'PHP_VERSION_ID' ) || PHP_VERSION_ID < $requirements['php'] and $test = 1
-	or version_compare( $GLOBALS['wp_version'], $requirements['wp'], '<' ) and $test = 2
-	or $test = true;
-	// phpcs:enable, Generic.Formatting.MultipleStatementAlignment, WordPress.WhiteSpace.PrecisionAlignment
-
-	//? 4
-	if ( true !== $test ) return;
 
 	// phpcs:ignore, TSF.Performance.Opcodes.ShouldHaveNamespaceEscape
 	_suggest_extension_manager( $previous_version, $current_version );
@@ -126,7 +108,7 @@ function _prepare( $previous_version, $current_version ) {
  */
 function _suggest_extension_manager( $previous_version, $current_version ) {
 
-	$tsf = \the_seo_framework();
+	$tsf = \tsf();
 
 	$suggest_key        = 'suggest-extension-manager';
 	$suggest_args       = [
@@ -180,7 +162,7 @@ function _suggest_extension_manager( $previous_version, $current_version ) {
  */
 function _suggest_temp_sale( $previous_version, $current_version ) {
 
-	$tsf = \the_seo_framework();
+	$tsf = \tsf();
 
 	$suggest_key        = 'suggest-sale';
 	$suggest_args       = [
@@ -193,15 +175,15 @@ function _suggest_temp_sale( $previous_version, $current_version ) {
 		'excl_screens' => [ 'update-core', 'post', 'term', 'upload', 'media', 'plugin-editor', 'plugin-install', 'themes', 'widgets', 'user', 'nav-menus', 'theme-editor', 'profile', 'export', 'site-health', 'export-personal-data', 'erase-personal-data' ],
 		'capability'   => 'install_plugins',
 		'user'         => 0,
-		'count'        => 2,
-		'timeout'      => strtotime( 'December 6th, 2020, 22:50GMT+1' ) - time(),
+		'count'        => 3,
+		'timeout'      => strtotime( 'December 6th, 2021, 22:50GMT+1' ) - time(),
 	];
 
-	if ( $previous_version < '4120' && $current_version < '4200' )
+	if ( $previous_version < '4200' && $current_version < '4201' )
 		$tsf->register_dismissible_persistent_notice(
 			$tsf->convert_markdown(
 				sprintf(
-					'<p>The SEO Framework: Cyber Monday [30~50%% off](%s). This notification will self-destruct when the sale ends, or when you dismiss it.</p>',
+					'<p>The SEO Framework: [Cyber Sale &ndash; 60%% off](%s). This notification will self-destruct when the sale ends, or when you dismiss it.</p>',
 					'https://theseoframework.com/?p=3527'
 				),
 				[ 'a', 'em', 'strong' ],

@@ -1,6 +1,6 @@
 <?php
-// Don't load directly
-defined( 'WPINC' ) or die;
+
+use Tribe__Date_Utils as Dates;
 
 /**
  * @since 4.3
@@ -50,13 +50,22 @@ class Tribe__Admin__Notices {
 	}
 
 	/**
-	 * User Meta Key that stores which notices have been dimissed
+	 * User Meta Key that stores which notices have been dismissed.
 	 *
 	 * @since 4.3
 	 *
 	 * @var string
 	 */
 	public static $meta_key = 'tribe-dismiss-notice';
+
+	/**
+	 * User Meta Key prefix that stores when notices have been dismissed.
+	 *
+	 * @since 4.13.0
+	 *
+	 * @var string
+	 */
+	public static $meta_key_time_prefix = 'tribe-dismiss-notice-time-';
 
 	/**
 	 * Stores all the Notices and it's configurations
@@ -96,7 +105,10 @@ class Tribe__Admin__Notices {
 			'tribe-notice-dismiss',
 			'notice-dismiss.js',
 			[ 'jquery' ],
-			'admin_enqueue_scripts'
+			null,
+			[
+				'groups' => 'tec-admin-notices',
+			]
 		);
 	}
 
@@ -128,10 +140,10 @@ class Tribe__Admin__Notices {
 	}
 
 	/**
-	 * This will allow the user to Dimiss the Notice using JS.
+	 * This will allow the user to Dismiss the Notice using JS.
 	 *
 	 * We will dismiss the notice without checking to see if the slug was already
-	 * registered (via a call to exists()) for the reason that, during a dismiss
+	 * registered (via a call to exists()) for the reason that, during dismissal
 	 * ajax request, some valid notices may not have been registered yet.
 	 *
 	 * @since 4.3
@@ -143,9 +155,9 @@ class Tribe__Admin__Notices {
 			wp_send_json( false );
 		}
 
-		$slug = sanitize_title_with_dashes( $_GET[ self::$meta_key ] );
+		$slug = sanitize_key( $_GET[ self::$meta_key ] );
 
-		// Send a JSON answer with the status of dimissal
+		// Send a JSON answer with the status of dismissal
 		wp_send_json( $this->dismiss( $slug ) );
 	}
 
@@ -154,8 +166,8 @@ class Tribe__Admin__Notices {
 	 *
 	 * @since 4.3
 	 *
-	 * @param  string $name       Name of the Method used to create the Slug of the Notice
-	 * @param  array  $arguments  Which arguments were used, normally empty
+	 * @param string $name      Name of the method used to create the slug of the notice.
+	 * @param array  $arguments Which arguments were used, normally empty.
 	 *
 	 * @return string
 	 */
@@ -174,17 +186,38 @@ class Tribe__Admin__Notices {
 			|| (
 				is_callable( $notice->active_callback )
 				&& true == call_user_func( $notice->active_callback )
-		     )
+			)
 		) {
 			$content = $notice->content;
-			$wrap = isset( $notice->wrap ) ? $notice->wrap : false;
+			$wrap    = isset( $notice->wrap ) ? $notice->wrap : false;
+
+			if ( is_array( $content ) && isset( $content[0] ) && $content[0] instanceof __PHP_Incomplete_Class ) {
+				// From a class that no longer exists (e.g. the plugin is not active), clean and bail.
+				$this->remove( $slug );
+				$this->remove_transient( $slug );
+
+				return false;
+			}
 
 			if ( is_callable( $content ) ) {
 				$content = call_user_func_array( $content, [ $notice ] );
 			}
 
-			// Return the rendered HTML
-			return $this->render( $slug, $content, false, $wrap );
+			if ( empty( $content ) ) {
+				// There is nothing to render, let's avoid the empty notice frame.
+				return false;
+			}
+
+			tribe_asset_enqueue_group( 'tec-admin-notices' );
+
+			// Return the rendered HTML.
+			$html = $this->render( $slug, $content, false, $wrap );
+
+			// Remove the notice and the transient (if any) since it's been rendered.
+			$this->remove( $slug );
+			$this->remove_transient( $slug );
+
+			return $html;
 		}
 
 		return false;
@@ -195,10 +228,10 @@ class Tribe__Admin__Notices {
 	 *
 	 * @since 4.3
 	 *
-	 * @param  string      $slug    The Name of the Notice
-	 * @param  string      $content The content of the notice
-	 * @param  boolean     $return  Echo or return the content
-	 * @param  string|bool $wrap    An optional HTML tag to wrap the content.
+	 * @param string      $slug    The name of the notice.
+	 * @param string      $content The content of the notice.
+	 * @param boolean     $return  Echo or return the content.
+	 * @param string|bool $wrap    An optional HTML tag to wrap the content.
 	 *
 	 * @return bool|string
 	 */
@@ -216,7 +249,7 @@ class Tribe__Admin__Notices {
 			return false;
 		}
 
-		$notice = $this->get( $slug );
+		$notice                              = $this->get( $slug );
 		$this->notices[ $slug ]->is_rendered = true;
 
 		$classes   = [ 'tribe-dismiss-notice', 'notice' ];
@@ -225,6 +258,10 @@ class Tribe__Admin__Notices {
 
 		if ( $notice->dismiss ) {
 			$classes[] = 'is-dismissible';
+		}
+
+		if ( $notice->inline ) {
+			$classes[] = 'inline';
 		}
 
 		// Prevents Empty Notices
@@ -237,6 +274,7 @@ class Tribe__Admin__Notices {
 		}
 
 		$html = sprintf( '<div class="%s" data-ref="%s">%s</div>', implode( ' ', $classes ), $notice->slug, $content );
+		tribe_asset_enqueue_group( 'tec-admin-notices' );
 
 		if ( ! $return ) {
 			echo $html;
@@ -250,9 +288,9 @@ class Tribe__Admin__Notices {
 	 *
 	 * @since 4.3
 	 *
-	 * @param  string  $slug    The Name of the Notice
-	 * @param  string  $content The content of the notice
-	 * @param  boolean $return  Echo or return the content
+	 * @param string  $slug    The name of the notice.
+	 * @param string  $content The content of the notice.
+	 * @param boolean $return  Echo or return the content.
 	 *
 	 * @return boolean|string
 	 */
@@ -265,7 +303,7 @@ class Tribe__Admin__Notices {
 	 *
 	 * @since  4.7.10
 	 *
-	 * @param  string  $slug  Which notice to check
+	 * @param string $slug Which notice to check.
 	 *
 	 * @return boolean
 	 */
@@ -284,8 +322,8 @@ class Tribe__Admin__Notices {
 	 *
 	 * @since  4.7.10
 	 *
-	 * @param  string  $slug  Which notice to check
-	 * @param  string  $html  Which html string we are check
+	 * @param string $slug Which notice to check.
+	 * @param string $html Which html string we are check.
 	 *
 	 * @return boolean
 	 */
@@ -300,16 +338,16 @@ class Tribe__Admin__Notices {
 	}
 
 	/**
-	 * Checks if a given user has dimissed a given notice.
+	 * Checks if a given user has dismissed a given notice.
 	 *
-	 * @since 4.3
+	 * @since 4.13.0
 	 *
-	 * @param  string    $slug    The Name of the Notice
-	 * @param  int|null  $user_id The user ID
+	 * @param string   $slug    The name of the notice.
+	 * @param int|null $user_id The user ID.
 	 *
 	 * @return boolean
 	 */
-	public function has_user_dimissed( $slug, $user_id = null ) {
+	public function has_user_dismissed( $slug, $user_id = null ) {
 
 		if ( is_null( $user_id ) ) {
 			$user_id = get_current_user_id();
@@ -325,7 +363,97 @@ class Tribe__Admin__Notices {
 			return false;
 		}
 
+		$notice = $this->get( $slug );
+		if (
+			is_object( $notice )
+			&& $notice->recurring
+			&& $this->should_recurring_notice_show( $slug, $user_id )
+		) {
+			return false;
+		}
+
 		return true;
+	}
+
+	/**
+	 * Checks if a given user has dismissed a given notice.
+	 *
+	 * @since      4.3
+	 * @deprecated 4.13.0 Deprecated in favor of correcting the typo.
+	 *
+	 * @param string   $slug    The Name of the Notice
+	 * @param int|null $user_id The user ID
+	 *
+	 * @return boolean
+	 */
+	public function has_user_dimissed( $slug, $user_id = null ) {
+		return $this->has_user_dismissed( $slug, $user_id );
+	}
+
+	/**
+	 * Gets the last Dismissal for a given notice slug and user.
+	 *
+	 * @since 4.13.0
+	 *
+	 * @param string   $slug    Slug of the notice to look for.
+	 * @param int|null $user_id Which user? If null will default to current user.
+	 *
+	 * @return false|\Tribe\Utils\Date_I18n
+	 */
+	public function get_last_dismissal( $slug, $user_id = null ) {
+		if ( is_null( $user_id ) ) {
+			$user_id = get_current_user_id();
+		}
+
+		$dismissed_time = get_user_meta( $user_id, static::$meta_key_time_prefix . $slug, true );
+
+		if ( ! is_numeric( $dismissed_time ) ) {
+			return false;
+		}
+
+		return Dates::build_date_object( $dismissed_time );
+	}
+
+	/**
+	 * Determines if a given notice needs to be re-displayed in case of recurring notice.
+	 *
+	 * @since 4.13.0
+	 *
+	 * @param string   $slug    Slug of the notice to look for.
+	 * @param int|null $user_id Which user? If null will default to current user.
+	 *
+	 * @return false|\Tribe\Utils\Date_I18n
+	 */
+	public function should_recurring_notice_show( $slug, $user_id = null ) {
+		$notice = $this->get( $slug );
+		if ( ! is_object( $notice ) ) {
+			return false;
+		}
+
+		if ( ! $notice->recurring || ! $notice->recurring_interval ) {
+			return false;
+		}
+
+		if ( is_null( $user_id ) ) {
+			$user_id = get_current_user_id();
+		}
+
+		$interval       = Dates::interval( $notice->recurring_interval );
+		$last_dismissal = $this->get_last_dismissal( $slug, $user_id );
+		if ( ! $last_dismissal ) {
+			return false;
+		}
+
+		$next_dismissal = $last_dismissal->add( $interval );
+		$now            = Dates::build_date_object( 'now' );
+
+		if ( $now >= $next_dismissal ) {
+			delete_user_meta( $user_id, self::$meta_key, $slug );
+
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -333,8 +461,8 @@ class Tribe__Admin__Notices {
 	 *
 	 * @since 4.3
 	 *
-	 * @param  string    $slug    The Name of the Notice
-	 * @param  int|null  $user_id The user ID
+	 * @param string   $slug    The Name of the Notice
+	 * @param int|null $user_id The user ID
 	 *
 	 * @return boolean
 	 */
@@ -343,19 +471,21 @@ class Tribe__Admin__Notices {
 			$user_id = get_current_user_id();
 		}
 
-		// If this user has dimissed we don't care either
-		if ( $this->has_user_dimissed( $slug, $user_id ) ) {
+		// If this user has dismissed we don't care either
+		if ( $this->has_user_dismissed( $slug, $user_id ) ) {
 			return true;
 		}
+
+		update_user_meta( $user_id, static::$meta_key_time_prefix . $slug, time() );
 
 		return add_user_meta( $user_id, self::$meta_key, $slug, false );
 	}
 
 	/**
-	 * Removes the User meta holding if a notice was dimissed
+	 * Removes the User meta holding if a notice was dismissed
 	 *
-	 * @param  string    $slug    The Name of the Notice
-	 * @param  int|null  $user_id The user ID
+	 * @param string   $slug    The Name of the Notice
+	 * @param int|null $user_id The user ID
 	 *
 	 * @return boolean
 	 */
@@ -364,8 +494,8 @@ class Tribe__Admin__Notices {
 			$user_id = get_current_user_id();
 		}
 
-		// If this user has dimissed we don't care either
-		if ( ! $this->has_user_dimissed( $slug, $user_id ) ) {
+		// If this user has dismissed we don't care either
+		if ( ! $this->has_user_dismissed( $slug, $user_id ) ) {
 			return false;
 		}
 
@@ -391,7 +521,7 @@ class Tribe__Admin__Notices {
 
 		foreach ( $user_query->get_results() as $user ) {
 			if ( $this->undismiss( $slug, $user->ID ) ) {
-				$affected++;
+				$affected ++;
 			}
 		}
 
@@ -403,32 +533,35 @@ class Tribe__Admin__Notices {
 	 *
 	 * @since 4.3
 	 *
-	 * @param  string          $slug      Slug to save the notice
-	 * @param  callable|string $callback  A callable Method/Fuction to actually display the notice
-	 * @param  array           $arguments Arguments to Setup a notice
-	 * @param callable|null    $active_callback An optional callback that should return bool values
+	 * @param string          $slug             Slug to save the notice
+	 * @param callable|string $callback         A callable Method/Function to actually display the notice
+	 * @param array           $arguments        Arguments to Setup a notice
+	 * @param callable|null   $active_callback  An optional callback that should return bool values
 	 *                                          to indicate whether the notice should display or not.
 	 *
 	 * @return stdClass
 	 */
 	public function register( $slug, $callback, $arguments = [], $active_callback = null ) {
 		// Prevent weird stuff here
-		$slug = sanitize_title_with_dashes( $slug );
+		$slug = sanitize_key( $slug );
 
 		$defaults = [
-			'callback'    => null,
-			'content'     => null,
-			'action'      => 'admin_notices',
-			'priority'    => 10,
-			'expire'      => false,
-			'dismiss'     => false,
-			'type'        => 'error',
-			'is_rendered' => false,
-			'wrap'        => false,
+			'callback'           => null,
+			'content'            => null,
+			'action'             => 'admin_notices',
+			'priority'           => 10,
+			'expire'             => false,
+			'dismiss'            => false,
+			'inline'             => false,
+			'recurring'          => false,
+			'recurring_interval' => null,
+			'type'               => 'error',
+			'is_rendered'        => false,
+			'wrap'               => false,
 		];
 
 		$defaults['callback'] = [ $this, 'render_' . $slug ];
-		$defaults['content'] = $callback;
+		$defaults['content']  = $callback;
 
 		if ( is_callable( $active_callback ) ) {
 			$defaults['active_callback'] = $active_callback;
@@ -441,9 +574,16 @@ class Tribe__Admin__Notices {
 		$notice->slug = $slug;
 
 		// Clean these
-		$notice->priority = absint( $notice->priority );
-		$notice->expire = (bool) $notice->expire;
-		$notice->dismiss = (bool) $notice->dismiss;
+		$notice->priority  = absint( $notice->priority );
+		$notice->expire    = (bool) $notice->expire;
+		$notice->recurring = (bool) $notice->recurring;
+
+		if ( ! is_callable( $notice->dismiss ) ) {
+			$notice->dismiss   = (bool) $notice->dismiss;
+		}
+		if ( ! is_callable( $notice->inline ) ) {
+			$notice->inline   = (bool) $notice->inline;
+		}
 
 		// Set the Notice on the array of notices
 		$this->notices[ $slug ] = $notice;
@@ -460,10 +600,10 @@ class Tribe__Admin__Notices {
 	 *
 	 * @since  4.7.7
 	 *
-	 * @param  string $slug      Slug to save the notice
-	 * @param  string $html      The notice output HTML code
-	 * @param  array  $arguments Arguments to Setup a notice
-	 * @param  int    $expire    After how much time (in seconds) the notice will stop showing.
+	 * @param string $slug      Slug to save the notice
+	 * @param string $html      The notice output HTML code
+	 * @param array  $arguments Arguments to Setup a notice
+	 * @param int    $expire    After how much time (in seconds) the notice will stop showing.
 	 *
 	 * @return stdClass Which notice was registered
 	 */
@@ -501,6 +641,7 @@ class Tribe__Admin__Notices {
 		}
 
 		unset( $this->notices[ $slug ] );
+
 		return true;
 	}
 
@@ -511,18 +652,29 @@ class Tribe__Admin__Notices {
 	 *
 	 * @param string $slug
 	 *
-	 * @return array|null
+	 * @return object|array|null
 	 */
 	public function get( $slug = null ) {
-		// Prevent weird stuff here
-		$slug = sanitize_title_with_dashes( $slug );
-
 		if ( is_null( $slug ) ) {
 			return $this->notices;
 		}
 
+		// Prevent weird stuff here
+		$slug = sanitize_key( $slug );
+
 		if ( ! empty( $this->notices[ $slug ] ) ) {
-			return $this->notices[ $slug ];
+			// I want to avoid modifying the registered value.
+			$notice = $this->notices[ $slug ];
+
+			if ( is_callable( $notice->inline ) ) {
+				$notice->inline = call_user_func( $notice->inline, $notice );
+			}
+
+			if ( is_callable( $notice->dismiss ) ) {
+				$notice->dismiss = call_user_func( $notice->dismiss, $notice );
+			}
+
+			return $notice;
 		}
 
 		return null;
@@ -604,7 +756,7 @@ class Tribe__Admin__Notices {
 		$transient_notices = (array) $this->get_transients();
 
 		return isset( $transient_notices[ $slug ] )
-		       && ! $this->has_user_dimissed( $slug )
+		       && ! $this->has_user_dismissed( $slug )
 		       && ! $this->transient_notice_expired( $slug );
 	}
 
@@ -652,7 +804,7 @@ class Tribe__Admin__Notices {
 		}
 
 		$notice = $this->notices[ $slug ];
-		if ( $notice->dismiss && $this->has_user_dimissed( $notice->slug ) ) {
+		if ( $notice->dismiss && $this->has_user_dismissed( $notice->slug ) ) {
 			return false;
 		}
 

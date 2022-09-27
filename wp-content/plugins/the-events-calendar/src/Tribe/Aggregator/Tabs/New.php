@@ -1,5 +1,8 @@
 <?php
 // Don't load directly
+
+use Tribe\Events\Admin\Settings;
+
 defined( 'WPINC' ) or die;
 
 class Tribe__Events__Aggregator__Tabs__New extends Tribe__Events__Aggregator__Tabs__Abstract {
@@ -506,7 +509,7 @@ class Tribe__Events__Aggregator__Tabs__New extends Tribe__Events__Aggregator__Ta
 	 * @return string
 	 */
 	public function maybe_display_aggregator_upsell() {
-		if ( defined( 'TRIBE_HIDE_UPSELL' ) ) {
+		if ( tec_should_hide_upsell() ) {
 			return;
 		}
 
@@ -517,28 +520,24 @@ class Tribe__Events__Aggregator__Tabs__New extends Tribe__Events__Aggregator__Ta
 		ob_start();
 		?>
 		<div class="notice inline notice-info tribe-dependent tribe-notice-tribe-missing-aggregator-license" data-ref="tribe-missing-aggregator-license" data-depends="#tribe-ea-field-origin" data-condition-empty>
+			<div class="tribe-notice-tribe-missing-aggregator-license__content">
+				<div class="upsell-banner">
+					<?php esc_html_e( 'Events Aggregator', 'the-events-calendar' );?>
+				</div>
 
-			<div class="upsell-banner">
-				<img src="<?php echo esc_url( tribe_events_resource_url( 'images/aggregator/upsell-banner.png' ) ) ; ?>">
+				<h3><?php esc_html_e( 'Import events with ease', 'the-events-calendar' ); ?></h3>
+
+				<p><?php esc_html_e( 'Effortlessly fill your calendar with events from Meetup, Eventbrite, iCal, Google Calendar, and more.', 'the-events-calendar' ); ?></p>
+
+				<a href="https://evnt.is/196z" class="tribe-license-link tribe-button tribe-button-secondary" target="_blank">
+					<?php esc_html_e( 'Learn More', 'the-events-calendar' ); ?>
+					<span class="screen-reader-text">
+						<?php esc_html_e( 'opens in a new window', 'the-events-calendar' );?>
+					</span>
+				</a>
 			</div>
+			<div class="tribe-notice-tribe-missing-aggregator-license__image"></div>
 
-			<h3><?php esc_html_e( 'Import Using Event Aggregator', 'the-events-calendar' ); ?></h3>
-
-			<p><?php esc_html_e( 'With Event Aggregator, you can import events from iCalendar, Google, and Meetup.com in a jiffy.', 'the-events-calendar' ); ?></p>
-
-			<a href="https://evnt.is/196y" class="tribe-license-link tribe-button tribe-button-primary" target="_blank">
-				<?php esc_html_e( 'Buy It Now', 'the-events-calendar' );?>
-				<span class="screen-reader-text">
-					<?php esc_html_e( 'opens in a new window', 'the-events-calendar' );?>
-				</span>
-			</a>
-
-			<a href="https://evnt.is/196z" class="tribe-license-link tribe-button tribe-button-secondary" target="_blank">
-				<?php esc_html_e( 'Learn More', 'the-events-calendar' ); ?>
-				<span class="screen-reader-text">
-					<?php esc_html_e( 'opens in a new window', 'the-events-calendar' );?>
-				</span>
-			</a>
 		</div>
 		<?php
 
@@ -553,7 +552,7 @@ class Tribe__Events__Aggregator__Tabs__New extends Tribe__Events__Aggregator__Ta
 	 * @return string
 	 */
 	public function maybe_display_eventbrite_upsell() {
-		if ( defined( 'TRIBE_HIDE_UPSELL' ) ) {
+		if ( tec_should_hide_upsell() ) {
 			return;
 		}
 
@@ -653,7 +652,7 @@ class Tribe__Events__Aggregator__Tabs__New extends Tribe__Events__Aggregator__Ta
 
 		$url_map = array(
 			'new'      => Tribe__Events__Aggregator__Page::instance()->get_url( array( 'tab' => $this->get_slug(), 'ea-auth' => 'facebook' ) ),
-			'settings' => Tribe__Settings::instance()->get_url( array( 'tab' => 'addons', 'ea-auth' => 'facebook' ) ),
+			'settings' => tribe( Settings::class )->get_url( array( 'tab' => 'addons', 'ea-auth' => 'facebook' ) ),
 		);
 
 		if ( ! isset( $url_map[ $type ] ) ) {

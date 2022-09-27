@@ -8,7 +8,7 @@
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -31,9 +31,8 @@
  * @since 4.0.0
  *
  * @constructor
- * @param {!jQuery} $ jQuery object.
  */
-window.tsfTerm = function( $ ) {
+window.tsfTerm = function() {
 
 	/**
 	 * Data property injected by WordPress l10n handler.
@@ -58,6 +57,13 @@ window.tsfTerm = function( $ ) {
 	const _descId = 'autodescription-meta[description]';
 
 	/**
+	 * @since 4.2.0
+	 * @access private
+	 * @type {string}
+	 */
+	const _socialGroup = 'autodescription_social_tt';
+
+	/**
 	 * Initializes Canonical URL meta input listeners.
 	 *
 	 * @since 4.0.0
@@ -65,9 +71,9 @@ window.tsfTerm = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initVisibilityListeners = () => {
+
 		const indexSelect = document.getElementById( 'autodescription-meta[noindex]' );
 
 		let canonicalUrl    = '',
@@ -78,7 +84,6 @@ window.tsfTerm = function( $ ) {
 		 *
 		 * @function
 		 * @param {string} link
-		 * @return {undefined}
 		 */
 		const updateCanonicalPlaceholder = () => {
 			let canonicalInput = document.getElementById( 'autodescription-meta[canonical]' );
@@ -86,13 +91,9 @@ window.tsfTerm = function( $ ) {
 			if ( ! canonicalInput ) return;
 
 			// Link might not've been updated (yet). Fill it in with PHP-supplied value (if any).
-			canonicalUrl = canonicalUrl || canonicalInput.placeholder;
+			canonicalUrl ||= canonicalInput.placeholder;
 
-			if ( ! showcanonicalPh ) {
-				canonicalInput.placeholder = '';
-			} else {
-				canonicalInput.placeholder = canonicalUrl;
-			}
+			canonicalInput.placeholder = showcanonicalPh ? canonicalUrl : '';
 		}
 
 		/**
@@ -100,7 +101,6 @@ window.tsfTerm = function( $ ) {
 		 *
 		 * @function
 		 * @param {Number} value
-		 * @return {undefined}
 		 */
 		const setRobotsIndexingState = value => {
 			let type = '';
@@ -124,9 +124,10 @@ window.tsfTerm = function( $ ) {
 
 			updateCanonicalPlaceholder();
 		}
-		indexSelect.addEventListener( 'change', event => setRobotsIndexingState( event.target.value ) );
-
-		setRobotsIndexingState( indexSelect.value );
+		if ( indexSelect ) {
+			indexSelect.addEventListener( 'change', event => setRobotsIndexingState( event.target.value ) );
+			setRobotsIndexingState( indexSelect.value );
+		}
 	}
 
 	/**
@@ -136,26 +137,24 @@ window.tsfTerm = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initTitleListeners = () => {
 
-		const titleInput      = document.getElementById( _titleId );
-		const blogNameTrigger = document.getElementById( 'autodescription-meta[title_no_blog_name]' );
+		tsfTitle.setInputElement( document.getElementById( _titleId ) );
 
-		tsfTitle.setInputElement( titleInput );
-
-		let state = JSON.parse(
-			document.getElementById( 'tsf-title-data_' + _titleId ).dataset.state
+		const state = JSON.parse(
+			document.getElementById( `tsf-title-data_${_titleId}` )?.dataset.state || 0
 		);
 
-		tsfTitle.updateStateOf( _titleId, 'allowReferenceChange', ! state.refTitleLocked );
-		tsfTitle.updateStateOf( _titleId, 'defaultTitle', state.defaultTitle.trim() );
-		tsfTitle.updateStateOf( _titleId, 'addAdditions', state.addAdditions );
-		tsfTitle.updateStateOf( _titleId, 'useSocialTagline', !! ( state.useSocialTagline || false ) );
-		tsfTitle.updateStateOf( _titleId, 'additionValue', state.additionValue.trim() );
-		tsfTitle.updateStateOf( _titleId, 'additionPlacement', state.additionPlacement );
-		tsfTitle.updateStateOf( _titleId, 'hasLegacy', !! ( state.hasLegacy || false ) );
+		if ( state ) {
+			tsfTitle.updateStateOf( _titleId, 'allowReferenceChange', ! state.refTitleLocked );
+			tsfTitle.updateStateOf( _titleId, 'defaultTitle', state.defaultTitle.trim() );
+			tsfTitle.updateStateOf( _titleId, 'addAdditions', state.addAdditions );
+			tsfTitle.updateStateOf( _titleId, 'useSocialTagline', !! ( state.useSocialTagline || false ) );
+			tsfTitle.updateStateOf( _titleId, 'additionValue', state.additionValue.trim() );
+			tsfTitle.updateStateOf( _titleId, 'additionPlacement', state.additionPlacement );
+			tsfTitle.updateStateOf( _titleId, 'hasLegacy', !! ( state.hasLegacy || false ) );
+		}
 
 		// tsfTitle shouldn't be aware of this--since we remove the prefix on-input.
 		const termPrefix = tsf.escapeString( l10n.params.termPrefix );
@@ -165,73 +164,54 @@ window.tsfTerm = function( $ ) {
 		 *
 		 * @function
 		 * @param {Event} event
-		 * @return {undefined}
 		 */
 		const updateTitleAdditions = event => {
-			let prevAddAdditions = tsfTitle.getStateOf( _titleId, 'addAdditions' ),
-				addAdditions     = ! event.target.checked;
+			let addAdditions = ! event.target.checked;
 
-			if ( l10n.params.additionsForcedDisabled ) {
+			if ( l10n.params.additionsForcedDisabled )
 				addAdditions = false;
-			}
 
-			if ( prevAddAdditions !== addAdditions ) {
-				tsfTitle.updateStateOf( _titleId, 'addAdditions', addAdditions );
-			}
+			tsfTitle.updateStateOf( _titleId, 'addAdditions', addAdditions );
 		}
+		const blogNameTrigger = document.getElementById( 'autodescription-meta[title_no_blog_name]' );
 		if ( blogNameTrigger ) {
 			blogNameTrigger.addEventListener( 'change', updateTitleAdditions );
 			blogNameTrigger.dispatchEvent( new Event( 'change' ) );
 		}
 
 		//!? Disabled as we don't add prefixes when using a custom title:
-		//
-		// /**
-		//  * Sets term prefix.
-		//  *
-		//  * @function
-		//  * @param {string} visibility
-		//  * @return {undefined}
-		//  */
 		// const setTermPrefixValue = ( event ) => {
-		// 	let oldPrefixValue = tsfTitle.getState( 'prefixValue' ),
-		// 		prefixValue    = '';
-
-		// 	if ( ! event.target.value.length ) {
+		// 	let prefixValue    = '';
+		// 	if ( ! event.target.value.length )
 		// 		prefixValue = l10n.params.termPrefix;
-		// 	}
-
-		// 	if ( prefixValue !== oldPrefixValue )
-		// 		tsfTitle.updateState( 'prefixValue', prefixValue );
+		// 	tsfTitle.updateState( 'prefixValue', prefixValue );
 		// }
-		// $( titleInput ).on( 'input', setTermPrefixValue );
+		// titleInput.addEventListener( 'input', setTermPrefixValue );
 
 		/**
 		 * Updates default title placeholder.
 		 *
 		 * @function
 		 * @param {string} value
-		 * @return {undefined}
 		 */
-		const updateDefaultTitle = ( val ) => {
-			val = typeof val === 'string' && val.trim() || '';
+		const updateDefaultTitle = val => {
+			val = val?.trim();
 
-			let title = tsfTitle.stripTitleTags ? tsf.stripTags( val ) : val;
-
-			title = title || tsfTitle.untitledTitle;
+			let title   = tsfTitle.stripTitleTags ? tsf.stripTags( val ) : val;
+			    title ||= tsfTitle.untitledTitle;
 
 			let defaultTitle;
 
-			if ( tsf.l10n.states.isRTL ) {
-				defaultTitle = title + ' ' + termPrefix;
+			if ( window.isRtl ) {
+				defaultTitle = `${title} ${termPrefix}`;
 			} else {
-				defaultTitle = termPrefix + ' ' + title;
+				defaultTitle = `${termPrefix} ${title}`;
 			}
 
 			tsfTitle.updateStateOf( _titleId, 'defaultTitle', defaultTitle );
 		}
-		const termNameInput = document.querySelector( '#edittag #name' );
-		termNameInput && termNameInput.addEventListener( 'input', event => updateDefaultTitle( event.target.value ) );
+		document.querySelector( '#edittag #name' )
+			?.addEventListener( 'input', event => updateDefaultTitle( event.target.value ) );
 
 		tsfTitle.enqueueUnregisteredInputTrigger( _titleId );
 	}
@@ -243,23 +223,54 @@ window.tsfTerm = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initDescriptionListeners = () => {
 
-		let state = JSON.parse(
-			document.getElementById( 'tsf-description-data_' + _descId ).dataset.state
-		);
-
 		tsfDescription.setInputElement( document.getElementById( _descId ) );
 
-		// tsfDescription.updateState( 'allowReferenceChange', ! state.refDescriptionLocked );
-		tsfDescription.updateStateOf( _descId, 'defaultDescription', state.defaultDescription.trim() );
-		tsfDescription.updateStateOf( _descId, 'hasLegacy', !! ( state.hasLegacy || false ) );
+		const state = JSON.parse(
+			document.getElementById( `tsf-description-data_${_descId}` )?.dataset.state || 0
+		);
+		if ( state ) {
+			// tsfDescription.updateState( 'allowReferenceChange', ! state.refDescriptionLocked );
+			tsfDescription.updateStateOf( _descId, 'defaultDescription', state.defaultDescription.trim() );
+			tsfDescription.updateStateOf( _descId, 'hasLegacy', !! ( state.hasLegacy || false ) );
+		}
 
 		// TODO set term-description-content (via ajax) listeners?
 
 		tsfDescription.enqueueUnregisteredInputTrigger( _descId );
+	}
+
+	/**
+	 * Initializes social meta input listeners.
+	 *
+	 * @since 4.2.0
+	 * @access private
+	 *
+	 * @function
+	 */
+	const _initSocialListeners = () => {
+
+		tsfSocial.setInputInstance( _socialGroup, _titleId, _descId );
+
+		const groupData = JSON.parse(
+			document.getElementById( `tsf-social-data_${_socialGroup}` )?.dataset.settings || 0
+		);
+		if ( ! groupData ) return;
+
+		tsfSocial.updateStateOf( _socialGroup, 'addAdditions', groupData.og.state.addAdditions ); // tw Also has one. Maybe future.
+
+		tsfSocial.updateStateOf(
+			_socialGroup,
+			'defaults',
+			{
+				ogTitle: groupData.og.state.defaultTitle,
+				twTitle: groupData.tw.state.defaultTitle,
+				ogDesc:  groupData.og.state.defaultDesc,
+				twDesc:  groupData.tw.state.defaultDesc,
+			}
+		);
 	}
 
 	/**
@@ -269,12 +280,12 @@ window.tsfTerm = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _loadSettings = () => {
 		_initVisibilityListeners();
 		_initTitleListeners();
 		_initDescriptionListeners();
+		_initSocialListeners();
 	}
 
 	/**
@@ -285,25 +296,8 @@ window.tsfTerm = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
-	const _readySettings = () => {
-
-		tsfSocial.initTitleInputs( {
-			ref:   document.getElementById( 'tsf-title-reference_' + _titleId ),
-			refNa: document.getElementById( 'tsf-title-noadditions-reference_' + _titleId ),
-			meta:  document.getElementById( _titleId ),
-			og:    document.getElementById( 'autodescription-meta[og_title]' ),
-			tw:    document.getElementById( 'autodescription-meta[tw_title]' ),
-		} );
-
-		tsfSocial.initDescriptionInputs( {
-			ref:  document.getElementById( 'tsf-description-reference_' + _descId ),
-			meta: document.getElementById( _descId ),
-			og:   document.getElementById( 'autodescription-meta[og_description]' ),
-			tw:   document.getElementById( 'autodescription-meta[tw_description]' ),
-		} );
-	}
+	const _readySettings = () => { }
 
 	return Object.assign( {
 		/**
@@ -314,16 +308,13 @@ window.tsfTerm = function( $ ) {
 		 * @access protected
 		 *
 		 * @function
-		 * @return {undefined}
 		 */
 		load: () => {
 			document.body.addEventListener( 'tsf-onload', _loadSettings );
 			document.body.addEventListener( 'tsf-ready', _readySettings );
 		}
 	}, {
-		// No public methods.
-	}, {
 		l10n
 	} );
-}( jQuery );
+}();
 window.tsfTerm.load();

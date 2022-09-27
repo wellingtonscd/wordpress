@@ -223,16 +223,28 @@ wp.customize.controlConstructor[ 'spacious-buttonset' ] = wp.customize.Control.e
 
 				'use strict';
 
-				var control = this;
+				var control = this,
+					isHueSlider = ( this.params.mode === 'hue' ),
+					picker = this.container.find( '.spacious-color-picker-alpha' ),
+					color = picker.val().replace( /\s+/g, '' );
 
-				this.container.find( '.spacious-color-picker-alpha' ).wpColorPicker( {
+				picker.wpColorPicker( {
 
 					change : function ( event, ui ) {
-						var color = ui.color.toString();
+						var current = ( isHueSlider ? ui.color.h() : picker.iris( 'color' ) );
 
-						if ( jQuery( 'html' ).hasClass( 'colorpicker-ready' ) ) {
-							control.setting.set( color );
+						if ( jQuery( 'html' ).hasClass( 'colorpicker-ready' ) && color !== current.replace( /\s+/g, '' ) ) {
+							control.setting.set( current );
 						}
+					},
+
+					clear: function() {
+
+						if ( ! control.setting.get() ) {
+							control.setting.set( '' );
+						}
+
+						control.setting.set( '' );
 					}
 
 				} );
@@ -244,6 +256,144 @@ wp.customize.controlConstructor[ 'spacious-buttonset' ] = wp.customize.Control.e
 	}
 )( jQuery );
 
+/**
+ * Dimensions JS to handle the background customize option.
+ *
+ * File `background.js`.
+ *
+ * @package Spacious
+ */
+wp.customize.controlConstructor['spacious-dimensions'] = wp.customize.Control.extend( {
+
+    ready : function () {
+
+        'use strict';
+
+        var control = this;
+
+        // Top Dimension setting.
+        control.container.on( 'change keyup paste input', '.top input', function () {
+            control.updateTop();
+        } );
+
+        // Right Dimension setting.
+        control.container.on( 'change keyup paste input', '.right input', function () {
+            control.updateRight();
+        } );
+
+        // Left Dimension setting.
+        control.container.on( 'change keyup paste input', '.left input', function () {
+            control.updateLeft();
+        } );
+
+        // Bottom Dimension setting.
+        control.container.on( 'change keyup paste input', '.bottom input', function () {
+            control.updateBottom();
+        } );
+
+    },
+
+    updateTop : function () {
+
+        var control  = this,
+            val      = control.setting._value,
+            input    = control.container.find( '.dimensions-hidden-value' ),
+            newValue = {
+                'top' : {}
+            };
+
+        control.container.find( '.top .input-wrapper' ).each(
+            function () {
+                var controlValue = jQuery( this ).find( 'input' ).val();
+
+                newValue['top'] = controlValue;
+            }
+        );
+
+        // Extend/Update the `val` object to include `newValue`'s new data as an object.
+        jQuery.extend( val, newValue );
+
+        jQuery( input ).attr( 'value', JSON.stringify( val ) ).trigger( 'change' );
+        control.setting.set( val );
+
+    },
+
+    updateRight : function () {
+
+        var control  = this,
+            val      = control.setting._value,
+            input    = control.container.find( '.dimensions-hidden-value' ),
+            newValue = {
+                'right' : {}
+            };
+
+        control.container.find( '.right .input-wrapper' ).each(
+            function () {
+                var controlValue = jQuery( this ).find( 'input' ).val();
+
+                newValue['right'] = controlValue;
+            }
+        );
+
+        // Extend/Update the `val` object to include `newValue`'s new data as an object.
+        jQuery.extend( val, newValue );
+
+        jQuery( input ).attr( 'value', JSON.stringify( val ) ).trigger( 'change' );
+        control.setting.set( val );
+
+    },
+
+    updateBottom: function () {
+
+        var control  = this,
+            val      = control.setting._value,
+            input    = control.container.find( '.dimensions-hidden-value' ),
+            newValue = {
+                'bottom' : {}
+            };
+
+        control.container.find( '.bottom .input-wrapper' ).each(
+            function () {
+                var controlValue = jQuery( this ).find( 'input' ).val();
+
+                newValue['bottom'] = controlValue;
+            }
+        );
+
+        // Extend/Update the `val` object to include `newValue`'s new data as an object.
+        jQuery.extend( val, newValue );
+
+        jQuery( input ).attr( 'value', JSON.stringify( val ) ).trigger( 'change' );
+        control.setting.set( val );
+
+    },
+
+    updateLeft : function () {
+
+        var control  = this,
+            val      = control.setting._value,
+            input    = control.container.find( '.dimensions-hidden-value' ),
+            newValue = {
+                'left' : {}
+            };
+
+        control.container.find( '.left .input-wrapper' ).each(
+            function () {
+                var controlValue = jQuery( this ).find( 'input' ).val();
+
+                newValue['left'] = controlValue;
+            }
+        );
+
+        // Extend/Update the `val` object to include `newValue`'s new data as an object.
+        jQuery.extend( val, newValue );
+
+        jQuery( input ).attr( 'value', JSON.stringify( val ) ).trigger( 'change' );
+        control.setting.set( val );
+
+    },
+
+} );
 /**
  * Dropdown categories control JS to handle the dropdown categories customize control.
  *
@@ -321,6 +471,81 @@ wp.customize.controlConstructor[ 'spacious-editor' ] = wp.customize.Control.exte
 	}
 
 } );
+
+/**
+ * Control: FontAwesome.
+ */
+(
+	function ( $ ) {
+
+		wp.customize.controlConstructor['spacious-fontawesome'] = wp.customize.Control.extend(
+			{
+				ready: function () {
+					'use strict';
+
+					var control = this;
+
+					control.initSpaciousFontawesomeControl();
+				},
+
+				initSpaciousFontawesomeControl: function() {
+					var control       = this,
+						selector      = control.selector,
+						elSelector    = $( selector ).find( 'select' ),
+						faData        = [],
+						value         = control.setting._value,
+						data          = window['SpaciousCustomizerControlFontawesome' + this.id],
+						faDataCounter = 0,
+						faSelect;
+
+					$.each(
+						data,
+						function ( key, value ) {
+							faData[ faDataCounter ] = {
+								id: value,
+								text: value
+							};
+
+							faDataCounter++;
+						}
+					);
+
+					// Add HTML inside the option element.
+					function formatState( state ) {
+
+						if ( ! state.id ) {
+							return state.text;
+						}
+
+						var $state = $(
+							'<span><i class="fa fa-lg ' + state.text + '"></i> ' + state.text + '</span>'
+						);
+
+						return $state;
+					};
+
+					// Apply selectWoo.
+					faSelect = elSelector.selectWoo(
+						{
+							data: faData,
+							width: '100%',
+							templateResult: formatState,
+						}
+					);
+
+					faSelect.val( value ).trigger( 'change' );
+
+					faSelect.on(
+						'change',
+						function () {
+							control.setting.set( elSelector.val() );
+						}
+					);
+				},
+			}
+		);
+	}
+)( jQuery );
 
 /**
  * Group control JS to handle the group customize option.
@@ -664,18 +889,21 @@ wp.customize.controlConstructor[ 'spacious-editor' ] = wp.customize.Control.exte
 						change : function ( event, ui ) {
 
 							if ( 'undefined' != typeof event.originalEvent || 'undefined' != typeof ui.color._alpha ) {
+
 								var element = $( event.target ).closest( '.wp-picker-input-wrap' ).find( '.wp-color-picker' )[0];
 								name        = $( element ).parents( '.customize-control' ).attr( 'id' );
+								var picker  = $( '#' + name + '.customize-control-spacious-color .spacious-color-picker-alpha' );
 								name        = name.replace( 'customize-control-', '' );
+								var current = picker.iris( 'color' );
 
-								$( element ).val( ui.color.toString() );
+								$( element ).val( current );
 
 								control.container.trigger(
 									'spacious_settings_changed',
 									[
 										control,
 										$( element ),
-										ui.color.toString(),
+										current,
 										name
 									]
 								);
@@ -1391,30 +1619,6 @@ wp.customize.controlConstructor[ 'spacious-editor' ] = wp.customize.Control.exte
 )( jQuery );
 
 /**
- * Radio image control JS to handle the toggle of radio images.
- *
- * File `radio-image.js`.
- *
- * @package Spacious
- */
-wp.customize.controlConstructor[ 'spacious-radio-image' ] = wp.customize.Control.extend( {
-
-	ready : function () {
-
-		'use strict';
-
-		var control = this;
-
-		// Change the value.
-		this.container.on( 'click', 'input', function () {
-			control.setting.set( jQuery( this ).val() );
-		} );
-
-	}
-
-} );
-
-/**
  * Background image control JS to handle the navigate customize option.
  *
  * File `navigate.js`.
@@ -1439,6 +1643,30 @@ wp.customize.controlConstructor[ 'spacious-radio-image' ] = wp.customize.Control
 		} );
 	}
 )( jQuery );
+
+/**
+ * Radio image control JS to handle the toggle of radio images.
+ *
+ * File `radio-image.js`.
+ *
+ * @package Spacious
+ */
+wp.customize.controlConstructor[ 'spacious-radio-image' ] = wp.customize.Control.extend( {
+
+	ready : function () {
+
+		'use strict';
+
+		var control = this;
+
+		// Change the value.
+		this.container.on( 'click', 'input', function () {
+			control.setting.set( jQuery( this ).val() );
+		} );
+
+	}
+
+} );
 
 /**
  * Slider control JS to handle the range of the inputs.
@@ -1505,6 +1733,24 @@ wp.customize.controlConstructor['spacious-sortable'] = wp.customize.Control.exte
 		// Set the sortable container.
 		control.sortableContainer = control.container.find( 'ul.sortable' ).first();
 
+		control.unsortableContainer = control.container.find( 'ul.unsortable' ).first();
+
+		control.unsortableContainer.find( 'li' ).each(
+			function () {
+				// Enable/disable options when we click on the eye of Thundera.
+				jQuery( this ).find( 'i.visibility' ).click(
+					function () {
+						jQuery( this ).toggleClass( 'dashicons-visibility-faint' ).parents( 'li:eq(0)' ).toggleClass( 'invisible' );
+					}
+				);
+			}
+		).click(
+			function () {
+				// Update value on click.
+				control.updateValue();
+			}
+		);
+
 		// Init sortable.
 		control.sortableContainer.sortable(
 			{
@@ -1535,22 +1781,36 @@ wp.customize.controlConstructor['spacious-sortable'] = wp.customize.Control.exte
 
 		'use strict';
 
-		var control  = this,
-		    newValue = [];
+		var control    = this,
+			sortable = [],
+			unsortable =[],
+			newValue   = [];
 
 		this.sortableContainer.find( 'li' ).each(
 			function () {
 				if ( ! jQuery( this ).is( '.invisible' ) ) {
-					newValue.push( jQuery( this ).data( 'value' ) );
+					sortable.push( jQuery( this ).data( 'value' ) );
 				}
 			}
 		);
+
+		this.unsortableContainer.find( 'li' ).each(
+			function (i) {
+				if ( ! jQuery( this ).is( '.invisible' ) ) {
+					unsortable.push( jQuery( this ).data( 'value' ) );
+				}
+			}
+		);
+
+		newValue = unsortable.concat(sortable);
 
 		control.setting.set( newValue );
 
 	}
 
+
 } );
+
 
 /**
  * Switch toggle control JS to handle the toggle of custom customize controls.

@@ -179,7 +179,7 @@ class Element_Classes {
 	protected function parse_string( $arguments, $default_value = true ) {
 		$values = preg_split( '/\s+/', $arguments, -1, PREG_SPLIT_NO_EMPTY );
 
-		// When it doesnt match, bail early.
+		// When it doesn't match, bail early.
 		if ( ! $values ) {
 			return;
 		}
@@ -207,11 +207,11 @@ class Element_Classes {
 					$this->parse( $value );
 				}
 			} elseif ( is_string( $key ) ) {
-				if ( ! is_bool( $value ) ) {
-					throw new \UnexpectedValueException( 'Value for key ' . $key . ' must be of type boolean' );
+				if ( $value instanceof \Closure || is_callable( $value ) ) {
+					$value = $value( $this->results );
 				}
 
-				$this->parse_string( $key, $value );
+				$this->parse_string( $key, tribe_is_truthy( $value ) );
 			}
 		}
 	}

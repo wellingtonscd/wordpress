@@ -10,7 +10,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -45,10 +45,10 @@ class Generate_Ldjson extends Generate_Image {
 	 * @see $this->receive_json_data()
 	 * @uses $this->build_json_data_cache()
 	 *
-	 * @param string $key  The JSON data key.
-	 * @param array  $data The JSON data.
+	 * @param string   $key  The JSON data key.
+	 * @param iterable $data The JSON data.
 	 */
-	public function build_json_data( $key, array $data ) {
+	public function build_json_data( $key, $data ) {
 
 		$key  = \sanitize_key( $key );
 		$data = array_filter( $data );
@@ -107,7 +107,7 @@ class Generate_Ldjson extends Generate_Image {
 	 * @param string $key   The JSON data key.
 	 * @param array  $entry The JSON data entry.
 	 */
-	protected function build_json_data_cache( $key, array $entry ) {
+	protected function build_json_data_cache( $key, $entry ) {
 		$this->cache_json_data( false, $key, $entry );
 	}
 
@@ -123,7 +123,7 @@ class Generate_Ldjson extends Generate_Image {
 	 * @param array  $entry The JSON data entry.
 	 * @return array The JSON data for $key.
 	 */
-	protected function cache_json_data( $get = true, $key = '', array $entry = [] ) {
+	protected function cache_json_data( $get = true, $key = '', $entry = [] ) {
 
 		static $data = [];
 
@@ -147,13 +147,13 @@ class Generate_Ldjson extends Generate_Image {
 	public function render_ld_json_scripts() {
 
 		if ( $this->is_real_front_page() ) {
-			//= Homepage Schema.
+			// Homepage Schema.
 			$output = '';
 
 			$output .= $this->get_ld_json_website() ?: '';
 			$output .= $this->get_ld_json_links() ?: '';
 		} else {
-			//= All other pages' Schema.
+			// All other pages' Schema.
 			$output = $this->get_ld_json_breadcrumbs() ?: '';
 		}
 
@@ -166,6 +166,7 @@ class Generate_Ldjson extends Generate_Image {
 	 * @since 2.9.3
 	 * @since 3.0.0 This whole functions now only listens to the searchbox option.
 	 * @since 4.1.2 Now properly slashes the search URL.
+	 * @since 4.2.4 Added EntryPoint definition (from implied to implicit)
 	 *
 	 * @return string escaped LD+JSON Search and Sitename script.
 	 */
@@ -180,18 +181,18 @@ class Generate_Ldjson extends Generate_Image {
 			'url'      => $this->get_homepage_permalink(),
 		];
 
-		//= The name part.
+		// The name part.
 		$blogname = $this->get_blogname();
 		$kname    = $this->get_option( 'knowledge_name' );
 
 		$alternate_name = $kname && $kname !== $blogname ? $kname : '';
 
 		$data += [
-			'name'          => $this->escape_title( $blogname ),
-			'alternateName' => $this->escape_title( $alternate_name ),
+			'name'          => \strlen( $blogname ) ? $this->escape_title( $blogname ) : '',
+			'alternateName' => \strlen( $alternate_name ) ? $this->escape_title( $alternate_name ) : '',
 		];
 
-		//= The searchbox part.
+		// The searchbox part.
 		$pattern     = '%s{%s}';
 		$action_name = 'search_term_string';
 		$search_link = $this->pretty_permalinks ? \trailingslashit( \get_search_link() ) : \get_search_link();
@@ -210,18 +211,21 @@ class Generate_Ldjson extends Generate_Image {
 			'potentialAction' => [
 				'@type'       => 'SearchAction',
 				// not properly sanitized; however, search_term_string is inert.
-				'target'      => sprintf( $pattern, \esc_url( $search_url ), $action_name ),
+				'target'      => [
+					'@type'       => 'EntryPoint',
+					'urlTemplate' => sprintf( $pattern, \esc_url( $search_url ), $action_name ),
+				],
 				'query-input' => sprintf( 'required name=%s', $action_name ),
 			],
 		];
 
-		//= Building
+		// Building
 		$key = 'website';
 		$this->build_json_data( $key, $data );
 		$json = $this->receive_json_data( $key );
 
 		if ( $json )
-			return '<script type="application/ld+json">' . $json . '</script>' . "\r\n";
+			return '<script type="application/ld+json">' . $json . '</script>' . "\n";
 
 		return '';
 	}
@@ -294,7 +298,7 @@ class Generate_Ldjson extends Generate_Image {
 		$json = $this->receive_json_data( $key );
 
 		if ( $json )
-			return '<script type="application/ld+json">' . $json . '</script>' . "\r\n";
+			return '<script type="application/ld+json">' . $json . '</script>' . "\n";
 
 		return '';
 	}
@@ -326,38 +330,10 @@ class Generate_Ldjson extends Generate_Image {
 	}
 
 	/**
-	 * Returns image URL suitable for Schema items.
-	 *
-	 * These are images that are strictly assigned to the Post or Page, fallbacks are omitted.
-	 * Themes should compliment these. If not, then Open Graph should at least compliment these.
-	 * If that's not even true, then I don't know what happens. But then you're in a grey area...
-	 *
-	 * @since 4.0.0
-	 * @uses $this->get_image_details()
-	 * @api Not used internally, only externally.
-	 *
-	 * @param array|null $args    The query arguments. Accepts 'id' and 'taxonomy'.
-	 *                            Leave null to autodetermine query.
-	 * @param bool       $details Whether to return all details, or just a simple URL.
-	 * @return string|array $url The Schema.org safe image.
-	 */
-	public function get_safe_schema_image( $args = null, $details = false ) {
-
-		static $image_details = null;
-
-		if ( ! isset( $image_details ) )
-			$image_details = current( $this->get_image_details( $args, true, 'schema' ) );
-
-		if ( $details )
-			return $image_details;
-
-		return isset( $image_details['url'] ) ? $image_details['url'] : '';
-	}
-
-	/**
 	 * Generates LD+JSON Breadcrumbs script.
 	 *
 	 * @since 2.9.3
+	 * @since 4.2.4 Exchanged "is_single" test for "is_post_type_hierarchical".
 	 *
 	 * @return string LD+JSON Breadcrumbs script.
 	 */
@@ -369,11 +345,10 @@ class Generate_Ldjson extends Generate_Image {
 		$output = '';
 
 		if ( $this->is_singular() && ! $this->is_real_front_page() ) {
-			// TODO Shouldn't this be is_post_type_hierarchical()?
-			if ( $this->is_single() ) {
-				$output = $this->get_ld_json_breadcrumbs_post();
-			} else {
+			if ( \is_post_type_hierarchical( $this->get_post_type_real_ID() ) ) {
 				$output = $this->get_ld_json_breadcrumbs_page();
+			} else {
+				$output = $this->get_ld_json_breadcrumbs_post();
 			}
 		}
 
@@ -398,10 +373,7 @@ class Generate_Ldjson extends Generate_Image {
 		foreach ( $parents as $parent_id ) {
 			++$position;
 
-			$_generator_args = [
-				'id'       => $parent_id,
-				'taxonomy' => '',
-			];
+			$_generator_args = [ 'id' => $parent_id ];
 
 			if ( $this->ld_json_breadcrumbs_use_seo_title() ) {
 				$parent_name = $this->get_filtered_raw_custom_field_title( $_generator_args )
@@ -436,8 +408,8 @@ class Generate_Ldjson extends Generate_Image {
 	 * Generates LD+JSON Breadcrumbs script for Posts.
 	 *
 	 * @since 2.9.3
-	 * @since 3.0.0 : 1. Now only returns one crumb.
-	 *                2. Now listens to primary term ID.
+	 * @since 3.0.0 1. Now only returns one crumb.
+	 *              2. Now listens to primary term ID.
 	 *
 	 * @return string LD+JSON breadcrumbs script for Posts on success. Empty string on failure.
 	 */
@@ -447,7 +419,7 @@ class Generate_Ldjson extends Generate_Image {
 
 		$post_id    = $this->get_the_real_ID();
 		$post_type  = \get_post_type( $post_id );
-		$taxonomies = $this->get_hierarchical_taxonomies_as( 'names', \get_post_type( $post_id ) );
+		$taxonomies = $this->get_hierarchical_taxonomies_as( 'names', $post_type );
 
 		/**
 		 * @since 3.0.0
@@ -504,14 +476,14 @@ class Generate_Ldjson extends Generate_Image {
 			// Check if they have parents (gets them all).
 			$ancestors = \get_ancestors( $term_id, $taxonomy );
 			if ( $ancestors ) {
-				//= Save parents to find duplicates.
+				// Save parents to find duplicates.
 				$parents[ $term_id ] = $ancestors;
 			} else {
-				//= Save current only with empty parent id..
+				// Save current only with empty parent id..
 				$parents[ $term_id ] = [];
 			}
 		endforeach;
-		//= Circle of life...
+		// Circle of life...
 		unset( $terms );
 
 		if ( ! $parents )
@@ -548,7 +520,7 @@ class Generate_Ldjson extends Generate_Image {
 			}
 		}
 		if ( ! $filtered ) {
-			//= Only get the first tree through numeric ordering.
+			// Only get the first tree through numeric ordering.
 			ksort( $assigned_ids, SORT_NUMERIC );
 			$tree_ids = $this->filter_ld_json_breadcrumb_trees( $tree_ids, key( $assigned_ids ) );
 		}
@@ -566,7 +538,6 @@ class Generate_Ldjson extends Generate_Image {
 				'taxonomy' => $taxonomy,
 			];
 
-			// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 			if ( $this->ld_json_breadcrumbs_use_seo_title() ) {
 				$cat_name = $this->get_filtered_raw_custom_field_title( $_generator_args )
 						 ?: $this->get_generated_single_term_title( \get_term( $child_id, $taxonomy ) )
@@ -575,9 +546,7 @@ class Generate_Ldjson extends Generate_Image {
 				$cat_name = $this->get_generated_single_term_title( \get_term( $child_id, $taxonomy ) )
 						 ?: $this->get_static_untitled_title();
 			}
-			// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
-			// Store in cache.
 			$items[] = [
 				'@type'    => 'ListItem',
 				'position' => $position,
@@ -610,7 +579,7 @@ class Generate_Ldjson extends Generate_Image {
 	 * @param array $previous_tree A previous set tree to compare to, if set.
 	 * @return array Trees in order.
 	 */
-	protected function build_ld_json_breadcrumb_trees( $cats, array $previous_tree = [] ) {
+	protected function build_ld_json_breadcrumb_trees( $cats, $previous_tree = [] ) {
 
 		$trees = $previous_tree;
 
@@ -682,40 +651,36 @@ class Generate_Ldjson extends Generate_Image {
 	 * Memoizes the return value.
 	 *
 	 * @since 2.9.3
-	 * @since 3.2.2 : 1. The title now works for the homepage as blog.
-	 *                2. The image has been disabled for the homepage as blog.
-	 *                   i. I couldn't fix it without evading the API, which is bad.
+	 * @since 3.2.2 1. The title now works for the homepage as blog.
+	 *              2. The image has been disabled for the homepage as blog.
+	 *                 i. I couldn't fix it without evading the API, which is bad.
 	 * @since 4.0.0 Removed the image input requirement.
 	 *
 	 * @return array The HomePage crumb entry.
 	 */
 	public function get_ld_json_breadcrumb_home_crumb() {
 
-		static $crumb = null;
-		if ( isset( $crumb ) )
-			return $crumb;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = memo() ) return $memo;
 
-		$_generator_args = [
-			'id'       => $this->get_the_front_page_ID(),
-			'taxonomy' => '',
-		];
+		$_generator_args = [ 'id' => $this->get_the_front_page_ID() ];
 
 		if ( $this->ld_json_breadcrumbs_use_seo_title() ) {
-			$title = $this->get_filtered_raw_custom_field_title( $_generator_args ) ?: $this->get_blogname();
+			$title = $this->get_filtered_raw_custom_field_title( $_generator_args )
+				 ?: $this->get_blogname();
 		} else {
-			$title = $this->get_filtered_raw_generated_title( $_generator_args ) ?: $this->get_blogname();
+			$title = $this->get_filtered_raw_generated_title( $_generator_args )
+				 ?: $this->get_blogname();
 		}
 
-		$crumb = [
+		return memo( [
 			'@type'    => 'ListItem',
 			'position' => 1,
 			'item'     => [
 				'@id'  => $this->get_schema_url_id( 'breadcrumb', 'homepage' ),
 				'name' => $this->escape_title( $title ),
 			],
-		];
-
-		return $crumb;
+		] );
 	}
 
 	/**
@@ -741,12 +706,8 @@ class Generate_Ldjson extends Generate_Image {
 		}
 
 		$post_id         = $this->get_the_real_ID();
-		$_generator_args = [
-			'id'       => $post_id,
-			'taxonomy' => '',
-		];
+		$_generator_args = [ 'id' => $post_id ];
 
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		if ( $this->ld_json_breadcrumbs_use_seo_title() ) {
 			$name = $this->get_filtered_raw_custom_field_title( $_generator_args )
 				 ?: $this->get_generated_single_post_title( $post_id )
@@ -755,7 +716,6 @@ class Generate_Ldjson extends Generate_Image {
 			$name = $this->get_generated_single_post_title( $post_id )
 				 ?: $this->get_static_untitled_title();
 		}
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		$crumb = [
 			'@type'    => 'ListItem',
@@ -786,7 +746,7 @@ class Generate_Ldjson extends Generate_Image {
 
 		static $it = 0;
 
-		$key = 'breadcrumbs_' . $it;
+		$key = "breadcrumbs_{$it}";
 
 		$data = [
 			'@context'        => 'https://schema.org',
@@ -800,7 +760,7 @@ class Generate_Ldjson extends Generate_Image {
 		$it++;
 
 		if ( $json )
-			return '<script type="application/ld+json">' . $json . '</script>' . "\r\n";
+			return '<script type="application/ld+json">' . $json . '</script>' . "\n";
 
 		return '';
 	}
@@ -827,7 +787,7 @@ class Generate_Ldjson extends Generate_Image {
 				break;
 
 			case 'create':
-				$url = $this->create_canonical_url( $args );
+				$url = $this->get_canonical_url( $args );
 				break;
 
 			default:
@@ -847,88 +807,58 @@ class Generate_Ldjson extends Generate_Image {
 	 * @return bool
 	 */
 	public function ld_json_breadcrumbs_use_seo_title() {
-
-		static $cache = null;
-
 		/**
 		 * @since 2.9.0
 		 * @param bool $use_seo_title Whether to use the SEO title.
 		 */
-		return isset( $cache ) ? $cache : $cache = (bool) \apply_filters( 'the_seo_framework_use_breadcrumb_seo_title', true );
+		return memo() ?? memo( (bool) \apply_filters( 'the_seo_framework_use_breadcrumb_seo_title', true ) );
 	}
 
 	/**
 	 * Determines if breadcrumbs scripts are enabled.
-	 * Memoizes the return value.
 	 *
 	 * @since 2.6.0
+	 * @since 4.2.0 No longer memoizes the return value.
 	 *
 	 * @return bool
 	 */
 	public function enable_ld_json_breadcrumbs() {
-
-		static $cache = null;
-
-		if ( isset( $cache ) )
-			return $cache;
-
 		/**
 		 * @since 2.4.2
-		 * @param bool $filter Whether to force disable Schema.org breadcrumbs.
+		 * @param bool $enable Whether to force disable Schema.org breadcrumbs.
 		 */
-		$filter = (bool) \apply_filters( 'the_seo_framework_json_breadcrumb_output', true );
-		$option = $this->get_option( 'ld_json_breadcrumbs' );
-
-		return $cache = $filter && $option;
+		return (bool) \apply_filters( 'the_seo_framework_json_breadcrumb_output', $this->get_option( 'ld_json_breadcrumbs' ) );
 	}
 
 	/**
 	 * Determines if searchbox script is enabled.
-	 * Memoizes the return value.
 	 *
 	 * @since 2.6.0
+	 * @since 4.2.0 No longer memoizes the return value.
 	 *
 	 * @return bool
 	 */
 	public function enable_ld_json_searchbox() {
-
-		static $cache = null;
-
-		if ( isset( $cache ) )
-			return $cache;
-
 		/**
 		 * @since 2.3.9
-		 * @param bool $filter Whether to force disable Schema.org searchbox.
+		 * @param bool $enable Whether to force disable Schema.org searchbox.
 		 */
-		$filter = (bool) \apply_filters( 'the_seo_framework_json_search_output', true );
-		$option = $this->get_option( 'ld_json_searchbox' );
-
-		return $cache = $filter && $option;
+		return (bool) \apply_filters( 'the_seo_framework_json_search_output', $this->get_option( 'ld_json_searchbox' ) );
 	}
 
 	/**
 	 * Determines if Knowledge Graph Script is enabled.
-	 * Memoizes the return value.
 	 *
 	 * @since 2.6.5
+	 * @since 4.2.0 No longer memoizes the return value.
 	 *
 	 * @return bool
 	 */
 	public function enable_ld_json_knowledge() {
-
-		static $cache = null;
-
-		if ( isset( $cache ) )
-			return $cache;
-
 		/**
-		 * @since 2.6.5
-		 * @param bool $filter Whether to force disable Schema.org knowledge.
+		 * @since 2.3.9
+		 * @param bool $enable Whether to force disable Schema.org knowledge.
 		 */
-		$filter = (bool) \apply_filters( 'the_seo_framework_json_knowledge_output', true );
-		$option = $this->get_option( 'knowledge_output' );
-
-		return $cache = $filter && $option;
+		return (bool) \apply_filters( 'the_seo_framework_json_knowledge_output', $this->get_option( 'knowledge_output' ) );
 	}
 }

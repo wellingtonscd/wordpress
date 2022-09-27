@@ -28,6 +28,15 @@ class Day_View extends View {
 	protected $slug = 'day';
 
 	/**
+	 * Cached dates for the prev/next links.
+	 *
+	 * @since 5.16.1
+	 *
+	 * @var array
+	 */
+	protected $cached_event_dates = [];
+
+	/**
 	 * Visibility for this view.
 	 *
 	 * @since 4.9.4
@@ -36,6 +45,51 @@ class Day_View extends View {
 	 * @var bool
 	 */
 	protected static $publicly_visible = true;
+
+	/**
+	 * Get the date of the event immediately previous to the current view date.
+	 *
+	 * @since 5.16.1
+	 *
+	 * @param DateTime|false $current_date A DateTime object signifying the current date for the view.
+	 *
+	 * @return DateTime|false Either the previous event chronologically, the previous month, or false if no next event found.
+	 */
+	public function get_previous_event_date( $current_date ) {
+		$context = $this->context instanceof Tribe__Context ? $this->context : null;
+		$args = $this->filter_repository_args( $this->setup_repository_args( $context ) );
+		// This value will mess up our query.
+		unset( $args['date_overlaps'] );
+
+		// Use cache to reduce the performance impact.
+		$cache_key = __METHOD__ . '_' . substr( md5( wp_json_encode( [ $current_date, $args ] ) ), 10 );
+
+		if ( isset( $this->cached_event_dates[ $cache_key ] ) ) {
+			return $this->cached_event_dates[ $cache_key ];
+		}
+
+		// Find the first event that starts before the start of today.
+		$prev_event = tribe_events()
+			->by_args( $args )
+			->where( 'starts_before', tribe_beginning_of_day( $current_date->format( 'Y-m-d' ) ) )
+			->order( 'DESC' )
+			->first();
+
+		if ( ! $prev_event instanceof \WP_Post ) {
+			return false;
+		}
+
+		// Show the closest date on which that event appears (but not the current date).
+		$prev_event_date = Dates::build_date_object( $prev_event->dates->start );
+		$prev_date       = min(
+			$prev_event_date,
+			$current_date->sub( new \DateInterval( 'P1D' ) )
+		);
+
+		$this->cached_event_dates[ $cache_key ] = $prev_date;
+
+		return $prev_date;
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -65,6 +119,50 @@ class Day_View extends View {
 		$this->cached_urls[ $cache_key ] = $url;
 
 		return $url;
+	}
+
+	/**
+	 * Get the date of the event immediately after to the current view date.
+	 *
+	 * @since 5.16.1
+	 *
+	 * @param DateTime|false $current_date A DateTime object signifying the current date for the view.
+	 *
+	 * @return DateTime|false Either the next event chronologically, the next month, or false if no next event found.
+	 */
+	public function get_next_event_date( $current_date ) {
+		$context = $this->context instanceof Tribe__Context ? $this->context : null;
+		$args = $this->filter_repository_args( $this->setup_repository_args( $context ) );
+		// This value will mess up our query.
+		unset( $args['date_overlaps'] );
+
+		// Use cache to reduce the performance impact.
+		$cache_key = __METHOD__ . '_' . substr( md5( wp_json_encode( [ $current_date, $args ] ) ), 10 );
+
+		if ( isset( $this->cached_event_dates[ $cache_key ] ) ) {
+			return $this->cached_event_dates[ $cache_key ];
+		}
+
+		// The first event that ends after the end of the month; it could still begin in this month.
+		$next_event = tribe_events()
+			->by_args( $args )
+			->where( 'starts_after', tribe_end_of_day( $current_date->format( 'Y-m-d' ) ) )
+			->order( 'ASC' )
+			->first();
+
+		if ( ! $next_event instanceof \WP_Post ) {
+			return false;
+		}
+
+		// At a minimum pick the next month or the month the next event starts in.
+		$next_date = max(
+			Dates::build_date_object( $next_event->dates->start ),
+			$current_date->add( new \DateInterval( 'P1D' ) )
+		);
+
+		$this->cached_event_dates[ $cache_key ] = $next_date;
+
+		return $next_date;
 	}
 
 	/**
@@ -109,9 +207,12 @@ class Day_View extends View {
 		$context_arr = $context->to_array();
 
 		$date = Arr::get( $context_arr, 'event_date', 'now' );
-		$event_display = Arr::get( $context_arr, 'event_display_mode', Arr::get( $context_arr, 'event_display' ), 'current' );
 
-		$args['date_overlaps'] = [ tribe_beginning_of_day( $date ), tribe_end_of_day( $date ) ];
+		$current_date          = Dates::build_date_object( $date );
+		$args['date_overlaps'] = [
+			tribe_beginning_of_day( $current_date->format( 'Y-m-d' ) ),
+			tribe_end_of_day( $current_date->format( 'Y-m-d' ) )
+		];
 
 		/**
 		 * @todo  @bordoni We need to consider fetching events on a given day from a cache
@@ -171,11 +272,24 @@ class Day_View extends View {
 	 * {@inheritDoc}
 	 */
 	protected function setup_template_vars() {
+		$template_vars   = parent::setup_template_vars();
+		$sorted_events   = $this->sort_events( $template_vars['events'] );
 
-		$template_vars = parent::setup_template_vars();
-		$sorted_events = $this->sort_events( $template_vars['events'] );
+		$next_date       = Dates::build_date_object( $template_vars['url_event_date'] )->add( new \DateInterval( 'P1D' ) )->format( 'Y-m-d' );
+		$prev_date       = Dates::build_date_object( $template_vars['url_event_date'] )->sub( new \DateInterval( 'P1D' ) )->format( 'Y-m-d' );
 
-		$template_vars['events'] = $sorted_events;
+		$next_event_date = $this->get_next_event_date( Dates::build_date_object( $template_vars['url_event_date'] ) );
+		$prev_event_date = $this->get_previous_event_date( Dates::build_date_object( $template_vars['url_event_date'] ) );
+
+		$index_next_rel  = $next_event_date && $next_date === $next_event_date->format( 'Y-m-d' );
+		$index_prev_rel  = $prev_event_date && $prev_date === $prev_event_date->format( 'Y-m-d' );
+
+		$next_rel        = $index_next_rel ? 'next' : 'noindex';
+		$prev_rel        = $index_prev_rel ? 'prev' : 'noindex';
+
+		$template_vars['events']   = $sorted_events;
+		$template_vars['next_rel'] = $next_rel;
+		$template_vars['prev_rel'] = $prev_rel;
 
 		return $template_vars;
 	}
@@ -229,7 +343,7 @@ class Day_View extends View {
 			$keyword = $this->context->get( 'keyword', false );
 
 			if ( $keyword ) {
-				$this->messages->insert( Messages::TYPE_NOTICE, Messages::for_key( 'no_results_found_w_keyword', trim( $keyword ) ) );
+				$this->messages->insert( Messages::TYPE_NOTICE, Messages::for_key( 'no_results_found_w_keyword', esc_html( trim( $keyword ) ) ) );
 
 				return;
 			}

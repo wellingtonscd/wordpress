@@ -9,7 +9,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -61,16 +61,15 @@ class Query extends Core {
 	 */
 	protected function can_cache_query( $method ) {
 
-		static $cache;
+		// Don't use method memo() here for this method is called over 85 times per page.
+		static $memo;
 
-		if ( isset( $cache ) )
-			return $cache;
+		if ( isset( $memo ) ) return $memo;
 
 		if ( \defined( 'WP_CLI' ) && WP_CLI )
-			return $cache = false;
-
+			return $memo = false;
 		if ( isset( $GLOBALS['wp_query']->query ) || isset( $GLOBALS['current_screen'] ) )
-			return $cache = true;
+			return $memo = true;
 
 		$this->the_seo_framework_debug
 			and $this->do_query_error_notice( $method );
@@ -92,8 +91,8 @@ class Query extends Core {
 
 		$trace = debug_backtrace( DEBUG_BACKTRACE_PROVIDE_OBJECT, 4 );
 		if ( ! empty( $trace[3] ) ) {
-			$message .= ' - In file: ' . $trace[3]['file'];
-			$message .= ' - On line: ' . $trace[3]['line'];
+			$message .= " - In file: {$trace[3]['file']}";
+			$message .= " - On line: {$trace[3]['line']}";
 		}
 
 		$this->_doing_it_wrong( \esc_html( $method ), \esc_html( $message ), '2.9.0' );
@@ -112,15 +111,32 @@ class Query extends Core {
 	 * Returns the post type name from query input or real ID.
 	 *
 	 * @since 4.0.5
+	 * @since 4.2.0 Now supports common archives without relying on the first post.
 	 *
 	 * @param int|WP_Post|null $post (Optional) Post ID or post object.
 	 * @return string|false Post type on success, false on failure.
 	 */
 	public function get_post_type_real_ID( $post = null ) {
 
-		$post = \is_null( $post ) ? $this->get_the_real_ID() : $post;
+		if ( isset( $post ) )
+			return \get_post_type( $post );
 
-		return \get_post_type( $post );
+		if ( $this->is_archive() ) {
+			if ( $this->is_category() || $this->is_tag() || $this->is_tax() ) {
+				$post_type = $this->get_post_types_from_taxonomy();
+				$post_type = \is_array( $post_type ) ? reset( $post_type ) : $post_type;
+			} elseif ( \is_post_type_archive() ) {
+				$post_type = \get_query_var( 'post_type' );
+				$post_type = \is_array( $post_type ) ? reset( $post_type ) : $post_type;
+			} else {
+				// Let WP guess for us. This works reliable (enough) on non-404 queries.
+				$post_type = \get_post_type();
+			}
+		} else {
+			$post_type = \get_post_type( $this->get_the_real_ID() );
+		}
+
+		return $post_type;
 	}
 
 	/**
@@ -132,8 +148,7 @@ class Query extends Core {
 	 * @return string
 	 */
 	public function get_admin_post_type() {
-		global $current_screen;
-		return isset( $current_screen->post_type ) ? $current_screen->post_type : '';
+		return $GLOBALS['current_screen']->post_type ?? '';
 	}
 
 	/**
@@ -149,7 +164,7 @@ class Query extends Core {
 		$taxonomy = $taxonomy ?: $this->get_current_taxonomy();
 		$tax      = $taxonomy ? \get_taxonomy( $taxonomy ) : null;
 
-		return ! empty( $tax->object_type ) ? $tax->object_type : [];
+		return $tax->object_type ?? [];
 	}
 
 	/**
@@ -167,29 +182,39 @@ class Query extends Core {
 		if ( \is_admin() )
 			return $this->get_the_real_admin_ID();
 
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( $use_cache && null !== $memo = umemo( __METHOD__ ) ) return $memo;
+
 		$use_cache = $use_cache && $this->can_cache_query( __METHOD__ );
 
+		// Try to get ID from plugins or feed when caching is available.
 		if ( $use_cache ) {
-			static $id = null;
-
-			if ( isset( $id ) )
-				return $id;
-		}
-
-		// Try to get ID from plugins when caching is available.
-		$id = $use_cache ? $this->check_the_real_ID() : 0;
-
-		if ( ! $id ) {
-			// This catches most IDs. Even Post IDs.
-			$id = \get_queried_object_id();
+			/**
+			 * @since 2.5.0
+			 * @param int $id
+			 */
+			$id = \apply_filters(
+				'the_seo_framework_real_id',
+				\is_feed() ? \get_the_ID() : 0
+			);
 		}
 
 		/**
 		 * @since 2.6.2
-		 * @param int $id Can be either the Post ID, or the Term ID.
-		 * @param bool    Whether this value is stored in runtime caching.
+		 * @param int  $id        Can be either the Post ID, or the Term ID.
+		 * @param bool $use_cache Whether this value is stored in runtime caching.
 		 */
-		return $id = (int) \apply_filters( 'the_seo_framework_current_object_id', $id, $use_cache );
+		$id = (int) \apply_filters_ref_array(
+			'the_seo_framework_current_object_id',
+			[
+				// This catches most IDs. Even Post IDs.
+				( $id ?? 0 ) ?: \get_queried_object_id(),
+				$use_cache,
+			]
+		);
+
+		// Do not overwrite cache when not requested. Otherwise, we'd have two "initial" states, causing incongruities.
+		return $use_cache ? umemo( __METHOD__, $id ) : $id;
 	}
 
 	/**
@@ -213,31 +238,6 @@ class Query extends Core {
 	}
 
 	/**
-	 * Get the real ID from plugins.
-	 *
-	 * Only works on front-end as there's no need to check for inconsistent
-	 * functions for the current ID in the admin.
-	 *
-	 * @since 2.5.0
-	 * @since 3.1.0 1. Now checks for the feed.
-	 *              2. No longer caches.
-	 * @since 4.0.5 1. The shop ID is now handled via the filter.
-	 *              2. The question ID (AnsPress) is no longer called. This should work out-of-the-box since AnsPress 4.1.
-	 *
-	 * @return int The admin ID.
-	 */
-	public function check_the_real_ID() { // phpcs:ignore -- ID is capitalized because WordPress does that too: get_the_ID().
-
-		$id = $this->is_feed() ? \get_the_ID() : 0;
-
-		/**
-		 * @since 2.5.0
-		 * @param int $id
-		 */
-		return (int) \apply_filters( 'the_seo_framework_real_id', $id );
-	}
-
-	/**
 	 * Returns the front page ID, if home is a page.
 	 *
 	 * @since 2.6.0
@@ -245,10 +245,11 @@ class Query extends Core {
 	 * @return int the ID.
 	 */
 	public function get_the_front_page_ID() { // phpcs:ignore -- ID is capitalized because WordPress does that too: get_the_ID().
-		static $front_id;
-		return isset( $front_id )
-			? $front_id
-			: $front_id = ( $this->has_page_on_front() ? (int) \get_option( 'page_on_front' ) : 0 );
+		return umemo( __METHOD__ )
+			?? umemo(
+				__METHOD__,
+				$this->has_page_on_front() ? (int) \get_option( 'page_on_front' ) : 0
+			);
 	}
 
 	/**
@@ -286,20 +287,30 @@ class Query extends Core {
 	 * @return string The queried taxonomy type.
 	 */
 	public function get_current_taxonomy() {
+		return $this->memo_query()
+			?? $this->memo_query(
+				( \is_admin() ? $GLOBALS['current_screen'] : \get_queried_object() )
+					->taxonomy ?? ''
+			);
+	}
 
-		static $cache;
-
-		if ( isset( $cache ) ) return $cache;
-
-		$_object = \is_admin() ? $GLOBALS['current_screen'] : \get_queried_object();
-
-		return $cache = ! empty( $_object->taxonomy ) ? $_object->taxonomy : '';
+	/**
+	 * Returns the current post type, if any.
+	 *
+	 * @since 4.1.4
+	 *
+	 * @return string The queried post type.
+	 */
+	public function get_current_post_type() {
+		return $this->get_post_type_real_ID() ?: $this->get_admin_post_type();
 	}
 
 	/**
 	 * Detects 404.
 	 *
 	 * @since 2.6.0
+	 * @ignore unused.
+	 * @todo deprecate
 	 *
 	 * @return bool
 	 */
@@ -311,6 +322,8 @@ class Query extends Core {
 	 * Detects admin screen.
 	 *
 	 * @since 2.6.0
+	 * @ignore unused.
+	 * @todo deprecate
 	 *
 	 * @return bool
 	 */
@@ -335,17 +348,8 @@ class Query extends Core {
 		if ( ! $attachment )
 			return \is_attachment();
 
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $attachment ) )
-			return $cache;
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_attachment = \is_attachment( $attachment ),
-			$attachment
-		);
-
-		return $is_attachment;
+		return $this->memo_query( null, $attachment )
+			?? $this->memo_query( \is_attachment( $attachment ), $attachment );
 	}
 
 	/**
@@ -377,37 +381,30 @@ class Query extends Core {
 	public function is_singular_archive( $post = null ) {
 
 		if ( isset( $post ) ) {
-			$post = \get_post( $post );
-			$id   = $post ? $post->ID : 0;
+			$id = \is_int( $post )
+				? $post
+				: ( \get_post( $post )->ID ?? 0 );
 		} else {
 			$id = null;
 		}
 
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $id ) )
-			return $cache;
-
-		/**
-		 * @since 4.0.5
-		 * @since 4.0.7 The $id can now be null, when no post is given.
-		 * @param bool     $is_singular_archive Whether the post ID is a singular archive.
-		 * @param int|null $id                  The supplied post ID. Null when in the loop.
-		 */
-		$is_singular_archive = \apply_filters_ref_array(
-			'the_seo_framework_is_singular_archive',
-			[
-				isset( $id ) ? $this->is_blog_page_by_id( $id ) : $this->is_blog_page(),
-				$id,
-			]
-		);
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_singular_archive,
-			$id
-		);
-
-		return $is_singular_archive;
+		return $this->memo_query( null, $id )
+			?? $this->memo_query(
+				/**
+				 * @since 4.0.5
+				 * @since 4.0.7 The $id can now be null, when no post is given.
+				 * @param bool     $is_singular_archive Whether the post ID is a singular archive.
+				 * @param int|null $id                  The supplied post ID. Null when in the loop.
+				 */
+				\apply_filters_ref_array(
+					'the_seo_framework_is_singular_archive',
+					[
+						$this->is_home_as_page( $id ),
+						$id,
+					]
+				),
+				$id
+			);
 	}
 
 	/**
@@ -423,17 +420,23 @@ class Query extends Core {
 		if ( \is_admin() )
 			return $this->is_archive_admin();
 
-		if ( \is_archive() && false === $this->is_singular() )
-			return true;
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( null !== $memo = $this->memo_query() ) return $memo;
 
-		if ( $this->can_cache_query( __METHOD__ ) && false === $this->is_singular() ) {
+		$can_cache = $this->can_cache_query( __METHOD__ );
+
+		if ( \is_archive() && false === $this->is_singular() )
+			return $can_cache ? $this->memo_query( true ) : true;
+
+		// The $can_cache check is used here because it asserted $wp_query is valid on the front-end.
+		if ( $can_cache && false === $this->is_singular() ) {
 			global $wp_query;
 
-			if ( $wp_query->is_post_type_archive || $wp_query->is_date || $wp_query->is_author || $wp_query->is_category || $wp_query->is_tag || $wp_query->is_tax )
-				return true;
+			if ( $wp_query->is_category || $wp_query->is_tag || $wp_query->is_tax || $wp_query->is_post_type_archive || $wp_query->is_date || $wp_query->is_author )
+				return $this->memo_query( true );
 		}
 
-		return false;
+		return $can_cache ? $this->memo_query( false ) : false;
 	}
 
 	/**
@@ -445,8 +448,7 @@ class Query extends Core {
 	 * @return bool Post Type is archive
 	 */
 	public function is_archive_admin() {
-		global $current_screen;
-		return isset( $current_screen->base ) && \in_array( $current_screen->base, [ 'edit-tags', 'term' ], true );
+		return \in_array( $GLOBALS['current_screen']->base ?? '', [ 'edit-tags', 'term' ], true );
 	}
 
 	/**
@@ -458,19 +460,7 @@ class Query extends Core {
 	 * @return bool True if on Term Edit screen. False otherwise.
 	 */
 	public function is_term_edit() {
-
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__ ) )
-			return $cache;
-
-		global $current_screen;
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_term_edit = isset( $current_screen->base ) && ( 'term' === $current_screen->base )
-		);
-
-		return $is_term_edit;
+		return 'term' === ( $GLOBALS['current_screen']->base ?? '' );
 	}
 
 	/**
@@ -482,8 +472,7 @@ class Query extends Core {
 	 * @return bool We're on Post Edit screen.
 	 */
 	public function is_post_edit() {
-		global $current_screen;
-		return isset( $current_screen->base ) && 'post' === $current_screen->base;
+		return 'post' === ( $GLOBALS['current_screen']->base ?? '' );
 	}
 
 	/**
@@ -495,8 +484,19 @@ class Query extends Core {
 	 * @return bool We're on the edit screen.
 	 */
 	public function is_wp_lists_edit() {
-		global $current_screen;
-		return isset( $current_screen->base ) && \in_array( $current_screen->base, [ 'edit-tags', 'edit' ], true );
+		return \in_array( $GLOBALS['current_screen']->base ?? '', [ 'edit-tags', 'edit' ], true );
+	}
+
+	/**
+	 * Detects Profile edit screen in WP Admin.
+	 *
+	 * @since 4.1.4
+	 * @global \WP_Screen $current_screen
+	 *
+	 * @return bool True if on Profile Edit screen. False otherwise.
+	 */
+	public function is_profile_edit() {
+		return \in_array( $GLOBALS['current_screen']->base ?? '', [ 'profile', 'user-edit' ], true );
 	}
 
 	/**
@@ -510,81 +510,50 @@ class Query extends Core {
 	 */
 	public function is_author( $author = '' ) {
 
-		if ( empty( $author ) )
+		if ( ! $author )
 			return \is_author();
 
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $author ) )
-			return $cache;
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_author = \is_author( $author ),
-			$author
-		);
-
-		return $is_author;
+		return $this->memo_query( null, $author )
+			?? $this->memo_query( \is_author( $author ), $author );
 	}
 
 	/**
-	 * Detect the non-home blog page by query (ID).
+	 * Detects the blog page.
 	 *
-	 * @since 2.3.4
-	 * @todo deprecate
-	 * @see is_wc_shop() -- that's the correct implementation. However, we're dealing with erratic queries here (ET & legacy WP)
+	 * @since 2.6.0
+	 * @since 4.2.0 Added the first parameter to allow custom query testing.
 	 *
-	 * @param int $id the Page ID.
-	 * @return bool true if is blog page. Always false if blog page is homepage.
-	 */
-	public function is_blog_page( $id = 0 ) {
-
-		// When the blog page is the front page, treat it as front instead of blog.
-		if ( ! $this->has_page_on_front() )
-			return false;
-
-		$id = $id ?: $this->get_the_real_ID();
-
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $id ) )
-			return $cache;
-
-		$is_blog_page = false;
-
-		static $pfp = null;
-
-		if ( \is_null( $pfp ) )
-			$pfp = (int) \get_option( 'page_for_posts' );
-
-		if ( $id && $id === $pfp && false === \is_archive() ) {
-			$is_blog_page = true;
-		} elseif ( \is_home() ) {
-			$is_blog_page = true;
-		}
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_blog_page,
-			$id
-		);
-
-		return $is_blog_page;
-	}
-
-	/**
-	 * Checks blog page by sole ID.
-	 *
-	 * @since 4.0.0
-	 * @todo deprecate
-	 * @see is_wc_shop() -- that's the correct implementation.
-	 *
-	 * @param int $id The ID to check
+	 * @param int|WP_Post|null $post Optional. Post ID or post object.
+	 *                               Do not supply from WP_Query's main loop-query.
 	 * @return bool
 	 */
-	public function is_blog_page_by_id( $id ) {
+	public function is_home( $post = null ) {
 
-		$pfp = (int) \get_option( 'page_for_posts' );
+		if ( isset( $post ) ) {
+			$id = \is_int( $post )
+				? $post
+				: ( \get_post( $post )->ID ?? 0 );
 
-		return 0 !== $pfp && $id === $pfp;
+			$is_pfp = (int) \get_option( 'page_for_posts' ) === $id;
+		} else {
+			$is_pfp = \is_home();
+		}
+
+		return $is_pfp;
+	}
+
+	/**
+	 * Detects the non-front blog page.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @param int|WP_Post|null $post Optional. Post ID or post object.
+	 *                               Do not supply from WP_Query's main loop-query.
+	 * @return bool
+	 */
+	public function is_home_as_page( $post = null ) {
+		// If front is a blog, the blog is never a page.
+		return $this->has_page_on_front() ? $this->is_home( $post ) : false;
 	}
 
 	/**
@@ -601,17 +570,8 @@ class Query extends Core {
 		if ( \is_admin() )
 			return $this->is_category_admin();
 
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $category ) )
-			return $cache;
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_category = \is_category( $category ),
-			$category
-		);
-
-		return $is_category;
+		return $this->memo_query( null, $category )
+			?? $this->memo_query( \is_category( $category ), $category );
 	}
 
 	/**
@@ -634,6 +594,8 @@ class Query extends Core {
 	 * in `\WP_Customize_Manager::setup_theme()`.
 	 *
 	 * @since 4.0.0
+	 * @ignore unused.
+	 * @todo deprecate
 	 *
 	 * @return bool
 	 */
@@ -645,6 +607,8 @@ class Query extends Core {
 	 * Detects date archives.
 	 *
 	 * @since 2.6.0
+	 * @ignore unused.
+	 * @todo deprecate
 	 *
 	 * @return bool
 	 */
@@ -656,7 +620,8 @@ class Query extends Core {
 	 * Detects day archives.
 	 *
 	 * @since 2.6.0
-	 * @uses $this->is_date()
+	 * @ignore unused.
+	 * @todo deprecate
 	 *
 	 * @return bool
 	 */
@@ -668,6 +633,8 @@ class Query extends Core {
 	 * Detects feed.
 	 *
 	 * @since 2.6.0
+	 * @ignore unused.
+	 * @todo deprecate
 	 *
 	 * @param string|array $feeds Optional feed types to check.
 	 * @return bool
@@ -686,28 +653,18 @@ class Query extends Core {
 	public function is_real_front_page() {
 
 		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__ ) )
+		if ( null !== $cache = $this->memo_query() )
 			return $cache;
 
-		$is_front_page = false;
+		$is_front_page = \is_front_page();
 
-		if ( \is_front_page() )
-			$is_front_page = true;
-
-		// Elegant Themes Support. Yay.
-		if ( false === $is_front_page && 0 === $this->get_the_real_ID() && $this->is_home() ) {
-			$sof = \get_option( 'show_on_front' );
-
-			if ( 'page' !== $sof && 'posts' !== $sof )
-				$is_front_page = true;
+		if ( ! $is_front_page ) {
+			// Elegant Themes's Extra Support: Assert home, but only when it's not registered as such.
+			$is_front_page = $this->is_home() && 0 === $this->get_the_real_ID()
+				&& ! \in_array( \get_option( 'show_on_front' ), [ 'page', 'post' ], true );
 		}
 
-		$this->set_query_cache(
-			__METHOD__,
-			$is_front_page
-		);
-
-		return $is_front_page;
+		return $this->memo_query( $is_front_page );
 	}
 
 	/**
@@ -715,7 +672,7 @@ class Query extends Core {
 	 *
 	 * @NOTE This doesn't check for anomalies in the query.
 	 * So, don't use this to test user-engaged WordPress queries, ever.
-	 * WARNING: This will lead to **FALSE POSITIVES** for Date, PTA, Search, and other archives.
+	 * WARNING: This will lead to **FALSE POSITIVES** for Date, CPTA, Search, and other archives.
 	 *
 	 * @see $this->is_front_page_by_id(), which supports query checking.
 	 * @see $this->is_real_front_page(), which solely uses query checking.
@@ -730,77 +687,11 @@ class Query extends Core {
 	}
 
 	/**
-	 * Checks for front page by input ID.
-	 *
-	 * NOTE: Doesn't always return true when the ID is 0, although the homepage might be.
-	 *       This is because it checks for the query, to prevent conflicts.
-	 *
-	 * @see $this->is_real_front_page_by_id(); Alternative to NOTE above.
-	 *
-	 * @since 2.9.0
-	 * @since 2.9.3 Now tests for archive and 404 before testing homepage as blog.
-	 * @since 3.2.2 Removed SEO settings page check. This now returns false on that page.
-	 *
-	 * @param int $id The page ID, required. Can be 0.
-	 * @return bool True if ID if for the homepage.
-	 */
-	public function is_front_page_by_id( $id ) {
-
-		$id = (int) $id;
-
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $id ) )
-			return $cache;
-
-		$is_front_page = false;
-
-		$sof = \get_option( 'show_on_front' );
-
-		// Compare against $id
-		if ( 'page' === $sof ) {
-			if ( (int) \get_option( 'page_on_front' ) === $id ) {
-				$is_front_page = true;
-			}
-		} elseif ( 'posts' === $sof ) {
-			if ( 0 === $id ) {
-				// 0 as ID causes many issues. Just test for is_home().
-				if ( $this->is_home() ) {
-					$is_front_page = true;
-				}
-			} elseif ( (int) \get_option( 'page_for_posts' ) === $id ) {
-				$is_front_page = true;
-			}
-		} else {
-			// Elegant Themes' Extra support
-			if ( 0 === $id && $this->is_home() ) {
-				$is_front_page = true;
-			}
-		}
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_front_page,
-			$id
-		);
-
-		return $is_front_page;
-	}
-
-	/**
-	 * Determines whether the query is for the blog page.
-	 *
-	 * @since 2.6.0
-	 *
-	 * @return bool
-	 */
-	public function is_home() {
-		return \is_home();
-	}
-
-	/**
 	 * Detects month archives.
 	 *
 	 * @since 2.6.0
+	 * @ignore unused.
+	 * @todo deprecate
 	 *
 	 * @return bool
 	 */
@@ -828,23 +719,13 @@ class Query extends Core {
 		if ( empty( $page ) )
 			return \is_page();
 
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $page ) )
-			return $cache;
-
-		if ( \is_int( $page ) || $page instanceof \WP_Post ) {
-			$is_page = \in_array( \get_post_type( $page ), $this->get_hierarchical_post_types(), true );
-		} else {
-			$is_page = \is_page( $page );
-		}
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_page,
-			$page
-		);
-
-		return $is_page;
+		return $this->memo_query( null, $page )
+			?? $this->memo_query(
+				\is_int( $page ) || $page instanceof \WP_Post
+					? \in_array( \get_post_type( $page ), $this->get_hierarchical_post_types(), true )
+					: \is_page( $page ),
+				$page
+			);
 	}
 
 	/**
@@ -877,11 +758,11 @@ class Query extends Core {
 		$is_preview = false;
 
 		if ( \is_preview()
-		&& \is_user_logged_in()
-		&& \is_singular()
-		&& \current_user_can( 'edit_post', \get_the_ID() )
-		&& isset( $_GET['preview_id'], $_GET['preview_nonce'] )
-		&& \wp_verify_nonce( $_GET['preview_nonce'], 'post_preview_' . (int) $_GET['preview_id'] ) // WP doesn't check for unslash either; who would've guessed.
+			&& \is_user_logged_in()
+			&& \is_singular()
+			&& \current_user_can( 'edit_post', \get_the_ID() )
+			&& isset( $_GET['preview_id'], $_GET['preview_nonce'] )
+			&& \wp_verify_nonce( $_GET['preview_nonce'], 'post_preview_' . (int) $_GET['preview_id'] )
 		) {
 			$is_preview = true;
 		}
@@ -917,23 +798,13 @@ class Query extends Core {
 		if ( \is_admin() )
 			return $this->is_single_admin();
 
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $post ) )
-			return $cache;
-
-		if ( \is_int( $post ) || $post instanceof \WP_Post ) {
-			$is_single = \in_array( \get_post_type( $post ), $this->get_nonhierarchical_post_types(), true );
-		} else {
-			$is_single = \is_single( $post );
-		}
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_single,
-			$post
-		);
-
-		return $is_single;
+		return $this->memo_query( null, $post )
+			?? $this->memo_query(
+				\is_int( $post ) || $post instanceof \WP_Post
+					? \in_array( \get_post_type( $post ), $this->get_nonhierarchical_post_types(), true )
+					: \is_single( $post ),
+				$post
+			);
 	}
 
 	/**
@@ -957,17 +828,13 @@ class Query extends Core {
 	 * @since 2.5.2
 	 * @since 3.1.0 Now passes $post_types parameter in admin screens, only when it's an integer.
 	 * @since 4.0.0 No longer processes integers as input.
+	 * @since 4.2.4 No longer tests type of $post_types.
 	 * @uses $this->is_singular_admin()
 	 *
-	 * @param string|array $post_types Optional. Post type or array of post types. Default empty string.
+	 * @param string|string[] $post_types Optional. Post type or array of post types. Default empty string.
 	 * @return bool Post Type is singular
 	 */
 	public function is_singular( $post_types = '' ) {
-
-		if ( \is_int( $post_types ) ) {
-			// Integers are no longer accepted.
-			$post_types = '';
-		}
 
 		// WP_Query functions require loop, do alternative check.
 		if ( \is_admin() )
@@ -976,18 +843,8 @@ class Query extends Core {
 		if ( $post_types )
 			return \is_singular( $post_types );
 
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__ ) )
-			return $cache;
-
-		$is_singular = \is_singular() || $this->is_singular_archive();
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_singular
-		);
-
-		return $is_singular;
+		return $this->memo_query()
+			?? $this->memo_query( \is_singular() || $this->is_singular_archive() );
 	}
 
 	/**
@@ -1001,24 +858,28 @@ class Query extends Core {
 	 * @return bool Post Type is singular
 	 */
 	public function is_singular_admin() {
-		global $current_screen;
-		return isset( $current_screen->base ) && \in_array( $current_screen->base, [ 'edit', 'post' ], true );
+		return \in_array( $GLOBALS['current_screen']->base ?? '', [ 'edit', 'post' ], true );
 	}
 
 	/**
 	 * Detects the static front page.
 	 *
 	 * @since 2.3.8
+	 * @since 4.1.4 Added memoization.
 	 *
 	 * @param int $id the Page ID to check. If empty, the current ID will be fetched.
-	 * @return bool true if is blog page. Always false if the homepage is a blog.
+	 * @return bool True when homepage is static and given/current ID matches.
 	 */
 	public function is_static_frontpage( $id = 0 ) {
 
-		if ( 'page' === \get_option( 'show_on_front' ) )
-			return (int) \get_option( 'page_on_front' ) === ( $id ?: $this->get_the_real_ID() );
+		// Memo this slow part seperately; memo_query() would cache the whole method, which isn't necessary.
+		$front_id = umemo( __METHOD__ )
+			?? umemo(
+				__METHOD__,
+				'page' === \get_option( 'show_on_front' ) ? (int) \get_option( 'page_on_front' ) : false
+			);
 
-		return false;
+		return false !== $front_id && ( $id ?: $this->get_the_real_ID() ) === $front_id;
 	}
 
 	/**
@@ -1036,17 +897,8 @@ class Query extends Core {
 		if ( \is_admin() )
 			return $this->is_tag_admin();
 
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $tag ) )
-			return $cache;
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_tag = \is_tag( $tag ),
-			$tag
-		);
-
-		return $is_tag;
+		return $this->memo_query( null, $tag )
+			?? $this->memo_query( \is_tag( $tag ), $tag );
 	}
 
 	/**
@@ -1073,42 +925,38 @@ class Query extends Core {
 	 * @return bool
 	 */
 	public function is_tax( $taxonomy = '', $term = '' ) {
-
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $taxonomy, $term ) )
-			return $cache;
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_tax = \is_tax( $taxonomy, $term ),
-			$taxonomy,
-			$term
-		);
-
-		return $is_tax;
+		return $this->memo_query( null, $taxonomy, $term )
+			?? $this->memo_query( \is_tax( $taxonomy, $term ), $taxonomy, $term );
 	}
 
 	/**
 	 * Determines if the $post is a shop page.
 	 *
 	 * @since 4.0.5
+	 * @since 4.1.4 Added memoization.
 	 *
 	 * @param int|WP_Post|null $post (Optional) Post ID or post object.
 	 * @return bool
 	 */
 	public function is_shop( $post = null ) {
-		/**
-		 * @since 4.0.5
-		 * @param bool $is_shop Whether the post ID is a shop.
-		 * @param int  $id      The current or supplied post ID.
-		 */
-		return \apply_filters_ref_array( 'the_seo_framework_is_shop', [ false, $post ] );
+		return $this->memo_query( null, $post )
+			?? $this->memo_query(
+				/**
+				 * @since 4.0.5
+				 * @since 4.1.4 Now has its return value memoized.
+				 * @param bool $is_shop Whether the post ID is a shop.
+				 * @param int  $id      The current or supplied post ID.
+				 */
+				\apply_filters_ref_array( 'the_seo_framework_is_shop', [ false, $post ] ),
+				$post
+			);
 	}
 
 	/**
 	 * Determines if the page is a product page.
 	 *
 	 * @since 4.0.5
+	 * @since 4.1.4 Added memoization.
 	 *
 	 * @param int|WP_Post|null $post (Optional) Post ID or post object.
 	 * @return bool True if on a WooCommerce Product page.
@@ -1118,126 +966,45 @@ class Query extends Core {
 		if ( \is_admin() )
 			return $this->is_product_admin();
 
-		/**
-		 * @since 4.0.5
-		 * @param bool $is_product
-		 * @param int|WP_Post|null $post (Optional) Post ID or post object.
-		 */
-		return (bool) \apply_filters_ref_array( 'the_seo_framework_is_product', [ false, $post ] );
+		return $this->memo_query( null, $post )
+			?? $this->memo_query(
+				/**
+				 * @since 4.0.5
+				 * @since 4.1.4 Now has its return value memoized.
+				 * @param bool $is_product
+				 * @param int|WP_Post|null $post (Optional) Post ID or post object.
+				 */
+				(bool) \apply_filters_ref_array( 'the_seo_framework_is_product', [ false, $post ] ),
+				$post
+			);
 	}
 
 	/**
 	 * Determines if the admin page is for a product page.
 	 *
 	 * @since 4.0.5
+	 * @since 4.1.4 Added memoization.
 	 *
 	 * @return bool
 	 */
 	public function is_product_admin() {
-		/**
-		 * @since 4.0.5
-		 * @param bool $is_product_admin
-		 */
-		return (bool) \apply_filters( 'the_seo_framework_is_product_admin', false );
-	}
-
-	/**
-	 * Determines if the $post is the WooCommerce plugin shop page.
-	 *
-	 * @since 2.5.2
-	 * @since 4.0.5 Now has a first parameter `$post`.
-	 * @since 4.0.5 Soft deprecated.
-	 * @deprecated
-	 * @internal
-	 *
-	 * @param int|WP_Post|null $post (Optional) Post ID or post object.
-	 * @return bool True if on the WooCommerce shop page.
-	 */
-	public function is_wc_shop( $post = null ) {
-
-		if ( isset( $post ) ) {
-			$post = \get_post( $post );
-			$id   = $post ? $post->ID : 0;
-		} else {
-			$id = null;
-		}
-
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $id ) )
-			return $cache;
-
-		if ( isset( $id ) ) {
-			$is_shop = (int) \get_option( 'woocommerce_shop_page_id' ) === $id;
-		} else {
-			$is_shop = ! \is_admin() && \function_exists( 'is_shop' ) && \is_shop();
-		}
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_shop,
-			$id
-		);
-
-		return $is_shop;
-	}
-
-	/**
-	 * Determines if the page is the WooCommerce plugin Product page.
-	 *
-	 * @since 2.5.2
-	 * @since 4.0.0 : 1. Added admin support.
-	 *                2. Added parameter for the Post ID or post to test.
-	 * @since 4.0.5 Soft deprecated.
-	 * @deprecated
-	 * @internal
-	 *
-	 * @param int|\WP_Post $post When set, checks if the post is of type product.
-	 * @return bool True if on a WooCommerce Product page.
-	 */
-	public function is_wc_product( $post = 0 ) {
-
-		if ( \is_admin() )
-			return $this->is_wc_product_admin();
-
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__, null, $post ) )
-			return $cache;
-
-		if ( $post ) {
-			$is_product = 'product' === \get_post_type( $post );
-		} else {
-			$is_product = \function_exists( 'is_product' ) && \is_product();
-		}
-
-		$this->set_query_cache(
-			__METHOD__,
-			$is_product,
-			$post
-		);
-
-		return $is_product;
-	}
-
-	/**
-	 * Detects products within the admin area.
-	 *
-	 * @since 4.0.0
-	 * @see $this->is_wc_product()
-	 * @since 4.0.5 Soft deprecated.
-	 * @deprecated
-	 * @internal
-	 *
-	 * @return bool
-	 */
-	public function is_wc_product_admin() {
-		// Checks for "is_singular_admin()" because the post type is non-hierarchical.
-		return $this->is_singular_admin() && 'product' === $this->get_admin_post_type();
+		return $this->memo_query()
+			?? $this->memo_query(
+				/**
+				 * @since 4.0.5
+				 * @since 4.1.4 Now has its return value memoized.
+				 * @param bool $is_product_admin
+				 */
+				(bool) \apply_filters( 'the_seo_framework_is_product_admin', false )
+			);
 	}
 
 	/**
 	 * Detects year archives.
 	 *
 	 * @since 2.6.0
+	 * @ignore unused.
+	 * @todo deprecate
 	 *
 	 * @return bool
 	 */
@@ -1254,10 +1021,8 @@ class Query extends Core {
 	 * @return bool True if SSL, false otherwise.
 	 */
 	public function is_ssl() {
-
-		static $cache = null;
-
-		return isset( $cache ) ? $cache : $cache = \is_ssl();
+		return umemo( __METHOD__ )
+			?? umemo( __METHOD__, \is_ssl() );
 	}
 
 	/**
@@ -1280,16 +1045,8 @@ class Query extends Core {
 		if ( ! $secure )
 			return $this->is_menu_page( $this->seo_settings_page_hook, $this->seo_settings_page_slug );
 
-		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__ ) )
-			return $cache;
-
-		$this->set_query_cache(
-			__METHOD__,
-			$page = $this->is_menu_page( $this->seo_settings_page_hook )
-		);
-
-		return $page;
+		return $this->memo_query()
+			?? $this->memo_query( $this->is_menu_page( $this->seo_settings_page_hook ) );
 	}
 
 	/**
@@ -1321,29 +1078,30 @@ class Query extends Core {
 			return $page_hook === $pagehook;
 		} elseif ( \is_admin() && $pageslug ) {
 			// N.B. $_GET['page'] === $plugin_page after admin_init...
-
 			// phpcs:ignore, WordPress.Security.NonceVerification -- This is a public variable, no data is processed.
-			return ! empty( $_GET['page'] ) && $pageslug === $_GET['page'];
+			return ( $_GET['page'] ?? '' ) === $pageslug;
 		}
 
 		return false;
 	}
 
 	/**
-	 * Fetches the amount of pages on the screen.
-	 * Fetches global $page through Query Var to prevent conflicts.
+	 * Returns the current page number.
+	 * Fetches global `$page` from `WP_Query` to prevent conflicts.
 	 *
 	 * @since 2.6.0
 	 * @since 3.2.4 1. Added overflow protection.
 	 *              2. Now always returns 1 on the admin screens.
+	 * @TODO Add better protection? This can get filled by users when is_paged() is true.
+	 *       WordPress has no protection/test for this, either.
 	 *
 	 * @return int (R>0) $page Always a positive number.
 	 */
 	public function page() {
 
 		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__ ) )
-			return $cache;
+		if ( null !== $memo = $this->memo_query() )
+			return $memo;
 
 		if ( $this->is_multipage() ) {
 			$page = (int) \get_query_var( 'page' );
@@ -1356,17 +1114,12 @@ class Query extends Core {
 			$page = 1;
 		}
 
-		$this->set_query_cache(
-			__METHOD__,
-			$page = $page ?: 1
-		);
-
-		return $page;
+		return $this->memo_query( $page ?: 1 );
 	}
 
 	/**
-	 * Fetches the number of the current page.
-	 * Fetches global $paged through Query var to prevent conflicts.
+	 * Returns the current page number.
+	 * Fetches global `$paged` from `WP_Query` to prevent conflicts.
 	 *
 	 * @since 2.6.0
 	 * @since 3.2.4 1. Added overflow protection.
@@ -1377,8 +1130,8 @@ class Query extends Core {
 	public function paged() {
 
 		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__ ) )
-			return $cache;
+		if ( null !== $memo = $this->memo_query() )
+			return $memo;
 
 		if ( $this->is_multipage() ) {
 			$paged = (int) \get_query_var( 'paged' );
@@ -1392,12 +1145,7 @@ class Query extends Core {
 			$paged = 1;
 		}
 
-		$this->set_query_cache(
-			__METHOD__,
-			$paged = $paged ?: 1
-		);
-
-		return $paged;
+		return $this->memo_query( $paged ?: 1 );
 	}
 
 	/**
@@ -1415,18 +1163,15 @@ class Query extends Core {
 	public function numpages() {
 
 		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition
-		if ( null !== $cache = $this->get_query_cache( __METHOD__ ) )
-			return $cache;
+		if ( null !== $memo = $this->memo_query() )
+			return $memo;
 
 		if ( \is_admin() ) {
-			$numpages = 1;
-			$this->set_query_cache( __METHOD__, $numpages );
-			return $numpages;
+			// Disable pagination detection in admin: Always on page 1.
+			return $this->memo_query( 1 );
 		}
 
 		global $wp_query;
-
-		$post = null;
 
 		if ( $this->is_singular() && ! $this->is_singular_archive() )
 			$post = \get_post( $this->get_the_real_ID() );
@@ -1467,9 +1212,7 @@ class Query extends Core {
 			$numpages = 0;
 		}
 
-		$this->set_query_cache( __METHOD__, $numpages );
-
-		return $numpages;
+		return $this->memo_query( $numpages );
 	}
 
 	/**
@@ -1491,24 +1234,21 @@ class Query extends Core {
 	 * Memoizes the return value once set.
 	 *
 	 * @since 2.9.2
-	 * @since 4.0.0 Now uses static variables instead of class properties.
+	 * @since 4.0.0 Now memoizes instead of populating class properties.
 	 *
 	 * @param bool $set Whether to set "doing sitemap".
 	 * @return bool
 	 */
 	public function is_sitemap( $set = false ) {
-
-		static $doing_sitemap = false;
-
-		if ( $set ) $doing_sitemap = true;
-
-		return $doing_sitemap;
+		return memo( $set ?: null ) ?? false;
 	}
 
 	/**
 	 * Determines whether we're on the robots.txt file output.
 	 *
 	 * @since 2.9.2
+	 * @ignore unused.
+	 * @todo deprecate
 	 *
 	 * @return bool
 	 */
@@ -1517,71 +1257,35 @@ class Query extends Core {
 	}
 
 	/**
-	 * Handles object cache for the query class.
+	 * Memoizes queries.
+	 * Should not be used on methods that aren't final.
 	 *
-	 * @since 2.7.0
-	 * @see $this->set_query_cache(); to set query cache.
+	 * The first parameter might not get retrieved in a later call, for this method
+	 * also tests whether the query is setup correctly at the time of the call.
 	 *
-	 * @param string $method       The method that wants to cache, used as the key to set or get.
-	 * @param mixed  $value_to_set The value to set.
-	 * @param mixed  ...$hash      Extra arguments, that are used to differentiaty queries.
-	 * @return mixed : {
-	 *    mixed The cached value if set and $value_to_set is null.
-	 *       null If the query can't be cached yet, or when no value has been set.
-	 *       If $value_to_set is set : {
-	 *          true If the value is being set for the first time.
-	 *          false If the value has been set and $value_to_set is being overwritten.
-	 *       }
-	 * }
+	 * @since 4.2.0
+	 *
+	 * @param mixed $value_to_set The value to set.
+	 * @param mixed ...$args      Extra arguments, that are used to differentiaty queries.
+	 * @return mixed $value_to_set when provided.
+	 *               Otherwise, the previously sent $value_to_set.
+	 *               When that's not set either, null.
 	 */
-	public function get_query_cache( $method, $value_to_set = null, ...$hash ) {
+	protected function memo_query( $value_to_set = null, ...$args ) {
 
 		static $can_cache_query = null;
 
+		// phpcs:ignore, WordPress.PHP.DevelopmentFunctions -- This is the only efficient way.
+		$caller = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 2 )[1]['function'] ?? '';
+
 		if ( null === $can_cache_query ) {
-			if ( $this->can_cache_query( $method ) ) {
+			if ( $this->can_cache_query( $caller ) ) {
 				$can_cache_query = true;
 			} else {
-				return null;
+				return $value_to_set;
 			}
 		}
 
-		static $cache = [];
-
-		if ( $hash ) {
-			// phpcs:ignore, WordPress.PHP.DiscouragedPHPFunctions -- No objects are inserted, nor is this ever unserialized.
-			$hash = serialize( $hash );
-		} else {
-			$hash = false;
-		}
-
-		if ( isset( $value_to_set ) ) {
-			$fresh_set                 = ! isset( $cache[ $method ][ $hash ] );
-			$cache[ $method ][ $hash ] = $value_to_set;
-			return $fresh_set;
-		} else {
-			if ( isset( $cache[ $method ][ $hash ] ) )
-				return $cache[ $method ][ $hash ];
-		}
-
-		return null;
-	}
-
-	/**
-	 * Object cache handler for the query class.
-	 *
-	 * @since 2.7.0
-	 * @see $this->get_query_cache()
-	 *
-	 * @param string $method       The method that wants to set. Used as a caching key.
-	 * @param mixed  $value_to_set If null, no cache will be set.
-	 * @param mixed  ...$hash      Extra arguments, that will be used to generate an alternative cache key.
-	 * @return bool : {
-	 *    true If the value is being set for the first time.
-	 *    false If the value has been set and $value_to_set is being overwritten.
-	 * }
-	 */
-	public function set_query_cache( $method, $value_to_set, ...$hash ) {
-		return $this->get_query_cache( $method, $value_to_set, ...$hash );
+		return umemo( __METHOD__, $value_to_set, $caller, ...$args );
 	}
 }

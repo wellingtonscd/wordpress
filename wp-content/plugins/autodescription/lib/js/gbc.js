@@ -11,7 +11,7 @@
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -40,15 +40,6 @@
  */
 window.tsfGBC = function( $ ) {
 
-	/**
-	 * Data property injected by our Scripts l10n handler.
-	 *
-	 * @since 4.0.0
-	 * @access public
-	 * @type {(Object<string, *>)|boolean|null} l10n Localized strings
-	 */
-	const l10n = 'undefined' !== typeof tsfGBCL10n && tsfGBCL10n;
-
 	const editor   = wp.data.select( 'core/editor' );
 	const editPost = wp.data.select( 'core/edit-post' );
 
@@ -59,7 +50,7 @@ window.tsfGBC = function( $ ) {
 	 *
 	 * @since 3.2.0
 	 * @access private
-	 * @type {(Object<string, *>)|boolean|null} post data
+	 * @type {{title:string,link:string,content:string;excerpt:string;visibility:string}|null} postData
 	 */
 	let postData;
 
@@ -118,7 +109,6 @@ window.tsfGBC = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	function assessData() {
 		let oldData = postData;
@@ -148,12 +138,11 @@ window.tsfGBC = function( $ ) {
 	 *
 	 * @function
 	 * @param {String} type
-	 * @return {undefined}
 	 */
 	const triggerUpdate = type => {
 		// Unfortunately, we rely on jQuery here. We can't move away from this, since the data sent is definitely used by other plugins.
 		// TODO send deprecation notice ($._data( document, 'events' ), should we?), and implement alternative via event.detail.
-		$( document ).trigger( 'tsf-updated-gutenberg-' + type, [ getData( type ) ] );
+		$( document ).trigger( `tsf-updated-gutenberg-${type}`, [ getData( type ) ] );
 	}
 
 	/**
@@ -179,7 +168,6 @@ window.tsfGBC = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	function saveDispatcher() {
 		if ( ! saved ) {
@@ -214,7 +202,6 @@ window.tsfGBC = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	function revertSaveState() {
 		saved = false;
@@ -237,7 +224,6 @@ window.tsfGBC = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	function dispatchSavedEvent() {
 		if ( editor.isPostSavingLocked() ) {
@@ -301,7 +287,6 @@ window.tsfGBC = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	function sidebarDispatcher() {
 		if ( editPost.isEditorSidebarOpened() ) {
@@ -325,13 +310,14 @@ window.tsfGBC = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initCompat = () => {
 
-		wp.data.subscribe( debounce( sidebarDispatcher, 500 ) );
-		wp.data.subscribe( debounce( assessData, 300 ) );
-		wp.data.subscribe( saveDispatcher );
+		const { subscribe } = wp.data;
+
+		subscribe( debounce( sidebarDispatcher, 500 ) );
+		subscribe( debounce( assessData, 300 ) );
+		subscribe( saveDispatcher );
 
 		// Set all values prior debouncing.
 		setTimeout( () => {
@@ -356,15 +342,12 @@ window.tsfGBC = function( $ ) {
 		 * @access protected
 		 *
 		 * @function
-		 * @return {undefined}
 		 */
 		load: () => {
 			document.body.addEventListener( 'tsf-onload', _initCompat );
 		},
 	}, {
 		triggerUpdate,
-	}, {
-		l10n
 	} );
 }( jQuery );
 window.tsfGBC.load();

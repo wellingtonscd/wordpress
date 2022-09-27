@@ -10,7 +10,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -39,20 +39,19 @@ class Generate_Description extends Generate {
 	 *
 	 * @since 3.0.6
 	 * @since 3.1.0 The first argument now accepts an array, with "id" and "taxonomy" fields.
+	 * @since 4.2.0 Now supports the `$args['pta']` index.
 	 * @uses $this->get_description_from_custom_field()
 	 * @uses $this->get_generated_description()
 	 *
-	 * @param array|null $args   An array of 'id' and 'taxonomy' values.
-	 *                           Accepts int values for backward compatibility.
+	 * @param array|null $args   The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
+	 *                           Leave null to autodetermine query.
 	 * @param bool       $escape Whether to escape the description.
 	 * @return string The real description output.
 	 */
 	public function get_description( $args = null, $escape = true ) {
 
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		$desc = $this->get_description_from_custom_field( $args, false )
 			 ?: $this->get_generated_description( $args, false );
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		return $escape ? $this->escape_description( $desc ) : $desc;
 	}
@@ -61,22 +60,21 @@ class Generate_Description extends Generate {
 	 * Returns the Open Graph meta description. Falls back to meta description.
 	 *
 	 * @since 3.0.4
-	 * @since 3.1.0 : 1. Now tries to get the homepage social descriptions.
-	 *                2. The first argument now accepts an array, with "id" and "taxonomy" fields.
+	 * @since 3.1.0 1. Now tries to get the homepage social descriptions.
+	 *              2. The first argument now accepts an array, with "id" and "taxonomy" fields.
+	 * @since 4.2.0 Now supports the `$args['pta']` index.
 	 * @uses $this->get_open_graph_description_from_custom_field()
 	 * @uses $this->get_generated_open_graph_description()
 	 *
-	 * @param array|null $args   An array of 'id' and 'taxonomy' values.
-	 *                           Accepts int values for backward compatibility.
+	 * @param array|null $args   The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
+	 *                           Leave null to autodetermine query.
 	 * @param bool       $escape Whether to escape the description.
 	 * @return string The real Open Graph description output.
 	 */
 	public function get_open_graph_description( $args = null, $escape = true ) {
 
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		$desc = $this->get_open_graph_description_from_custom_field( $args, false )
 			 ?: $this->get_generated_open_graph_description( $args, false );
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		return $escape ? $this->escape_description( $desc ) : $desc;
 	}
@@ -88,7 +86,7 @@ class Generate_Description extends Generate {
 	 * @since 3.1.0
 	 * @see $this->get_open_graph_description()
 	 *
-	 * @param array|null $args   The query arguments. Accepts 'id' and 'taxonomy'.
+	 * @param array|null $args   The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
 	 *                           Leave null to autodetermine query.
 	 * @param bool       $escape Whether to escape the title.
 	 * @return string TwOpen Graphitter description.
@@ -112,6 +110,8 @@ class Generate_Description extends Generate {
 	 * @since 3.1.0
 	 * @since 3.2.2 Now tests for the homepage as page prior getting custom field data.
 	 * @since 4.0.0 Added term meta item checks.
+	 * @since 4.2.0 1. No longer returns an escaped custom field description.
+	 *              2. Now returns custom descriptions for post type archives.
 	 * @see $this->get_open_graph_description()
 	 * @see $this->get_open_graph_description_from_custom_field()
 	 *
@@ -120,24 +120,25 @@ class Generate_Description extends Generate {
 	protected function get_custom_open_graph_description_from_query() {
 
 		$desc = '';
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		if ( $this->is_real_front_page() ) {
 			if ( $this->is_static_frontpage() ) {
 				$desc = $this->get_option( 'homepage_og_description' )
 					 ?: $this->get_post_meta_item( '_open_graph_description' )
-					 ?: $this->get_description_from_custom_field();
+					 ?: $this->get_description_from_custom_field( null, false );
 			} else {
 				$desc = $this->get_option( 'homepage_og_description' )
-					 ?: $this->get_description_from_custom_field();
+					 ?: $this->get_description_from_custom_field( null, false );
 			}
 		} elseif ( $this->is_singular() ) {
 			$desc = $this->get_post_meta_item( '_open_graph_description' )
-				 ?: $this->get_description_from_custom_field();
+				 ?: $this->get_description_from_custom_field( null, false );
 		} elseif ( $this->is_term_meta_capable() ) {
 			$desc = $this->get_term_meta_item( 'og_description' )
-				 ?: $this->get_description_from_custom_field();
+				 ?: $this->get_description_from_custom_field( null, false );
+		} elseif ( \is_post_type_archive() ) {
+			$desc = $this->get_post_type_archive_meta_item( 'og_description' )
+				 ?: $this->get_description_from_custom_field( null, false );
 		}
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		return $desc;
 	}
@@ -147,36 +148,39 @@ class Generate_Description extends Generate {
 	 * Falls back to meta description.
 	 *
 	 * @since 3.1.0
-	 * @since 3.2.2 : 1. Now tests for the homepage as page prior getting custom field data.
-	 *                2. Now obtains custom field data for terms.
+	 * @since 3.2.2 1. Now tests for the homepage as page prior getting custom field data.
+	 *              2. Now obtains custom field data for terms.
 	 * @since 4.0.0 Added term meta item checks.
+	 * @since 4.2.0 1. No longer returns an escaped custom field description.
+	 *              2. Now supports the `$args['pta']` index.
 	 * @see $this->get_open_graph_description()
 	 * @see $this->get_open_graph_description_from_custom_field()
 	 *
-	 * @param array|null $args The query arguments. Accepts 'id' and 'taxonomy'.
+	 * @param array|null $args The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
 	 * @return string Open Graph description.
 	 */
-	protected function get_custom_open_graph_description_from_args( array $args ) {
+	protected function get_custom_open_graph_description_from_args( $args ) {
 
 		$desc = '';
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		if ( $args['taxonomy'] ) {
 			$desc = $this->get_term_meta_item( 'og_description', $args['id'] )
-				 ?: $this->get_description_from_custom_field( $args );
+				 ?: $this->get_description_from_custom_field( $args, false );
+		} elseif ( $args['pta'] ) {
+			$desc = $this->get_post_type_archive_meta_item( 'og_description', $args['pta'] )
+				 ?: $this->get_description_from_custom_field( $args, false );
 		} else {
 			if ( $this->is_static_frontpage( $args['id'] ) ) {
 				$desc = $this->get_option( 'homepage_og_description' )
 					 ?: $this->get_post_meta_item( '_open_graph_description', $args['id'] )
-					 ?: $this->get_description_from_custom_field( $args );
+					 ?: $this->get_description_from_custom_field( $args, false );
 			} elseif ( $this->is_real_front_page_by_id( $args['id'] ) ) {
 				$desc = $this->get_option( 'homepage_og_description' )
-					 ?: $this->get_description_from_custom_field( $args );
+					 ?: $this->get_description_from_custom_field( $args, false );
 			} else {
 				$desc = $this->get_post_meta_item( '_open_graph_description', $args['id'] )
-					 ?: $this->get_description_from_custom_field( $args );
+					 ?: $this->get_description_from_custom_field( $args, false );
 			}
 		}
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		return $desc;
 	}
@@ -186,22 +190,21 @@ class Generate_Description extends Generate {
 	 * Falls back to Open Graph description.
 	 *
 	 * @since 3.0.4
-	 * @since 3.1.0 : 1. Now tries to get the homepage social descriptions.
-	 *                2. The first argument now accepts an array, with "id" and "taxonomy" fields.
+	 * @since 3.1.0 1. Now tries to get the homepage social descriptions.
+	 *              2. The first argument now accepts an array, with "id" and "taxonomy" fields.
+	 * @since 4.2.0 Now supports the `$args['pta']` index.
 	 * @uses $this->get_twitter_description_from_custom_field()
 	 * @uses $this->get_generated_twitter_description()
 	 *
-	 * @param array|null $args   An array of 'id' and 'taxonomy' values.
-	 *                           Accepts int values for backward compatibility.
+	 * @param array|null $args   The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
+	 *                           Leave null to autodetermine query.
 	 * @param bool       $escape Whether to escape the description.
 	 * @return string The real Twitter description output.
 	 */
 	public function get_twitter_description( $args = null, $escape = true ) {
 
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		$desc = $this->get_twitter_description_from_custom_field( $args, false )
 			 ?: $this->get_generated_twitter_description( $args, false );
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		return $escape ? $this->escape_description( $desc ) : $desc;
 	}
@@ -213,7 +216,7 @@ class Generate_Description extends Generate {
 	 * @since 3.1.0
 	 * @see $this->get_twitter_description()
 	 *
-	 * @param array|null $args   The query arguments. Accepts 'id' and 'taxonomy'.
+	 * @param array|null $args   The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
 	 *                           Leave null to autodetermine query.
 	 * @param bool       $escape Whether to escape the title.
 	 * @return string Twitter description.
@@ -235,9 +238,11 @@ class Generate_Description extends Generate {
 	 * Falls back to Open Graph description.
 	 *
 	 * @since 3.1.0
-	 * @since 3.2.2 : 1. Now tests for the homepage as page prior getting custom field data.
-	 *                2. Now obtains custom field data for terms.
+	 * @since 3.2.2 1. Now tests for the homepage as page prior getting custom field data.
+	 *              2. Now obtains custom field data for terms.
 	 * @since 4.0.0 Added term meta item checks.
+	 * @since 4.2.0 1. No longer returns an escaped custom field description.
+	 *              2. Now returns custom descriptions for post type archives.
 	 * @see $this->get_twitter_description()
 	 * @see $this->get_twitter_description_from_custom_field()
 	 *
@@ -246,33 +251,36 @@ class Generate_Description extends Generate {
 	protected function get_custom_twitter_description_from_query() {
 
 		$desc = '';
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		if ( $this->is_real_front_page() ) {
 			if ( $this->is_static_frontpage() ) {
 				$desc = $this->get_option( 'homepage_twitter_description' )
 					 ?: $this->get_post_meta_item( '_twitter_description' )
 					 ?: $this->get_option( 'homepage_og_description' )
 					 ?: $this->get_post_meta_item( '_open_graph_description' )
-					 ?: $this->get_description_from_custom_field()
+					 ?: $this->get_description_from_custom_field( null, false )
 					 ?: '';
 			} else {
 				$desc = $this->get_option( 'homepage_twitter_description' )
 					?: $this->get_option( 'homepage_og_description' )
-					?: $this->get_description_from_custom_field()
+					?: $this->get_description_from_custom_field( null, false )
 					?: '';
 			}
 		} elseif ( $this->is_singular() ) {
 			$desc = $this->get_post_meta_item( '_twitter_description' )
 				 ?: $this->get_post_meta_item( '_open_graph_description' )
-				 ?: $this->get_description_from_custom_field()
+				 ?: $this->get_description_from_custom_field( null, false )
 				 ?: '';
 		} elseif ( $this->is_term_meta_capable() ) {
 			$desc = $this->get_term_meta_item( 'tw_description' )
 				 ?: $this->get_term_meta_item( 'og_description' )
-				 ?: $this->get_description_from_custom_field()
+				 ?: $this->get_description_from_custom_field( null, false )
+				 ?: '';
+		} elseif ( \is_post_type_archive() ) {
+			$desc = $this->get_post_type_archive_meta_item( 'tw_description' )
+				 ?: $this->get_post_type_archive_meta_item( 'og_description' )
+				 ?: $this->get_description_from_custom_field( null, false )
 				 ?: '';
 		}
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		return $desc;
 	}
@@ -282,22 +290,28 @@ class Generate_Description extends Generate {
 	 * Falls back to Open Graph description.
 	 *
 	 * @since 3.1.0
-	 * @since 3.2.2 : 1. Now tests for the homepage as page prior getting custom field data.
-	 *                2. Now obtains custom field data for terms.
+	 * @since 3.2.2 1. Now tests for the homepage as page prior getting custom field data.
+	 *              2. Now obtains custom field data for terms.
 	 * @since 4.0.0 Added term meta item checks.
+	 * @since 4.2.0 1. No longer returns an escaped custom field description.
+	 *              2. Now supports the `$args['pta']` index.
 	 * @see $this->get_twitter_description()
 	 * @see $this->get_twitter_description_from_custom_field()
 	 *
-	 * @param array|null $args The query arguments. Accepts 'id' and 'taxonomy'.
+	 * @param array|null $args The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
 	 * @return string Twitter description.
 	 */
-	protected function get_custom_twitter_description_from_args( array $args ) {
+	protected function get_custom_twitter_description_from_args( $args ) {
 
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		if ( $args['taxonomy'] ) {
 			$desc = $this->get_term_meta_item( 'tw_description', $args['id'] )
 				 ?: $this->get_term_meta_item( 'og_description', $args['id'] )
-				 ?: $this->get_description_from_custom_field( $args )
+				 ?: $this->get_description_from_custom_field( $args, false )
+				 ?: '';
+		} elseif ( $args['pta'] ) {
+			$desc = $this->get_post_type_archive_meta_item( 'tw_description', $args['pta'] )
+				 ?: $this->get_post_type_archive_meta_item( 'og_description', $args['pta'] )
+				 ?: $this->get_description_from_custom_field( $args, false )
 				 ?: '';
 		} else {
 			if ( $this->is_static_frontpage( $args['id'] ) ) {
@@ -305,21 +319,20 @@ class Generate_Description extends Generate {
 					 ?: $this->get_post_meta_item( '_twitter_description', $args['id'] )
 					 ?: $this->get_option( 'homepage_og_description' )
 					 ?: $this->get_post_meta_item( '_open_graph_description', $args['id'] )
-					 ?: $this->get_description_from_custom_field( $args )
+					 ?: $this->get_description_from_custom_field( $args, false )
 					 ?: '';
 			} elseif ( $this->is_real_front_page_by_id( $args['id'] ) ) {
 				$desc = $this->get_option( 'homepage_twitter_description' )
 					 ?: $this->get_option( 'homepage_og_description' )
-					 ?: $this->get_description_from_custom_field( $args )
+					 ?: $this->get_description_from_custom_field( $args, false )
 					 ?: '';
 			} else {
 				$desc = $this->get_post_meta_item( '_twitter_description', $args['id'] )
 					 ?: $this->get_post_meta_item( '_open_graph_description', $args['id'] )
-					 ?: $this->get_description_from_custom_field( $args )
+					 ?: $this->get_description_from_custom_field( $args, false )
 					 ?: '';
 			}
 		}
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		return $desc;
 	}
@@ -329,9 +342,10 @@ class Generate_Description extends Generate {
 	 *
 	 * @since 3.0.6
 	 * @since 3.1.0 The first argument now accepts an array, with "id" and "taxonomy" fields.
+	 * @since 4.2.0 Now supports the `$args['pta']` index.
 	 *
-	 * @param array|null $args   An array of 'id' and 'taxonomy' values.
-	 *                           Accepts int values for backward compatibility.
+	 * @param array|null $args   The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
+	 *                           Leave null to autodetermine query.
 	 * @param bool       $escape Whether to escape the description.
 	 * @return string The custom field description.
 	 */
@@ -339,12 +353,6 @@ class Generate_Description extends Generate {
 
 		if ( null === $args ) {
 			$desc = $this->get_custom_description_from_query();
-
-			// Generated as backward compat for the filter...
-			$args = [
-				'id'       => $this->get_the_real_ID(),
-				'taxonomy' => $this->get_current_taxonomy(),
-			];
 		} else {
 			$this->fix_generation_args( $args );
 			$desc = $this->get_custom_description_from_args( $args );
@@ -354,11 +362,19 @@ class Generate_Description extends Generate {
 		 * @since 2.9.0
 		 * @since 3.0.6 1. Duplicated from $this->generate_description() (deprecated)
 		 *              2. Removed all arguments but the 'id' argument.
+		 * @since 4.2.0 1. No longer gets supplied custom query arguments when in the loop.
+		 *              2. Now supports the `$args['pta']` index.
 		 * @param string     $desc The custom-field description.
-		 * @param array|null $args The query arguments. Contains 'id' and 'taxonomy'.
+		 * @param array|null $args The query arguments. Contains 'id', 'taxonomy', and 'pta'.
 		 *                         Is null when query is autodetermined.
 		 */
-		$desc = (string) \apply_filters( 'the_seo_framework_custom_field_description', $desc, $args );
+		$desc = (string) \apply_filters_ref_array(
+			'the_seo_framework_custom_field_description',
+			[
+				$desc,
+				$args,
+			]
+		);
 
 		return $escape ? $this->escape_description( $desc ) : $desc;
 	}
@@ -368,6 +384,7 @@ class Generate_Description extends Generate {
 	 *
 	 * @since 3.1.0
 	 * @since 3.2.2 Now tests for the homepage as page prior getting custom field data.
+	 * @since 4.2.0 Now returns custom descriptions for post type archives.
 	 * @internal
 	 * @see $this->get_description_from_custom_field()
 	 *
@@ -377,7 +394,6 @@ class Generate_Description extends Generate {
 
 		$desc = '';
 
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		if ( $this->is_real_front_page() ) {
 			if ( $this->is_static_frontpage() ) {
 				$desc = $this->get_option( 'homepage_description' )
@@ -393,11 +409,16 @@ class Generate_Description extends Generate {
 		} elseif ( \is_post_type_archive() ) {
 			/**
 			 * @since 4.0.6
+			 * @since 4.2.0 Deprecated.
+			 * @deprecated Use options instead.
 			 * @param string $desc The post type archive description.
 			 */
-			$desc = (string) \apply_filters( 'the_seo_framework_pta_description', '' ) ?: '';
+			$desc = (string) \apply_filters_deprecated(
+				'the_seo_framework_pta_description',
+				[ $this->get_post_type_archive_meta_item( 'description' ) ?: '' ],
+				'4.2.0 of The SEO Framework'
+			) ?: '';
 		}
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		return $desc;
 	}
@@ -407,17 +428,19 @@ class Generate_Description extends Generate {
 	 *
 	 * @since 3.1.0
 	 * @since 3.2.2 Now tests for the homepage as page prior getting custom field data.
+	 * @since 4.2.0 Now supports the `$args['pta']` index.
 	 * @internal
 	 * @see $this->get_description_from_custom_field()
 	 *
 	 * @param array $args Array of 'id' and 'taxonomy' values.
 	 * @return string The custom description.
 	 */
-	protected function get_custom_description_from_args( array $args ) {
+	protected function get_custom_description_from_args( $args ) {
 
-		// phpcs:disable, WordPress.WhiteSpace.PrecisionAlignment
 		if ( $args['taxonomy'] ) {
 			$desc = $this->get_term_meta_item( 'description', $args['id'] ) ?: '';
+		} elseif ( $args['pta'] ) {
+			$desc = $this->get_post_type_archive_meta_item( 'description', $args['pta'] ) ?: '';
 		} else {
 			if ( $this->is_static_frontpage( $args['id'] ) ) {
 				$desc = $this->get_option( 'homepage_description' )
@@ -429,7 +452,6 @@ class Generate_Description extends Generate {
 				$desc = $this->get_post_meta_item( '_genesis_description', $args['id'] ) ?: '';
 			}
 		}
-		// phpcs:enable, WordPress.WhiteSpace.PrecisionAlignment
 
 		return $desc;
 	}
@@ -445,10 +467,14 @@ class Generate_Description extends Generate {
 	 * @since 3.1.2 1. Now omits additions when the description will be deemed too short.
 	 *              2. Now no longer converts additions into excerpt when no excerpt is found.
 	 * @since 3.2.2 Now converts HTML characters prior trimming.
+	 * @since 4.2.0 Now supports the `$args['pta']` index.
 	 * @uses $this->generate_description()
+	 * @TODO Should we enforce a minimum description length, where this result is ignored? e.g., use the input
+	 *       guidelines' 'lower' value as a minimum, so that TSF won't ever generate "bad" descriptions?
+	 *       This isn't truly helpful, since then search engines can truly fetch whatever with zero guidance.
 	 *
-	 * @param array|null $args   An array of 'id' and 'taxonomy' values.
-	 *                           Accepts int values for backward compatibility.
+	 * @param array|null $args   The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
+	 *                           Leave null to autodetermine query.
 	 * @param bool       $escape Whether to escape the description.
 	 * @param string     $type   Type of description. Accepts 'search', 'opengraph', 'twitter'.
 	 * @return string The generated description output.
@@ -472,18 +498,24 @@ class Generate_Description extends Generate {
 		 * @since 3.1.0 No longer passes 3rd and 4th parameter.
 		 * @since 4.0.0 1. Deprecated second parameter.
 		 *              2. Added third parameter: $args.
+		 * @since 4.2.0 Now supports the `$args['pta']` index.
 		 * @param string     $excerpt The excerpt to use.
 		 * @param int        $page_id Deprecated.
-		 * @param array|null $args The query arguments. Contains 'id' and 'taxonomy'.
+		 * @param array|null $args The query arguments. Contains 'id', 'taxonomy', and 'pta'.
 		 *                         Is null when query is autodetermined.
 		 */
-		$excerpt = (string) \apply_filters( 'the_seo_framework_fetched_description_excerpt', $excerpt, 0, $args );
+		$excerpt = (string) \apply_filters_ref_array(
+			'the_seo_framework_fetched_description_excerpt',
+			[
+				$excerpt,
+				0,
+				$args,
+			]
+		);
 
-		// TODO Should we enforce a minimum description length, where this result is ignored?
-		// e.g. use the input guidelines 'lower' value as a minimum, so that TSF won't ever generate "bad" descriptions?
 		// This page has a generated description that's far too short: https://theseoframework.com/em-changelog/1-0-0-amplified-seo/.
 		// A direct directory-'site:' query will accept the description outputted--anything else will ignore it...
-		// We should then create a new method which processes this with a parameter for the minimum length, so we can optimize it for performance.
+		// We should not work around that, because it won't direct in the slightest what to display.
 		$excerpt = $this->trim_excerpt(
 			$excerpt,
 			0,
@@ -493,11 +525,18 @@ class Generate_Description extends Generate {
 		/**
 		 * @since 2.9.0
 		 * @since 3.1.0 No longer passes 3rd and 4th parameter.
+		 * @since 4.2.0 Now supports the `$args['pta']` index.
 		 * @param string     $desc The generated description.
-		 * @param array|null $args The query arguments. Contains 'id' and 'taxonomy'.
+		 * @param array|null $args The query arguments. Contains 'id', 'taxonomy', and 'pta'.
 		 *                         Is null when query is autodetermined.
 		 */
-		$desc = (string) \apply_filters( 'the_seo_framework_generated_description', $excerpt, $args );
+		$desc = (string) \apply_filters_ref_array(
+			'the_seo_framework_generated_description',
+			[
+				$excerpt,
+				$args,
+			]
+		);
 
 		return $escape ? $this->escape_description( $desc ) : $desc;
 	}
@@ -506,9 +545,10 @@ class Generate_Description extends Generate {
 	 * Returns the autogenerated Twitter meta description. Falls back to meta description.
 	 *
 	 * @since 3.0.4
+	 * @since 4.2.0 Now supports the `$args['pta']` index.
 	 *
-	 * @param array|null $args   An array of 'id' and 'taxonomy' values.
-	 *                           Accepts int values for backward compatibility.
+	 * @param array|null $args   The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
+	 *                           Leave null to autodetermine query.
 	 * @param bool       $escape Whether to escape the description.
 	 * @return string The generated Twitter description output.
 	 */
@@ -520,10 +560,11 @@ class Generate_Description extends Generate {
 	 * Returns the autogenerated Open Graph meta description. Falls back to meta description.
 	 *
 	 * @since 3.0.4
+	 * @since 4.2.0 Now supports the `$args['pta']` index.
 	 * @uses $this->generate_description()
 	 *
-	 * @param array|null $args   An array of 'id' and 'taxonomy' values.
-	 *                           Accepts int values for backward compatibility.
+	 * @param array|null $args   The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
+	 *                           Leave null to autodetermine query.
 	 * @param bool       $escape Whether to escape the description.
 	 * @return string The generated Open Graph description output.
 	 */
@@ -535,6 +576,7 @@ class Generate_Description extends Generate {
 	 * Returns a description excerpt for the current query.
 	 *
 	 * @since 3.1.0
+	 * @since 4.2.0 Flipped order of query tests.
 	 *
 	 * @return string
 	 */
@@ -547,14 +589,14 @@ class Generate_Description extends Generate {
 
 		$excerpt = '';
 
-		if ( $this->is_blog_page() ) {
-			$excerpt = $this->get_blog_page_description_excerpt();
-		} elseif ( $this->is_real_front_page() ) {
+		if ( $this->is_real_front_page() ) {
 			$excerpt = $this->get_front_page_description_excerpt();
-		} elseif ( $this->is_archive() ) {
-			$excerpt = $this->get_archival_description_excerpt();
+		} elseif ( $this->is_home_as_page() ) {
+			$excerpt = $this->get_blog_page_description_excerpt();
 		} elseif ( $this->is_singular() ) {
 			$excerpt = $this->get_singular_description_excerpt();
+		} elseif ( $this->is_archive() ) {
+			$excerpt = $this->get_archival_description_excerpt();
 		}
 
 		return $excerpt;
@@ -565,21 +607,24 @@ class Generate_Description extends Generate {
 	 *
 	 * @since 3.1.0
 	 * @since 3.2.2 Fixed front-page as blog logic.
+	 * @since 4.2.0 Now supports the `$args['pta']` index.
 	 *
-	 * @param array|null $args An array of 'id' and 'taxonomy' values.
+	 * @param array $args The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
 	 * @return string
 	 */
-	protected function get_description_excerpt_from_args( array $args ) {
+	protected function get_description_excerpt_from_args( $args ) {
 
 		$excerpt = '';
 
 		if ( $args['taxonomy'] ) {
 			$excerpt = $this->get_archival_description_excerpt( \get_term( $args['id'], $args['taxonomy'] ) );
+		} elseif ( $args['pta'] ) {
+			$excerpt = $this->get_archival_description_excerpt( \get_post_type_object( $args['pta'] ) );
 		} else {
-			if ( $this->is_blog_page_by_id( $args['id'] ) ) {
-				$excerpt = $this->get_blog_page_description_excerpt();
-			} elseif ( $this->is_real_front_page_by_id( $args['id'] ) ) {
+			if ( $this->is_real_front_page_by_id( $args['id'] ) ) {
 				$excerpt = $this->get_front_page_description_excerpt();
+			} elseif ( $this->is_home_as_page( $args['id'] ) ) {
+				$excerpt = $this->get_blog_page_description_excerpt();
 			} else {
 				$excerpt = $this->get_singular_description_excerpt( $args['id'] );
 			}
@@ -596,10 +641,7 @@ class Generate_Description extends Generate {
 	 * @return string
 	 */
 	protected function get_blog_page_description_excerpt() {
-		return $this->get_description_additions( [
-			'id'       => (int) \get_option( 'page_for_posts' ),
-			'taxonomy' => '',
-		] );
+		return $this->get_description_additions( [ 'id' => (int) \get_option( 'page_for_posts' ) ] );
 	}
 
 	/**
@@ -613,16 +655,8 @@ class Generate_Description extends Generate {
 
 		$id = $this->get_the_front_page_ID();
 
-		$excerpt = '';
-		if ( $id ) {
-			$excerpt = $this->get_singular_description_excerpt( $id );
-		}
-		$excerpt = $excerpt ?: $this->get_description_additions( [
-			'id'       => $id,
-			'taxonomy' => '',
-		] );
-
-		return $excerpt;
+		return ( $id ? $this->get_singular_description_excerpt( $id ) : '' )
+			   ?: $this->get_description_additions( [ 'id' => $id ] );
 	}
 
 	/**
@@ -630,29 +664,36 @@ class Generate_Description extends Generate {
 	 *
 	 * @since 3.1.0
 	 * @since 4.0.0 Now processes HTML tags via s_excerpt_raw() for the author descriptions.
+	 * @since 4.2.0 Now uses post type archive descriptions to prefill meta descriptions.
 	 *
-	 * @param null|\WP_Term $term The term.
+	 * @param null|\WP_Term|\WP_Post_Type $object The term or post type object.
 	 * @return string
 	 */
-	protected function get_archival_description_excerpt( $term = null ) {
+	protected function get_archival_description_excerpt( $object = null ) {
 
-		if ( $term && \is_wp_error( $term ) )
+		if ( $object && \is_wp_error( $object ) )
 			return '';
 
-		if ( \is_null( $term ) ) {
+		if ( \is_null( $object ) ) {
 			$in_the_loop = true;
-			$term        = \get_queried_object();
+			$object      = \get_queried_object();
 		} else {
 			$in_the_loop = false;
 		}
 
 		/**
 		 * @since 3.1.0
-		 * @see `\the_seo_framework()->s_excerpt_raw()` to strip HTML tags neatly.
-		 * @param string   $excerpt The short circuit excerpt.
-		 * @param \WP_Term $term    The Term object.
+		 * @see `\tsf()->s_excerpt_raw()` to strip HTML tags neatly.
+		 * @param string                 $excerpt The short circuit excerpt.
+		 * @param \WP_Term|\WP_Post_Type $object  The Term object or post type object.
 		 */
-		$excerpt = (string) \apply_filters( 'the_seo_framework_generated_archive_excerpt', '', $term );
+		$excerpt = (string) \apply_filters_ref_array(
+			'the_seo_framework_generated_archive_excerpt',
+			[
+				'',
+				$object,
+			]
+		);
 
 		if ( $excerpt ) return $excerpt;
 
@@ -662,29 +703,40 @@ class Generate_Description extends Generate {
 			if ( $this->is_category() || $this->is_tag() || $this->is_tax() ) {
 				// WordPress DOES NOT allow HTML in term descriptions, not even if you're a super-administrator.
 				// See https://wpvulndb.com/vulnerabilities/9445. We won't parse HTMl tags unless WordPress adds native support.
-				$excerpt = ! empty( $term->description ) ? $this->s_description_raw( $term->description ) : '';
+				$excerpt = $this->s_description_raw( $object->description ?? '' );
 			} elseif ( $this->is_author() ) {
 				$excerpt = $this->s_excerpt_raw( \get_the_author_meta( 'description', (int) \get_query_var( 'author' ) ) );
 			} elseif ( \is_post_type_archive() ) {
 				/**
-				 * @TODO can we even obtain anything useful ourselves?
-				 *
 				 * @since 4.0.6
+				 * @since 4.2.0 Now provides the post type object description, if assigned.
 				 * @param string $excerpt The archive description excerpt.
-				 * @param mixed  $term    The queried object.
+				 * @param \WP_Term|\WP_Post_Type $object The post type object.
 				 */
-				$excerpt = (string) \apply_filters( 'the_seo_framework_pta_description_excerpt', '', $term );
+				$excerpt = (string) \apply_filters_ref_array(
+					'the_seo_framework_pta_description_excerpt',
+					[
+						$this->s_description_raw( $object->description ?? '' ),
+						$object,
+					]
+				);
 			} else {
 				/**
 				 * @since 4.0.6
-				 * @since 4.1.0 Added the $term object parameter.
+				 * @since 4.1.0 Added the $object object parameter.
 				 * @param string $excerpt The fallback archive description excerpt.
-				 * @param \WP_Term $term    The Term object.
+				 * @param \WP_Term $object    The Term object.
 				 */
-				$excerpt = (string) \apply_filters( 'the_seo_framework_fallback_archive_description_excerpt', '', $term );
+				$excerpt = (string) \apply_filters_ref_array(
+					'the_seo_framework_fallback_archive_description_excerpt',
+					[
+						'',
+						$object,
+					]
+				);
 			}
 		} else {
-			$excerpt = ! empty( $term->description ) ? $this->s_description_raw( $term->description ) : '';
+			$excerpt = $this->s_description_raw( $object->description ?? '' );
 		}
 
 		return $excerpt;
@@ -700,8 +752,7 @@ class Generate_Description extends Generate {
 	 */
 	protected function get_singular_description_excerpt( $id = null ) {
 
-		if ( \is_null( $id ) )
-			$id = $this->get_the_real_ID();
+		$id = $id ?? $this->get_the_real_ID();
 
 		// If the post is protected, don't generate a description.
 		if ( $this->is_protected( $id ) ) return '';
@@ -713,43 +764,36 @@ class Generate_Description extends Generate {
 	 * Returns additions for "Title on Site Title".
 	 *
 	 * @since 3.1.0
-	 * @since 3.2.0 : 1. Now no longer listens to options.
-	 *                2. Now only works for the front and blog pages.
+	 * @since 3.2.0 1. Now no longer listens to options.
+	 *              2. Now only works for the front and blog pages.
 	 * @since 3.2.2 Now works for homepages from external requests.
+	 * @since 4.2.0 No longer adds "on Blogname".
 	 * @see $this->get_generated_description()
 	 *
-	 * @param array|null $args   An array of 'id' and 'taxonomy' values.
-	 *                           Accepts int values for backward compatibility.
-	 * @param bool       $forced Whether to force the additions, bypassing options and filters.
+	 * @param array $args The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
+	 *                    This method should always have 'taxonomy' set to ''.
 	 * @return string The description additions.
 	 */
-	protected function get_description_additions( $args, $forced = false ) {
+	protected function get_description_additions( $args ) {
 
-		$this->fix_generation_args( $args );
-
-		if ( $this->is_blog_page_by_id( $args['id'] ) ) {
-			$title = $this->get_filtered_raw_generated_title( $args );
-			/* translators: %s = Blog page title. Front-end output. */
-			$title = sprintf( \__( 'Latest posts: %s', 'autodescription' ), $title );
-		} elseif ( $this->is_real_front_page_by_id( $args['id'] ) ) {
+		if ( $this->is_real_front_page_by_id( $args['id'] ) ) {
 			$title = $this->get_home_title_additions();
+		} elseif ( $this->is_home_as_page( $args['id'] ) ) {
+			$title = sprintf(
+				/* translators: %s = Blog page title. Front-end output. */
+				\__( 'Latest posts: %s', 'autodescription' ),
+				$this->get_filtered_raw_generated_title( $args )
+			);
 		}
 
-		if ( empty( $title ) )
-			return '';
-
-		$on       = \_x( 'on', 'Placement. e.g. Post Title "on" Site Title', 'autodescription' );
-		$blogname = $this->get_blogname();
-
-		/* translators: 1: Title, 2: on, 3: Site Title */
-		return trim( sprintf( \_x( '%1$s %2$s %3$s', 'blog page description', 'autodescription' ), $title, $on, $blogname ) );
+		return ( $title ?? '' ) ?: '';
 	}
 
 	/**
 	 * Fetches or parses the excerpt of the post.
 	 *
 	 * @since 1.0.0
-	 * @since 2.8.2 : Added 4th parameter for escaping.
+	 * @since 2.8.2 Added 4th parameter for escaping.
 	 * @since 3.1.0 1. No longer returns anything for terms.
 	 *              2. Now strips plausible embeds URLs.
 	 * @since 4.0.1 The second parameter `$id` now defaults to int 0, instead of an empty string.
@@ -805,11 +849,9 @@ class Generate_Description extends Generate {
 				$excerpt = $this->strip_newline_urls( $excerpt );
 				$excerpt = $this->strip_paragraph_urls( $excerpt );
 			}
-		} else {
-			$excerpt = '';
 		}
 
-		return $excerpt;
+		return $excerpt ?? '';
 	}
 
 	/**
@@ -818,59 +860,82 @@ class Generate_Description extends Generate {
 	 * Warning: Returns with entities encoded. The output is not safe for printing.
 	 *
 	 * @since 2.6.0
-	 * @since 3.1.0 : 1. Now uses smarter trimming.
-	 *                2. Deprecated 2nd parameter.
-	 *                3. Now has unicode support for sentence closing.
-	 *                4. Now strips last three words when preceded by a sentence closing separator.
-	 *                5. Now always leads with (inviting) dots, even if the excerpt is shorter than $max_char_length.
-	 * @since 4.0.0 : 1. Now stops parsing earlier on failure.
-	 *                2. Now performs faster queries.
-	 *                3. Now maintains last sentence with closing punctuations.
-	 * @since 4.0.5 : 1. Now decodes the excerpt input, improving accuracy, and so that HTML entities at
-	 *                   the end won't be transformed into gibberish.
-	 * @since 4.1.0 : 1. Now texturizes the excerpt input, improving accuracy with included closing & final punctuation support.
-	 *                2. Now performs even faster queries, in most situations. (0.2ms/0.02ms total (worst/best) @ PHP 7.3/PCRE 11 ).
-	 *                   Mind you, this method probably boots PCRE and wptexturize; so, it'll be slower than what we noted--it's
-	 *                   overhead that otherwise WP, the theme, or other plugin would cause anyway. So, deduct that.
-	 *                3. Now recognizes connector and final punctuations for preliminary sentence bounding.
-	 *                4. Leading punctuation now excludes symbols, special annotations, opening brackets and quotes,
-	 *                   and marks used in some latin languages like ¡¿.
-	 *                5. Is now able to always strip leading punctuation.
-	 *                6. It will now strip leading colon characters.
-	 *                7. It will now stop counting trailing words towards new sentences when a connector, dash, mark, or ¡¿ is found.
-	 *                8. Now returns encoded entities once more. So that the return value can be treated the same as anything else
-	 *                   revolving around descriptions--preventing double transcoding like `&amp;amp; > &amp; > &` instead of `&amp;`.
+	 * @since 3.1.0 1. Now uses smarter trimming.
+	 *              2. Deprecated 2nd parameter.
+	 *              3. Now has unicode support for sentence closing.
+	 *              4. Now strips last three words when preceded by a sentence closing separator.
+	 *              5. Now always leads with (inviting) dots, even if the excerpt is shorter than $max_char_length.
+	 * @since 4.0.0 1. Now stops parsing earlier on failure.
+	 *              2. Now performs faster queries.
+	 *              3. Now maintains last sentence with closing punctuations.
+	 * @since 4.0.5 1. Now decodes the excerpt input, improving accuracy, and so that HTML entities at
+	 *                 the end won't be transformed into gibberish.
+	 * @since 4.1.0 1. Now texturizes the excerpt input, improving accuracy with included closing & final punctuation support.
+	 *              2. Now performs even faster queries, in most situations. (0.2ms/0.02ms total (worst/best) @ PHP 7.3/PCRE 11).
+	 *                 Mind you, this method probably boots PCRE and wptexturize; so, it'll be slower than what we noted--it's
+	 *                 overhead that otherwise WP, the theme, or other plugin would cause anyway. So, deduct that.
+	 *              3. Now recognizes connector and final punctuations for preliminary sentence bounding.
+	 *              4. Leading punctuation now excludes symbols, special annotations, opening brackets and quotes,
+	 *                 and marks used in some latin languages like ¡¿.
+	 *              5. Is now able to always strip leading punctuation.
+	 *              6. It will now strip leading colon characters.
+	 *              7. It will now stop counting trailing words towards new sentences when a connector, dash, mark, or ¡¿ is found.
+	 *              8. Now returns encoded entities once more. So that the return value can be treated the same as anything else
+	 *                 revolving around descriptions--preventing double transcoding like `&amp;amp; > &amp; > &` instead of `&amp;`.
+	 * @since 4.1.5 1. The second parameter now accepts values again. From "current description length" to minimum accepted char length.
+	 *              2. Can now return an empty string when the input string doesn't satisfy the minimum character length.
+	 *              3. The third parameter now defaults to 4096, so no longer unexpected results are created.
+	 *              4. Resolved some backtracking issues.
+	 *              5. Resolved an issue where a character followed by punctuation would cause the match to fail.
+	 * @since 4.2.0 Now enforces at least a character length of 1. This prevents needless processing.
 	 * @see https://secure.php.net/manual/en/regexp.reference.unicode.php
 	 *
 	 * We use `[^\P{Po}\'\"]` because WordPress texturizes ' and " to fall under `\P{Po}`.
 	 * This is perfect. Please have the courtesy to credit us when taking it. :)
 	 *
 	 * @param string $excerpt         The untrimmed excerpt. Expected not to contain any HTML operators.
-	 * @param int    $depr            The current excerpt length. No longer needed. Deprecated.
+	 * @param int    $min_char_length The minimum character length. Set to 0 to ignore the requirement.
+	 *                                This is read as a SUGGESTION. Multibyte characters will create inaccuracies.
 	 * @param int    $max_char_length At what point to shave off the excerpt.
 	 * @return string The trimmed excerpt with encoded entities. Needs escaping prior printing.
 	 */
-	public function trim_excerpt( $excerpt, $depr = 0, $max_char_length = 0 ) {
+	public function trim_excerpt( $excerpt, $min_char_length = 1, $max_char_length = 4096 ) {
+
+		// At least 1.
+		$min_char_length = $min_char_length < 1 ? 1 : $min_char_length;
+
+		// We should _actually_ use mb_strlen, but that's wasteful on resources for something benign.
+		// We'll rectify that later, somewhat, where characters are transformed.
+		// We could also use preg_match_all( '/./u' ); or count( preg_split( '/./u', $excerpt, $min_char_length ) );
+		// But, again, that'll eat CPU cycles.
+		if ( \strlen( $excerpt ) < $min_char_length ) return '';
 
 		// Decode to get a more accurate character length in Unicode.
-		$excerpt = html_entity_decode( $excerpt, ENT_QUOTES | ENT_COMPAT, 'UTF-8' );
+		$excerpt = html_entity_decode( $excerpt, ENT_QUOTES, 'UTF-8' );
 
 		// Find all words with $max_char_length, and trim when the last word boundary or punctuation is found.
-		preg_match( sprintf( '/.{0,%d}([^\P{Po}\'\":]|[\p{Pc}\p{Pd}\p{Pf}\p{Z}]|$){1}/su', $max_char_length ), trim( $excerpt ), $matches );
-		$excerpt = isset( $matches[0] ) ? ( $matches[0] ?: '' ) : '';
+		preg_match( sprintf( '/.{0,%d}([^\P{Po}\'\":]|[\p{Pc}\p{Pd}\p{Pf}\p{Z}]|\Z){1}/su', $max_char_length ), trim( $excerpt ), $matches );
+		$excerpt = trim( ( $matches[0] ?? '' ) ?: '' );
 
 		$excerpt = trim( $excerpt );
 
-		if ( ! $excerpt ) return '';
+		if ( \strlen( $excerpt ) < $min_char_length ) return '';
 
 		// Texturize to recognize the sentence structure. Decode thereafter since we get HTML returned.
-		$excerpt = htmlentities( $excerpt, ENT_QUOTES | ENT_COMPAT, 'UTF-8' );
+		$excerpt = htmlentities( $excerpt, ENT_QUOTES, 'UTF-8' );
 		$excerpt = \wptexturize( $excerpt );
-		$excerpt = html_entity_decode( $excerpt, ENT_QUOTES | ENT_COMPAT, 'UTF-8' );
+		$excerpt = html_entity_decode( $excerpt, ENT_QUOTES, 'UTF-8' );
 		/**
-		 * Play with it here: https://regex101.com/r/u0DIgx/5/tests
+		 * Play with it here: https://regex101.com/r/u0DIgx/5/ (old) https://regex101.com/r/G92lUt/3 (new)
 		 *
-		 * TODO fix `.*[\p{Pe}\p{Pf}]$`... it suffers from a backtracing issue. I still can't seem to anchor it...
+		 * TODO Group 4's match is repeated. However, referring to it as (4) will cause it to congeal into 3.
+		 *
+		 * TODO .+[\p{Pe}\p{Pf}](*THEN)\Z              still backtracks; it should just find \Z and see if one char is in front of it.
+		 *   -> [^\p{Pe}\p{Pf}]++.*?[\p{Pe}\p{Pf}]+?\Z would solve it... but I don't trust it; it's populating 4 and 5 in edge-cases.
+		 *
+		 * TODO we can futher optimize this by capturing the last 4 words and refer to that. Of thence more than 3 words
+		 * found, we could simply end the query, mitigating all forms of backtracking. For now, backtracking cannot
+		 * exceed step-count=($max_char_length*2+56) = 160*2+56 = 376, which is perfectly acceptable as a 'worst case'.
 		 *
 		 * Critically optimized, so the $matches don't make much sense. Bear with me:
 		 *
@@ -884,21 +949,23 @@ class Generate_Description extends Generate {
 		 * }
 		 */
 		preg_match(
-			'/(?:^[\p{P}\p{Z}]*?)([\P{Po}\p{M}\xBF\xA1:\p{Z}]+[\p{Z}\w])(?:([^\P{Po}\p{M}\xBF\xA1:]$(*ACCEPT))|((?(?=.+?\p{Z}*(?:\w+[\p{Pc}\p{Pd}\p{Pf}\p{Z}]*){1,3}|[\p{Po}]$)(?:.*[\p{Pe}\p{Pf}]$|.*[^\P{Po}\p{M}\xBF\xA1:])|.*$(*ACCEPT)))(?>(.+?\p{Z}*(?:\w+[\p{Pc}\p{Pd}\p{Pf}\p{Z}]*){1,3})|[^\p{Pc}\p{Pd}\p{M}\xBF\xA1:])?)(.+)?/su',
+			'/(?:\A[\p{P}\p{Z}]*?)?([\P{Po}\p{M}\xBF\xA1:\p{Z}]+[\p{Z}\w])(?:([^\P{Po}\p{M}\xBF\xA1:]\Z(*ACCEPT))|((?(?=.+(?:\w+[\p{Pc}\p{Pd}\p{Pf}\p{Z}]*){1,3}|[\p{Po}]\Z)(?:.+[\p{Pe}\p{Pf}](*THEN)\Z(*ACCEPT)|.*[^\P{Po}\p{M}\xBF\xA1:])|.*\Z(*ACCEPT)))(?>(.+?\p{Z}*(?:\w+[\p{Pc}\p{Pd}\p{Pf}\p{Z}]*){1,3})|[^\p{Pc}\p{Pd}\p{M}\xBF\xA1:])?)(.+)?/su',
 			$excerpt,
 			$matches
 		);
 
 		if ( isset( $matches[5] ) ) {
-			$excerpt = $matches[1] . $matches[3] . $matches[4] . $matches[5];
+			$excerpt = "$matches[1]$matches[3]$matches[4]$matches[5]";
 			// Skip 4. It's useless content without 5.
 		} elseif ( isset( $matches[3] ) ) {
-			$excerpt = $matches[1] . $matches[3];
+			$excerpt = "$matches[1]$matches[3]";
 		} elseif ( isset( $matches[2] ) ) {
-			$excerpt = $matches[1] . $matches[2];
+			$excerpt = "$matches[1]$matches[2]";
 		} elseif ( isset( $matches[1] ) ) {
 			$excerpt = $matches[1];
 		}
+
+		if ( \strlen( $excerpt ) < $min_char_length ) return '';
 
 		/**
 		 * @param array $matches: {
@@ -914,45 +981,46 @@ class Generate_Description extends Generate {
 		);
 		// Why can $matches[2] still be populated with 3 set? Does it populate empty results upward to last, always???
 		if ( isset( $matches[2] ) && \strlen( $matches[2] ) ) {
-			$excerpt = $matches[1] . $matches[2];
+			$excerpt = "$matches[1]$matches[2]";
 		} elseif ( isset( $matches[1] ) && \strlen( $matches[1] ) ) {
 			// Ignore useless [3], there's no [2], [1] is open-ended; so, add hellip.
-			$excerpt = $matches[1] . '...'; // This should be texturized later to &hellip;.
+			$excerpt = "$matches[1]..."; // This should be texturized later to &hellip;.
 		} else {
 			// If there's no matches[1], only some form of non-closing-leading punctuation was left in $excerpt. Empty it.
 			$excerpt = '';
 		}
 
-		return trim( htmlentities( $excerpt, ENT_QUOTES | ENT_COMPAT, 'UTF-8' ) );
+		if ( \strlen( $excerpt ) < $min_char_length ) return '';
+
+		return trim( htmlentities( $excerpt, ENT_QUOTES, 'UTF-8' ) );
 	}
 
 	/**
 	 * Determines whether automated descriptions are enabled.
 	 *
 	 * @since 3.1.0
+	 * @since 4.2.0 1. Now fixes the input arguments.
+	 *              2. Now supports the `$args['pta']` index.
 	 * @access private
 	 * @see $this->get_the_real_ID()
 	 * @see $this->get_current_taxonomy()
 	 *
-	 * @param array|null $args An array of 'id' and 'taxonomy' values.
-	 *                         Can be null when query is autodetermined.
+	 * @param array|null $args The query arguments. Accepts 'id', 'taxonomy', and 'pta'.
+	 *                         Leave null to autodetermine query.
 	 * @return bool
 	 */
-	public function is_auto_description_enabled( $args ) {
+	public function is_auto_description_enabled( $args = null ) {
 
-		if ( \is_null( $args ) ) {
-			$args = [
-				'id'       => $this->get_the_real_ID(),
-				'taxonomy' => $this->get_current_taxonomy(),
-			];
-		}
+		if ( null !== $args )
+			$this->fix_generation_args( $args );
 
 		/**
 		 * @since 2.5.0
 		 * @since 3.0.0 Now passes $args as the second parameter.
 		 * @since 3.1.0 Now listens to option.
+		 * @since 4.2.0 Now supports the `$args['pta']` index.
 		 * @param bool       $autodescription Enable or disable the automated descriptions.
-		 * @param array|null $args            The query arguments. Contains 'id' and 'taxonomy'.
+		 * @param array|null $args            The query arguments. Contains 'id', 'taxonomy', and 'pta'.
 		 *                                    Is null when query is autodetermined.
 		 */
 		return (bool) \apply_filters_ref_array(

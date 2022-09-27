@@ -1,91 +1,194 @@
-=== All-in-One Event Calendar ===
-Contributors: uchu, calvinyeh, raquelleira, renatotbueno, domanb, elirenato, hubrik, vtowel, yani.iliev, nicolapeluchetti, jbutkus, lpawlik, bangelov
-Tags: calendar, event, ical, feed, ics, icalendar, sync, aggregator, google, venue, calendar widget, events widget
-Requires at least: 3.5
-Tested up to: 5.5.1
-Stable tag: 2.6.8
-Requires PHP: 5.4
+=== Timely All-in-One Events Calendar ===
+Contributors: timelynetwork
+Tags: calendar, event, events, event manager, event management
+Requires at least: 5.0
+Tested up to: 6.0
+Stable tag: 3.0.0
+Requires PHP: 7.2
 License: GNU General Public License, version 3 (GPL-3.0)
 
-An events calendar system with multiple views, upcoming events widget, color-coded categories, recurrence, and import/export of .ics feeds.
+Timely All-in-One Events Calendar is a free WordPress plugin trusted by 150,000+ event creators worldwide. Easily create, manage and share events.
 
 == Description ==
 
-The free [All-in-One Event Calendar](https://time.ly/wordpress-calendar-plugins-addons) from [Timely](https://time.ly/) is a beautiful way to list your events in WordPress and easily share them with the rest of the world.
+The [Timely All-in-One Events Calendar](https://time.ly/solutions/all-in-one-events-calendar-wordpress-plugin/) is a FREE events calendar plugin, trusted by 150,000+ event professionals around the globe, including UPS, AT&T, Harvard University, Commscope, Avon, Stanford University, Awin, Radancy, and the University of Bristol. It allows you to easily create, manage and share events with the rest of the world, whether they are in-person, virtual or hybrid.
 
-Our events calendar is easy to manage. Combines clean visual design with a powerful set of features to create the most advanced website calendar system available for WordPress.
+https://www.youtube.com/watch?v=Nb7y_GsaQjQ
 
-This plugin is a service provided by [Timely](https://time.ly/) and requires that you create and activate an account in order to use it. 
+= 🗓️ The Best Events Calendar WP Plugin =
 
-= Features =
+Our events calendar plugin is the most advanced website calendar system available for WordPress. It was created with the latest technology, and combines a **beautiful and modern design** with a **powerful set of features**. 
 
-Download our free website events calendar software and get the following features:
+Our plugin is known in the WP community for its **great UI/UX** and **attractive visuals**, and considered by experts as one of **the most advanced WP Plugins**.
 
-* **Recurring** events including complex patterns.
-* **Filtering** by event category or tag.
-* Easy **sharing** with Google Calendar, Apple iCal, MS Outlook and any other system that accepts iCalendar (.ics) feeds.
-* Embedded **Google Maps**.
-* **Color-coded** events based on category.
-* Featured **event images** and **category images**.
-* **Day** view
-* **Week** view
-* **Month** view
-* **Agenda** view
-* **Posterboard** view
-* **Upcoming Events** widget.
-* Direct links to **filtered calendar views**.
-* **Theme** options to customize your calendar appearance.
-* Inline **Calendar Theme editor**.
-* Import other calendars automatically to display in your calendar.
-* Categorize and tag imported calendar feeds automatically.
-* Plugin can also be easily imported.
-* Each event is SEO-optimized.
-* Each event links to the original calendar.
+Besides being fully customizable and extremely easy to use, Timely’s plugin is 100% mobile responsive, and accessible for the community with disabilities.
+
+The [All-in-One Event Calendar](https://time.ly/solutions/all-in-one-events-calendar-wordpress-plugin/) is a service provided by [Time.ly](https://time.ly/). After installing the plugin, you will need to create and activate a Timely account in order to use it.
+
+= ❤️ The Events Calendar Most Loved by Event Creators Around the World =
+Timely’s [All-in-One Event Calendar](https://time.ly/solutions/all-in-one-events-calendar-wordpress-plugin/) is made for freelancers and bootstrapped entrepreneurs, who are looking for a free but powerful event calendar to start or power up their event-related business.
+
+If you are an event planner or event manager, and work for a small, medium or large organization that needs more sophisticated event management tools, **check out our other [event software solutions](https://time.ly/solutions/) and [features list](https://time.ly/event-management-software-features/)**.
+
+= 🌟 Free Features =
+
+Our free events calendar plugin is feature-rich. Download the plugin and get all the following features for FREE:
+
+* **Beautiful and responsive** online event calendar for your website.
+* Dashboard available in several languages, including **English**, **French**, **Spanish**, **Portuguese**, **Italian**, **German** and **Dutch**. Calendar public interface translated into those same languages, plus **Arabic**, **Chinese**, **Danish**, **Japanese, **Korean**, **Turkish**, and **Swedish**. Other languages available upon request.
+* Display your public calendar on **week, month or agenda views**. Additional calendar views available with our [paid plans](https://time.ly/pricing/).
+* Setup different calendar views for calendar on mobile and on desktop.
+* Several out of the box calendar themes to choose from. Alternatively, **customize** your theme, colours and fonts to personalize your calendar appearance to match your brand and style, as well as header, footer and CSS. 
+* **Custom toolbar** options, including calendar views and languages available, as well as event search by keyword, date range and filters.
+* **Filtering** events by categories, tags, organizers and venues. **Colour-coded** events based on category.
+* **Easy event creation**, scheduling and publishing. Compatible with **in-person, virtual and hybrid events**.
+* Create **single day, multiple days, all day, never end events, and recurring events**, including complex patterns.
+* **Duplicate events** with ease, increasing productivity and saving time.
+* Add all sorts of event details to your event page, including text, images, videos, tables and links.
+* Set the **timezone of your events**, and display it on either yours or your website visitors’ timezone.
+* Event venue and organizer tag system. Add multiple event organizers to your events.
+* **Media library** to facilitate media upload. Add event images and category images.
+* **Social share buttons**, so your audience can share events directly from your calendar.
+* Allow or disallow your audience to print or subscribe to your calendar.
+* **Easy sharing** events with Google Calendar, Apple iCal, MS Outlook and any other system that accepts iCalendar (.ics) feeds.
+* Calendar and events are **SEO-optimized**, **Event Schema ready** and with **Good Web Core Vitals**.
 * Your calendar can be embedded into a WordPress page without needing to create template files or modify the theme.
+* Free support via written documentation available on our [Help Center](https://help.time.ly/).
+* Collect event registrations (RSVP) or sell event tickets online with the add-on.
 
-= Get the add-on =
+What are you waiting for? Download [Timely All-in-One Events Calendar Plugin](https://time.ly/solutions/all-in-one-events-calendar-wordpress-plugin/) now and sign up for a free account!
 
-Upgrade your free WordPress calendar version and get the following additional feature:
+= 🔌 Add-ons =
 
-* [Extended Views](https://time.ly/wordpress-extended-visual-views-add-on/)
+Upgrade your free Timely events calendar for WordPress and get the following additional features:
 
-Looking for more features like importing events from other calendars, front end submission, event finder, ticketing, booking and Facebook & Twitter integration? Check out our [Website Event Calendar App](https://time.ly/timely-website-events-calendar).
+* **RSVP / Ticketing**: easily manage RSVPs and sell event tickets directly from your event calendar. You can activate the add-on directly on the plugin.
 
-= Legal =
+If you are a seasoned event professional you might want to consider adding more advanced features to your events calendar so check our [feature list](https://time.ly/event-management-software-features). Popular features include finding, importing and automatically syncing events from other calendars and the web, event submission form, and MailChimp, Twitter, Facebook and LinkedIn integration.
 
-By creating or activating an account and/or embedding the code into a website, you agree to Timely's [Terms of Service](https://time.ly/tos) and policies. Please note that to provide you with our services, we sometimes send you service announcements and other information. To learn more about what personal data we collect from you and how we use it, please check our [Privacy Policy](https://time.ly/tos/privacy-policy). 
+= 🌐 Languages =
 
-= Languages =
+Timely's application dashboard has been translated into the following languages (in alphabetical order): Dutch | English | French | German | Italian | Portuguese | Spanish
 
-Timely is supported by a committed group of translators offering [languages files](https://translate.time.ly/) in numerous languages including:
+Timely's events calendar public interface has been translated into the same languages above, plus (in alphabetical order): Arabic | Chinese | Danish | Japanese | Korean | Turkish | Swedish. Other languages are available upon request.
 
-* German
-* French
-* Russian
-* Italian
-* Dutch
-* Japanese
-* Portuguese
-* Swedish
-* Polish
-* Danish
-* Spanish
-* Bulgarian
-* Greek
-* Hungarian
-* Latvian
+= 🤓 Some Geeky Facts =
+* Responsive and works perfectly on all devices (desktop, laptop, tablet and mobile).
+* Compatible with major web-browsers (Chrome, Safari, iOS, Android, Edge, Firefox and Internet Explorer v.11).
+* Average uptime is 99.8%.
+* HTTPS enabled, data encrypted at rest, encrypted backups, CDN and two-factor authentication.
+* Free from [WordPress plugin security vulnerabilities](https://time.ly/blog/best-practices-for-wordpress-plugin-security/).
+* Accessible for individuals with disabilities (WCAG 2.1 AA Level compliant).
+* Well maintained and constantly [updated](https://time.ly/blog/?_category=product-update).
+* HTML5 dashboard.
+* Available shortcode.
 
-You can help translate by going to [https://translate.time.ly](https://translate.time.ly).
+= 📒 Read More =
 
-= Helpful Links =
+Want more information on Timely’s events calendar wordpress plugin? Have a look at:
 
-* [**Access our User Guide**](https://time.ly/document/user-guide/).
+* Timely official [homepage](https://time.ly/).
+* Timely [events calendar month view demo page](https://time.ly/demo/events-calendar-month-view/)
+* Timely [events calendar week view demo page](https://time.ly/demo/events-calendar-week-view/)
+* Timely [events calendar agenda view demo page](https://time.ly/demo/events-calendar-agenda-view-demo/)
+* Timely [Help Center](https://help.time.ly/all-in-one-event-calendar-wp-plugin-guide-v3/).
+* Timely [about us page](https://time.ly/about-us/)
+* Timely [reviews and customer testimonials](https://time.ly/why-timely/customer-testimonials/).
+* Timely [case studies](https://time.ly/blog/category/case-study/).
+* Timely [press mentions](https://time.ly/newsroom/).
+* Timely [event management blog](https://time.ly/blog/).
+* Timely [product release notes](https://time.ly/blog/?_category=product-update)
+* Also follow Timely on [Linkedin](https://www.linkedin.com/company/timely/), [Facebook](https://www.facebook.com/timely.network), [Twitter](https://twitter.com/_timely) & [Instagram](https://twitter.com/_timely).
+
+**Please note that we DO NOT provide live support to free users**. You can check the [All-in-One Event Calendar forum here on WordPress.org](https://wordpress.org/support/plugin/all-in-one-event-calendar/), which is the place where community members help one another.  If you need official support from us, consider upgrading to a [paid plan](https://time.ly/pricing/).
+
+Want to know more about other Timely's event software products and use cases? Please check:
+
+Products:
+
+* Timely [event management software](https://time.ly/solutions/event-management-software/)
+* Timely [event calendar software](https://time.ly/solutions/event-calendar-software/)
+* Timely [event registration software](https://time.ly/solutions/event-registration-software/)
+* Timely [event ticketing software](https://time.ly/solutions/event-ticketing-software/)
+* Timely [event booking software](https://time.ly/solutions/event-booking-software/)
+* Timely [online training software](https://time.ly/solutions/online-training-software/)
+* Timely [online school agenda](https://time.ly/solutions/online-school-agenda/)
+* Timely [room scheduling software](https://time.ly/solutions/room-scheduling-software/)
+* Timely [event management software features](https://time.ly/event-management-software-features/)
+* Timely [live demo page](https://time.ly/demo/)
+
+Use Cases:
+
+* Timely [event management software for schools, colleges and universities](https://time.ly/markets/schools-colleges-universities/)
+* Timely [event management software for media and event promoters](https://time.ly/markets/media-event-promoters/)
+* Timely [event management software for event venues, theatres & museums](https://time.ly/markets/event-venues-theatres-museums/)
+* Timely [event management software for corporate learning](https://time.ly/markets/corporate-learning/)
+* Timely [event management software for job and career fairs](https://time.ly/markets/event-management-software-for-job-career-fairs/)
+* Timely [event management software for investor relations](https://time.ly/markets/investor-relations/)
+* Timely [event management software for parks & recreation](https://time.ly/markets/parks-recreation/)
+* Timely [event management software for destination marketing organizations](https://time.ly/markets/destination-marketing-organizations/)
+* Timely [event management software for nonprofit & charities](https://time.ly/markets/nonprofits-charities/)
+* Timely [event management software for churches & religious organizations](https://time.ly/markets/churches-and-religious-organizations/)
+ 
+Still have questions about our event management software solutions? Please [contact us](https://time.ly/contact/).
+
+= ⚖️ Legal =
+
+By creating or activating an account and/or embedding the code into a website, you agree to Timely's [Terms of Service](https://time.ly/terms-of-service/) and policies. Please note that to provide you with our services, we sometimes send you service announcements and other information. To learn more about what personal data we collect from you and how we use it, please check our [Privacy Policy](https://time.ly/privacy-policy/).
 
 == Frequently Asked Questions ==
 
-[**Learn more with our detailed documentation »**](https://time.ly/support/)
+= Where can I get support for my Timely All-in-One Events Calendar WordPress plugin? =
+WordPress clients can access the plugin written documentation on our [Help Center](https://help.time.ly/all-in-one-event-calendar-wp-plugin-guide-v3/).
 
-= Shortcodes =
+You can also check our [WordPress.org forum](https://wordpress.org/support/plugin/all-in-one-event-calendar/), where community members help one another. Please read our sticky post and search the forum for previous support threads BEFORE posting your question.
+
+If you need official and timely support from us, consider upgrading to a paid plan. As a paying client, you will get ticket-based support via email. Please [contact us](https://time.ly/contact/) to learn more.
+
+= Can I export events from my Timely calendar? =
+Yes! With [Timely All-in-One Event Calendar](https://time.ly/solutions/all-in-one-events-calendar-wordpress-plugin/), you can easily export events from your events calendar by downloading an XML or ICS file directly from the public view of your calendar.
+
+= What add-ons are available for the Timely All-in-One Event Calendar WP Plugin? =
+The following add-ons are available for the Timely WordPress events calendar widget:
+
+* **RSVP / Ticketing**: for managing RSVPs and selling tickets for events.
+
+= How do I collect RSPVs or sell event tickets from my Timely calendar? =
+If you want to collect registrations or sell tickets to your events directly from your events calendar without intermediaries, you can use our RSVP / Ticketing Add-on. It integrates with PayPal, Stripe, Square and other payment gateways so you can easily collect payments and take control of your ticket sales. Please [contact us](https://time.ly/contact/) to learn more.
+
+= Can I have more than one Timely events calendar on my website? =
+Unfortunately, no. You can only have one Timely free calendar of events per website. If you need more calendars, you will need to upgrade to a paying account. Please [contact us](https://time.ly/contact/) to learn more.
+
+= Can I import events to my Timely calendar? =
+Our Import Events feature allows you to import events with ease. You can either add a URL feed or upload a CSV or an ICS file to import events from Google Calendar, Apple iCal, MS Outlook and any other system that accepts iCalendar (.ics) feeds. You can even set it up for AUTOMATICALLY import events from other calendars and online sources. In addition, our Event Finder feature allows you to find events from our network of events calendars, and import them into your calendar. If you are an event aggregator, these tools will be perfect for you!
+
+These features are available on paid plans only. [contact us](https://time.ly/contact/) to learn more.
+
+= How can I allow people to submit events to my Timely events calendar? =
+Our Event Submission Form feature allows your website visitors to submit events to your calendar. As the calendar owner, you have full publishing control and can decide whether event submissions are approved automatically, or just after being approved by you. This feature is available on paid plans only. Please [contact us](https://time.ly/contact/) to learn more.
+
+= What other event management software solutions does Timely offer? =
+[Timely All-in-One Events Calendar WordPress plugin](https://time.ly/solutions/all-in-one-events-calendar-wordpress-plugin/) is a simple events calendar widget made for freelancers and individual entrepreneurs, who are just starting their event business and need a free calendar of events for their website.
+
+For small, medium and larger organizations that need more advanced tools, Timely offers a myriad of event management software solutions. Our paid solutions include:
+
+* Timely [event management software](https://time.ly/solutions/event-management-software/)
+* Timely [event calendar software](https://time.ly/solutions/event-calendar-software/)
+* Timely [event registration software](https://time.ly/solutions/event-registration-software/)
+* Timely [event ticketing software](https://time.ly/solutions/event-ticketing-software/)
+* Timely [event booking software](https://time.ly/solutions/event-booking-software/)
+* Timely [online training software](https://time.ly/solutions/online-training-software/)
+* Timely [online school agenda](https://time.ly/solutions/online-school-agenda/)
+* Timely [room scheduling software](https://time.ly/solutions/room-scheduling-software/)
+
+= How do I get more advanced event management features for my Timely Events Calendar? =
+Timely offers the most comprehensive and flexible event management platform available in the market. Check out all our [amazing features](https://time.ly/event-management-software-features/), and [contact us](https://time.ly/contact/) to add them to your Timely event calendar.
+
+= Shortcode version 3.0.0 (new platform) =
+
+* [timely-calendar]
+
+= Shortcodes version 3.0.0 (old platform), 2.6.8 or older (deprecated / superseded) =
 
 * Monthly view: **[ai1ec view="monthly"]**
 * Weekly view: **[ai1ec view="weekly"]**
@@ -115,10 +218,14 @@ You can help translate by going to [https://translate.time.ly](https://translate
 
 * Hide filter toolbar: **[ai1ec display_filters="false"]**
 * Limit number of events per page: **[ai1ec events_limit="5"]**
-* Select a different start date: 
+* Select a different start date:
 **[ai1ec exact_date="5-10-2017"]**
 
 == Changelog ==
+
+= Version 3.0.0 =
+* PHP version updated to 7.2 or higher.
+* New event management platform for new plugin installs.
 
 = Version 2.6.8 =
 * Fixed broken pages after updating to WordPress 5.5
@@ -327,7 +434,7 @@ You can help translate by going to [https://translate.time.ly](https://translate
 = Version 2.5.0 =
 * Changed: ICS feeds are now handled through API
 * Added support for Timely Ticketing to the tickets button
-* Fixed: Error was popping up when clicking on "Your Saved Events" button 
+* Fixed: Error was popping up when clicking on "Your Saved Events" button
 * Fixed: Tickets button were appearing twice on Month view popup
 * Fixed: A few users were getting error while trying to upgrade plugin
 
@@ -362,7 +469,6 @@ You can help translate by going to [https://translate.time.ly](https://translate
 * Fixed: Image does not appear in the month view pop-up window.
 * Fixed: Ticketing Beta - Every ticket type dropdown defaults to 1 instead of the actual minimum.
 * Fixed: Ticketing Beta - Ticket Types got misaligned when one ticket is closed.
-* If you want to see the release notes for Add-ons, then please visit [this page](https://time.ly/document/release-notes).
 
 = Version 2.3.11 =
 * New: Now the calendar is set up automatically when you install the plug-in for the first time
@@ -379,7 +485,7 @@ You can help translate by going to [https://translate.time.ly](https://translate
 * Updated: Increased the "Medium size" for the images of imported events from 300px to 600px
 
 = Version 2.3.10 =
-* Initial ticketing implementation - If you want to be a Beta user for this exciting new feature, then please visit [this page](https://time.ly/ticketing_beta).
+* Initial ticketing implementation
 
 = Version 2.3.9 =
 * Improved JS caching stability in different environments
@@ -448,7 +554,7 @@ recurring event
 JavaScript
 * Rendering proper page while calendar is not fully configured
 * Made it possible for 3rd party developers to add buttons to event
-details page .ics feeds can now be edited. 
+details page .ics feeds can now be edited.
 * Made it possible for 3rd party developers to add elements to ICS feeds
 import screen
 * Made it possible to filter by author
@@ -626,37 +732,37 @@ widget area with certain themes
 them during activation
 * Showing add-ons available for All-in-One Event Calendar in a
 dedicated page
-* Fixed issue with unescaped HTML in the widget title 
-* Fixed wording - using proper WordPress name wherever applicable 
+* Fixed issue with unescaped HTML in the widget title
+* Fixed wording - using proper WordPress name wherever applicable
 * Fixed issue with double-escaped HTML in Agenda view (strange
-characters in titles) 
+characters in titles)
 * Fixed invalid constant use which was causing some strings to be not
-translatable 
-* Fixed event title rendering in a widget 
-* Fixed span class appearing on all day events in the sidebar widget 
-* Fixed imported all day events appearing a month ahead in Month View 
+translatable
+* Fixed event title rendering in a widget
+* Fixed span class appearing on all day events in the sidebar widget
+* Fixed imported all day events appearing a month ahead in Month View
 * Fixed an issue where base64 fonts caused errors with older versions of
-PHP 
-* Fixed an issue with ics feeds importing past events 
-* Fixed an issue where theme options need to be resaved after update 
-* Fixed an issue where font awesome icons were missing in Firefox 
-* Fixed a conflict with sortcodes and front end rendering 
-* Fixed an issue where an event missing a timezone caused a fatal error 
-* Fixed a styling issue with Select2 fields on the settings page 
+PHP
+* Fixed an issue with ics feeds importing past events
+* Fixed an issue where theme options need to be resaved after update
+* Fixed an issue where font awesome icons were missing in Firefox
+* Fixed a conflict with sortcodes and front end rendering
+* Fixed an issue where an event missing a timezone caused a fatal error
+* Fixed a styling issue with Select2 fields on the settings page
 * Fixed an issue where the post your event button did not display on a
-calendar set with shortcode 
+calendar set with shortcode
 * Fixed an issue where some calendars displayed extra space below
-Posterboard 
-* Fixed an issue where certain feeds would create double images 
-* Fixed a navigation issue with a calendar embedded by shortcode 
-* Fixed issue where Agenda View displaed multiple images 
+Posterboard
+* Fixed an issue where certain feeds would create double images
+* Fixed a navigation issue with a calendar embedded by shortcode
+* Fixed issue where Agenda View displaed multiple images
 * Fixed an issue where clicking a link in js widgets did not open the
-modal 
-* Fixed issue where clearing filters changed spacing 
-* Fixed issue where clearing filters reset the calendar to default view 
-* Fixed issue where in some cases views would not change 
+modal
+* Fixed issue where clearing filters changed spacing
+* Fixed issue where clearing filters reset the calendar to default view
+* Fixed issue where in some cases views would not change
 * Fixed issue where featured images were missing from Streamview in
-Firefox 
+Firefox
 * Fixed issue where the timezone of events imported from Google was set
 to UTC
 
@@ -1010,8 +1116,7 @@ before they end
 
 = Version 1.9.5-standard =
 * Fixed an issue where the time of events, occurring on or after DST
-change, has incorrect offset (see
-http://help.time.ly/customer/portal/articles/1038017 for more details)
+change, has incorrect offset
 * Fixed an issue where subscribed .ics feeds are being flushed rather
 than being refreshed during automatic cron update
 * Fixed incorrect formatting of events' end date/times
@@ -1346,20 +1451,30 @@ WordPress Dashboard.
 to configure it.
 4. Log in or sign up for a Timely account.
 
-Your WordPress site and Timely account will be connected and then you're ready to get started with Timely's All-in-One Event Calendar.
+Your WordPress site and Timely account will be connected and then you're ready to get started with Timely's All-in-One Events Calendar.
 
 == Screenshots ==
 
-1. Posterboard view
-2. Add New Event page
-3. Settings page
-4. Month view
-5. Event details page
+1. Mobile view
+2. Month view
+3. Week view
+4. Agenda view
+5. Single event details with RSVP/Ticket Add-on
+6. Event calendar dashboard
+7. General settings
+8. Design settings
+9. Embed code settings
+10. Events admin creation
+11. Filters: categories, tags, venues and organizers
+12. RSVP/Ticket Add-On: Reports for Tickets & Invoices
 
 == Upgrade Notice ==
 
+= 3.0 =
+PHP version updated to 7.2 or higher, and new event management platform for new plugin installs.
+
 = 2.0 =
-I you believe you are missing functionality, please visit our site and
+If you believe you are missing functionality, please visit our site and
 download the corresponding Add-on.
 
 = 1.0.3 =

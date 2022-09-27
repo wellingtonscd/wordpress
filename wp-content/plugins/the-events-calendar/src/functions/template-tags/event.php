@@ -109,6 +109,16 @@ if ( ! function_exists( 'tribe_get_event' ) ) {
 			return null;
 		}
 
+		if ( ! isset( $cache['option_start_of_week'] ) ) {
+			$cache['option_start_of_week'] = get_option( 'start_of_week' );
+		}
+		if ( ! isset( $cache['option_timezone_string'] ) ) {
+			$cache['option_timezone_string'] = get_option( 'timezone_string' );
+		}
+		if ( ! isset( $cache['option_gmt_offset'] ) ) {
+			$cache['option_gmt_offset'] = get_option( 'gmt_offset' );
+		}
+
 		$key_fields = [
 			$cache_post->ID,
 			$cache_post->post_modified,
@@ -117,9 +127,9 @@ if ( ! function_exists( 'tribe_get_event' ) ) {
 			// We must include options on cache key, because options influence the hydrated data on the Event object.
 			wp_json_encode( Tribe__Settings_Manager::get_options() ),
 			wp_json_encode( [
-				get_option( 'start_of_week' ),
-				get_option( 'timezone_string' ),
-				get_option( 'gmt_offset' )
+				$cache['option_start_of_week'],
+				$cache['option_timezone_string'],
+				$cache['option_gmt_offset']
 			] ),
 			$output,
 			$filter,
@@ -128,11 +138,23 @@ if ( ! function_exists( 'tribe_get_event' ) ) {
 		$cache_key = 'tribe_get_event_' . md5( wp_json_encode( $key_fields ) );
 
 		if ( ! $force ) {
-			$post  = $cache->get( $cache_key, Tribe__Cache_Listener::TRIGGER_SAVE_POST );
+			$initial_unserialize_callback = ini_get( 'unserialize_callback_func' );
+			// Prevent warning from happening.
+			ini_set( 'unserialize_callback_func', '__return_false' );
+
+			$post = $cache->get( $cache_key, Tribe__Cache_Listener::TRIGGER_SAVE_POST );
+
+			if ( ! $post instanceof WP_Post ) {
+				// If not a WP_Post we reset value, so it ignores cache.
+				$post = false;
+			}
+
+			// Revert to the original value.
+			ini_set( 'unserialize_callback_func', $initial_unserialize_callback );
 		}
 
 		if ( false === $post ) {
-			$post = Event::from_post( $event )->to_post( $output, $filter );
+			$post = Event::from_post( $event )->to_post( OBJECT, $filter );
 
 			if ( empty( $post ) ) {
 				return null;
@@ -176,8 +198,14 @@ if ( ! function_exists( 'tribe_get_event' ) ) {
 		 */
 		$post = apply_filters( 'tribe_get_event_after', $post, $event, $output, $filter );
 
-		if ( OBJECT !== $output ) {
-			$post = ARRAY_A === $output ? (array) $post : array_values( (array) $post );
+		switch ( $output ) {
+			case ARRAY_A:
+				return (array) $post;
+			case ARRAY_N:
+				return array_values( (array) $post );
+			case OBJECT:
+			default;
+				return $post;
 		}
 
 		return $post;

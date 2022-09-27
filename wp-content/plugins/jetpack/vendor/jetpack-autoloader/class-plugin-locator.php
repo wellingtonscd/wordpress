@@ -5,7 +5,7 @@
  * @package automattic/jetpack-autoloader
  */
 
-namespace Automattic\Jetpack\Autoloader\jp84939e330244e4e15279abc789e679bf;
+namespace Automattic\Jetpack\Autoloader\jpf11009ded9fc4592b6a05b61ce272b3c_jetpackⓥ11_3_2;
 
  // phpcs:ignore
 
@@ -59,8 +59,8 @@ class Plugin_Locator {
 	 * @return array $plugin_paths The list of absolute paths we've found.
 	 */
 	public function find_using_option( $option_name, $site_option = false ) {
-		$raw = $site_option ? get_site_option( $option_name, array() ) : get_option( $option_name, array() );
-		if ( empty( $raw ) ) {
+		$raw = $site_option ? get_site_option( $option_name ) : get_option( $option_name );
+		if ( false === $raw ) {
 			return array();
 		}
 
@@ -88,6 +88,7 @@ class Plugin_Locator {
 			return array();
 		}
 
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Validated just below.
 		$action = isset( $_REQUEST['action'] ) ? wp_unslash( $_REQUEST['action'] ) : false;
 		if ( ! in_array( $action, $allowed_actions, true ) ) {
 			return array();
@@ -101,6 +102,7 @@ class Plugin_Locator {
 					break;
 				}
 
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Validated by convert_plugins_to_paths.
 				$plugin_slugs[] = wp_unslash( $_REQUEST['plugin'] );
 				break;
 
@@ -110,6 +112,7 @@ class Plugin_Locator {
 					break;
 				}
 
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Validated by convert_plugins_to_paths.
 				$plugin_slugs = wp_unslash( $_REQUEST['checked'] );
 				break;
 		}
@@ -128,6 +131,10 @@ class Plugin_Locator {
 	 * @return string[]
 	 */
 	private function convert_plugins_to_paths( $plugins ) {
+		if ( ! is_array( $plugins ) || empty( $plugins ) ) {
+			return array();
+		}
+
 		// We're going to look for plugins in the standard directories.
 		$path_constants = array( WP_PLUGIN_DIR, WPMU_PLUGIN_DIR );
 

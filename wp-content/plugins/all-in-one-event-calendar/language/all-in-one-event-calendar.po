@@ -1,16 +1,209 @@
-# Copyright (C) 2020 All-in-One Event Calendar by Time.ly
+# Copyright (C) 2021 All-in-One Event Calendar by Time.ly
 # This file is distributed under the same license as the All-in-One Event Calendar by Time.ly package.
 msgid ""
 msgstr ""
-"Project-Id-Version: All-in-One Event Calendar by Time.ly 2.6.8\n"
+"Project-Id-Version: All-in-One Event Calendar by Time.ly 3.0.0\n"
 "Report-Msgid-Bugs-To: http://wordpress.org/tag/all-in-one-event-calendar\n"
-"POT-Creation-Date: 2020-10-09 13:19:53+00:00\n"
+"POT-Creation-Date: 2021-07-07 22:21:53+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2020-10-09 13:19+0000\n"
+"PO-Revision-Date: 2021-07-07 22:21+0000\n"
 "Last-Translator: Timely <support@time.ly>\n"
 "Language-Team:\n"
+
+#: apiki/src/Providers/Menus/Timely.php:22
+#: apiki/src/Providers/Menus/Timely.php:23
+msgid "Time.ly"
+msgstr "Time.ly"
+
+#: apiki/src/Providers/Menus/Timely.php:49
+#: apiki/src/Providers/Menus/Timely.php:50 app/view/admin/settings.php:207
+msgid "Sign In"
+msgstr "Sign In"
+
+#. translators: %1$s: plugin version, %2$s required PHP version
+#. translators: %1$s: plugin version, %2$s required wp version
+#: apiki/src/Providers/Menus/Timely.php:179
+#: apiki/src/Providers/Menus/Timely.php:186
+msgid ""
+"Timely %1$s requires PHP %2$s or higher. Please upgrade WordPress first."
+msgstr ""
+"Timely %1$s requires PHP %2$s or higher. Please upgrade WordPress first."
+
+#: apiki/vendor/apiki/wpsteak/src/Repositories/AbstractTerm.php:50
+msgid "Termo invalido."
+msgstr "Termo invalido."
+
+#: apiki/vendor/apiki/wpsteak/src/Repositories/AbstractTerm.php:67
+msgid "Taxonomia não existe."
+msgstr "Taxonomia não existe."
+
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Common.php:35
+msgid "Todas %s"
+msgid_plural "Todos %s"
+msgstr[0] "Todas %s"
+msgstr[1] "Todos %s"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Common.php:37
+msgid "Editar %s"
+msgstr "Editar %s"
+
+#. translators: %s label singular lower.
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Common.php:39
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:39
+msgid "Ver %s"
+msgstr "Ver %s"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Common.php:41
+msgid "Adicionar nova %s"
+msgid_plural "Adicionar novo %s"
+msgstr[0] "Adicionar nova %s"
+msgstr[1] "Adicionar novo %s"
+
+#. translators: %s label singular.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Common.php:43
+msgid "%s pai:"
+msgstr "%s pai:"
+
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Common.php:45
+msgid "Buscar %s"
+msgstr "Buscar %s"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Common.php:47
+msgid "Nenhuma %s encontrada."
+msgid_plural "Nenhum %s encontrado."
+msgstr[0] "Nenhuma %s encontrada."
+msgstr[1] "Nenhum %s encontrado."
+
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:35
+msgid "Adicionar nova"
+msgid_plural "Adicionar novo"
+msgstr[0] "Adicionar nova"
+msgstr[1] "Adicionar novo"
+
+#. translators: %s label singular female lower; %s label singular male lower;
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:37
+msgid "Nova %s"
+msgid_plural "Novo %s"
+msgstr[0] "Nova %s"
+msgstr[1] "Novo %s"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:41
+msgid "Nenhuma %s encontrada na Lixeira."
+msgid_plural "Nenhum %s encontrado na Lixeira."
+msgstr[0] "Nenhuma %s encontrada na Lixeira."
+msgstr[1] "Nenhum %s encontrado na Lixeira."
+
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:43
+msgid "Arquivos de %s"
+msgstr "Arquivos de %s"
+
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:45
+msgid "Atributos de %s"
+msgstr "Atributos de %s"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:47
+msgid "Inserir na %s"
+msgid_plural "Inserir no %s"
+msgstr[0] "Inserir na %s"
+msgstr[1] "Inserir no %s"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:49
+msgid "Carregado para esta %s"
+msgid_plural "Carregado para este %s"
+msgstr[0] "Carregado para esta %s"
+msgstr[1] "Carregado para este %s"
+
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:50
+msgid "Imagem destacada"
+msgstr "Imagem destacada"
+
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:51
+msgid "Definir imagem destacada"
+msgstr "Definir imagem destacada"
+
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:52
+msgid "Remover imagem destacada"
+msgstr "Remover imagem destacada"
+
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:53
+msgid "Usar como imagem destacada"
+msgstr "Usar como imagem destacada"
+
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:55
+msgid "Filtrar lista de %s"
+msgstr "Filtrar lista de %s"
+
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:57
+msgid "Navegação da lista de %s"
+msgstr "Navegação da lista de %s"
+
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/PostType.php:59
+msgid "Lista de %s"
+msgstr "Lista de %s"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Taxonomy.php:36
+msgid "Atualizar %s"
+msgstr "Atualizar %s"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Taxonomy.php:38
+msgid "Nome da nova %s"
+msgid_plural "Nome do novo %s"
+msgstr[0] "Nome da nova %s"
+msgstr[1] "Nome do novo %s"
+
+#. translators: %s label singular.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Taxonomy.php:40
+msgid "%s pai"
+msgstr "%s pai"
+
+#. translators: %s label singular.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Taxonomy.php:42
+msgid "%s populares"
+msgstr "%s populares"
+
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Taxonomy.php:44
+msgid "Separe as %s com virgulas"
+msgid_plural "Separe os %s com virgulas"
+msgstr[0] "Separe as %s com virgulas"
+msgstr[1] "Separe os %s com virgulas"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Taxonomy.php:46
+msgid "Adicionar ou remover %s"
+msgstr "Adicionar ou remover %s"
+
+#. translators: %s label plural lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Taxonomy.php:48
+msgid "Escolher entre as %s mais usadas"
+msgid_plural "Escolher entre os %s mais usados"
+msgstr[0] "Escolher entre as %s mais usadas"
+msgstr[1] "Escolher entre os %s mais usados"
+
+#. translators: %s label singular lower.
+#: apiki/vendor/apiki/wpsteak/src/Services/Labels/Taxonomy.php:50
+msgid "Voltar para as %s"
+msgid_plural "Voltar para os %s"
+msgstr[0] "Voltar para as %s"
+msgstr[1] "Voltar para os %s"
 
 #: app/controller/extension-license.php:53 app/view/admin/add-ons.php:26
 #: app/view/admin/add-ons.php:27
@@ -1355,10 +1548,6 @@ msgstr "Sign Out"
 #: app/view/admin/settings.php:206
 msgid "Sign Up"
 msgstr "Sign Up"
-
-#: app/view/admin/settings.php:207
-msgid "Sign In"
-msgstr "Sign In"
 
 #: app/view/admin/settings.php:208
 msgid "Calendar Type:"

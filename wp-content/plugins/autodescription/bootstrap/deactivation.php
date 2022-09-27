@@ -9,7 +9,7 @@ namespace The_SEO_Framework\Bootstrap;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -41,7 +41,7 @@ _deactivation_unset_options_autoload();
  */
 function _deactivation_unset_options_autoload() {
 
-	$the_seo_framework = \the_seo_framework();
+	$the_seo_framework = \tsf();
 
 	if ( $the_seo_framework->loaded ) {
 		$options = $the_seo_framework->get_all_options();
@@ -52,7 +52,7 @@ function _deactivation_unset_options_autoload() {
 		\remove_all_filters( "sanitize_option_{$setting}" );
 
 		$temp_options = $options;
-		//? Write a small difference, so the change will be forwarded to the database.
+		// Write a small difference, so the change will be forwarded to the database.
 		if ( \is_array( $temp_options ) )
 			$temp_options['update_buster'] = (int) time();
 

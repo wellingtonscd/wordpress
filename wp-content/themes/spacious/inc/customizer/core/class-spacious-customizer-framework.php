@@ -122,6 +122,9 @@ class Spacious_Customizer_FrameWork {
 		require dirname(__FILE__) . '/custom-controls/sortable/class-spacious-sortable-control.php';
 		require dirname(__FILE__) . '/custom-controls/group/class-spacious-group-control.php';
 		require dirname(__FILE__) . '/custom-controls/title/class-spacious-title-control.php';
+		require dirname(__FILE__) . '/custom-controls/dimensions/class-spacious-dimensions-control.php';
+		require dirname(__FILE__) . '/custom-controls/upgrade/class-spacious-upgrade-control.php';
+		require dirname(__FILE__) . '/custom-controls/fontawesome/class-spacious-fontawesome-control.php';
 
 	}
 
@@ -138,6 +141,48 @@ class Spacious_Customizer_FrameWork {
 		$wp_customize->register_section_type( 'Spacious_WP_Customize_Separator' );
 		$wp_customize->register_panel_type( 'Spacious_WP_Customize_Panel' );
 		$wp_customize->register_section_type( 'Spacious_Upsell_Section' );
+
+		// Overrides sanitize callback if theme supports custom-background.
+		if ( current_theme_supports( 'custom-background' ) ) {
+
+			remove_filter(
+				'customize_sanitize_background_color',
+				$wp_customize->get_setting( 'background_color' )->sanitize_callback
+			);
+
+			$wp_customize->get_setting( 'background_color' )->sanitize_callback = array(
+				'Spacious_Customizer_FrameWork_Sanitizes',
+				'sanitize_alpha_color',
+			);
+
+			add_filter(
+				'customize_sanitize_background_color',
+				array( 'Spacious_Customizer_FrameWork_Sanitizes', 'sanitize_alpha_color' ),
+				10,
+				2
+			);
+		}
+
+		// Overrides sanitize callback if theme supports custom-header.
+		if ( current_theme_supports( 'custom-header' ) ) {
+
+			remove_filter(
+				'customize_sanitize_header_textcolor',
+				$wp_customize->get_setting( 'header_textcolor' )->sanitize_callback
+			);
+
+			$wp_customize->get_setting( 'header_textcolor' )->sanitize_callback = array(
+				'Spacious_Customizer_FrameWork_Sanitizes',
+				'sanitize_alpha_color',
+			);
+
+			add_filter(
+				'customize_sanitize_header_textcolor',
+				array( 'Spacious_Customizer_FrameWork_Sanitizes', 'sanitize_alpha_color' ),
+				10,
+				2
+			);
+		}
 
 		/**
 		 * Register controls.
@@ -464,6 +509,33 @@ class Spacious_Customizer_FrameWork {
 			)
 		);
 
+		// Dimensions control.
+		Spacious_Customize_Base_Control::add_control(
+			'spacious-dimensions',
+			array(
+				'callback' => 'Spacious_Dimensions_Control',
+			)
+		);
+
+		// Upgrade control.
+		Spacious_Customize_Base_Control::add_control(
+			'spacious-upgrade',
+			array(
+				'callback' => 'Spacious_Upgrade_Control',
+			)
+		);
+
+		// Fontawesome control.
+		Spacious_Customize_Base_Control::add_control(
+			'spacious-fontawesome',
+			array(
+				'callback' => 'Spacious_Fontawesome_Control',
+				'sanitize_callback' => array(
+					'Spacious_Customizer_FrameWork_Sanitizes',
+					'sanitize_radio_select',
+				),
+			)
+		);
 	}
 
 	/**

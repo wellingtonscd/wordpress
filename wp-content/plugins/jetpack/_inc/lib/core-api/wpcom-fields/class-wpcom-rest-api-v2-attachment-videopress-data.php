@@ -2,7 +2,7 @@
 /**
  * Extend the REST API functionality for VideoPress users.
  *
- * @package Jetpack
+ * @package automattic/jetpack
  */
 
 /**
@@ -93,8 +93,11 @@ class WPCOM_REST_API_V2_Attachment_VideoPress_Data extends WPCOM_REST_API_V2_Fie
 	public function get_videopress_data( $attachment_id, $blog_id ) {
 		$info = video_get_info_by_blogpostid( $blog_id, $attachment_id );
 		return array(
-			'guid'   => $info->guid,
-			'rating' => $info->rating,
+			'guid'            => $info->guid,
+			'rating'          => $info->rating,
+			'allow_download'  =>
+				isset( $info->allow_download ) && $info->allow_download ? 1 : 0,
+			'privacy_setting' => ! isset( $info->privacy_setting ) ? VIDEOPRESS_PRIVACY::SITE_DEFAULT : intval( $info->privacy_setting ),
 		);
 	}
 
@@ -168,7 +171,7 @@ class WPCOM_REST_API_V2_Attachment_VideoPress_Data extends WPCOM_REST_API_V2_Fie
 }
 
 if (
-	( method_exists( 'Jetpack', 'is_active' ) && Jetpack::is_active() ) ||
+	( method_exists( 'Jetpack', 'is_connection_ready' ) && Jetpack::is_connection_ready() ) ||
 	( defined( 'IS_WPCOM' ) && IS_WPCOM )
 ) {
 	wpcom_rest_api_v2_load_plugin( 'WPCOM_REST_API_V2_Attachment_VideoPress_Data' );

@@ -4,7 +4,7 @@
  *
  * @since 9.3.0
  *
- * @package Jetpack
+ * @package automattic/jetpack
  */
 
 namespace Automattic\Jetpack\Extensions\AnchorFm;
@@ -62,15 +62,13 @@ function register_extension() {
 function process_anchor_params() {
 	if (
 		! function_exists( 'get_current_screen' )
-		|| is_null( \get_current_screen() )
+		|| \get_current_screen() === null
 	) {
 		return;
 	}
 
-	$current_screen = \get_current_screen();
-	// TODO: Replace `$current_screen->is_block_editor()` with `wp_should_load_block_editor_scripts_and_styles()` that is introduced in WP 5.6.
-	if ( method_exists( $current_screen, 'is_block_editor' ) && ! $current_screen->is_block_editor() ) {
-		// Return early if we are not in the block editor.
+	// Return early if we are not in the block editor.
+	if ( ! wp_should_load_block_editor_scripts_and_styles() ) {
 		return;
 	}
 
@@ -82,7 +80,7 @@ function process_anchor_params() {
 	// phpcs:disable WordPress.Security.NonceVerification.Recommended
 	$podcast_id  = isset( $_GET['anchor_podcast'] ) ? sanitize_text_field( wp_unslash( $_GET['anchor_podcast'] ) ) : null;
 	$episode_id  = isset( $_GET['anchor_episode'] ) ? sanitize_text_field( wp_unslash( $_GET['anchor_episode'] ) ) : null;
-	$spotify_url = isset( $_GET['spotify_url'] ) ? wp_unslash( $_GET['spotify_url'] ) : null;
+	$spotify_url = isset( $_GET['spotify_url'] ) ? esc_url_raw( wp_unslash( $_GET['spotify_url'] ) ) : null;
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 	$data = array(
@@ -114,7 +112,7 @@ function process_anchor_params() {
 			}
 
 			if ( ! empty( $episode_id ) ) {
-				$track = $podcast_helper->get_track_data( $episode_id );
+				$track = $podcast_helper->get_track_data( $episode_id, true );
 				if ( ! \is_wp_error( $track ) ) {
 					update_post_meta( $post->ID, 'jetpack_anchor_episode', $track['guid'] );
 
@@ -141,6 +139,21 @@ function process_anchor_params() {
 							),
 						);
 					}
+				} else {
+					$retry_url         = add_query_arg(
+						array(
+							'anchor_episode' => $episode_id,
+							'anchor_podcast' => $podcast_id,
+							'spotify_url'    => $valid_spotify_url ? rawurlencode( $spotify_url ) : false,
+						),
+						admin_url( 'post-new.php' )
+					);
+					$data['actions'][] = array(
+						'create-episode-error-notice',
+						array(
+							'retry_url' => esc_url_raw( $retry_url ),
+						),
+					);
 				}
 			}
 		}

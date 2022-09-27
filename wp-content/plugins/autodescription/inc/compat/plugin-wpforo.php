@@ -6,15 +6,15 @@
 
 namespace The_SEO_Framework;
 
-\defined( 'THE_SEO_FRAMEWORK_PRESENT' ) and \the_seo_framework()->_verify_include_secret( $_secret ) or die;
+\defined( 'THE_SEO_FRAMEWORK_PRESENT' ) and \tsf()->_verify_include_secret( $_secret ) or die;
 
 \add_action( 'the_seo_framework_init', __NAMESPACE__ . '\\_wpforo_fix_page' );
 /**
  * Initializes wpForo page fixes.
  *
  * @since 2.9.2
- * @since 3.1.2 : 1. Now disables HTML output when wpForo SEO is enabled.
- *                2. Now disables title override when wpForo Title SEO is enabled.
+ * @since 3.1.2 1. Now disables HTML output when wpForo SEO is enabled.
+ *              2. Now disables title override when wpForo Title SEO is enabled.
  */
 function _wpforo_fix_page() {
 
@@ -56,7 +56,7 @@ function _wpforo_fix_page() {
  * @access private
  */
 function _wpforo_disable_html_output() {
-	\remove_action( 'wp_head', [ \the_seo_framework(), 'html_output' ], 1 );
+	\remove_action( 'wp_head', [ \tsf(), 'html_output' ], 1 );
 }
 
 /**
@@ -70,7 +70,7 @@ function _wpforo_disable_html_output() {
  * @param \WP_Post $post          Post object.
  * @return string
  */
-function _wpforo_filter_canonical_url( $canonical_url, $post ) {
+function _wpforo_filter_canonical_url( $canonical_url, $post ) { // phpcs:ignore, VariableAnalysis.CodeAnalysis.VariableAnalysis
 	return \function_exists( '\\wpforo_get_request_uri' ) ? \wpforo_get_request_uri() : $canonical_url;
 }
 
@@ -91,7 +91,7 @@ function _wpforo_filter_canonical_url( $canonical_url, $post ) {
 function _wpforo_filter_pre_title( $title = '', $args = null ) {
 
 	if ( null === $args ) {
-		$wpforo_title = \wpforo_meta_title( '' ); //= Either &$title or [ $title, ... ];
+		$wpforo_title = \wpforo_meta_title( '' ); // This is either &$title or [ $title, ... ];
 		$title        = \is_array( $wpforo_title ) && ! empty( $wpforo_title[0] ) ? $wpforo_title[0] : $title;
 	}
 

@@ -29,17 +29,44 @@ trait iCal_Data {
 	 *
 	 * @return object
 	 */
-	protected function get_ical_data() {
-		$slug = $this->slug;
+	public function get_ical_data() {
+		$slug         = $this->slug;
+		$display_ical = true;
 
 		/**
 		 * A filter to control whether the "iCal Import" link shows up or not.
 		 *
 		 * @since unknown
 		 *
+		 * @deprecated 5.14.0 Changed to a more generic filter name and deprecated for the new subscribe to calendar links.
+		 *
 		 * @param boolean $show Whether to show the "iCal Import" link; defaults to true.
 		 */
-		$display_ical = apply_filters( 'tribe_events_list_show_ical_link', true );
+		$display_ical = apply_filters_deprecated(
+			'tribe_events_list_show_ical_link',
+			[$display_ical],
+			'5.14.0',
+			'tec_events_show_ical_link',
+			'Changed to a more generic filter name and deprecated for the new subscribe to calendar links, see also tribe_events_{$slug}_show_ical_link below for a view-specific filter.'
+		);
+
+		/**
+		 * A filter to control whether the "iCal Import" link shows up or not.
+		 *
+		 * @since 5.14.0
+		 *
+		 * @param boolean $show Whether to show the "iCal Import" link; defaults to true.
+		 */
+		$display_ical = apply_filters( 'tec_events_show_ical_link', $display_ical );
+
+		/**
+		 * A view-specific filter to control whether the "iCal Import" link shows up or not.
+		 *
+		 * @since 5.14.0
+		 *
+		 * @param boolean $show Whether to show the "iCal Import" link; defaults to true.
+		 */
+		$display_ical = apply_filters( "tec_events_{$slug}_show_ical_link", $display_ical );
 
 		/**
 		 * Allow for customization of the iCal export link "Export Events" text.
@@ -59,19 +86,13 @@ trait iCal_Data {
 
 		$link_title = __( 'Use this to share calendar data with Google Calendar, Apple iCal and other compatible apps', 'the-events-calendar' );
 
-		switch ( $slug ) {
-			case 'month':
-				$url = $this->get_month_view_url();
-				break;
-			default:
-				$url = tribe_get_ical_link();
-				break;
-		}
+		// The View iCalendar export link will be just the View URL with `ical=1` added to it.
+		$url = add_query_arg( [ 'ical' => 1 ], $this->get_url( true ) );
 
-		$ical_data = (object) [
+		$ical_data     = (object) [
 			'display_link' => $display_ical,
 			'link'         => (object) [
-				'url'   => esc_url( $url ),
+				'url' => esc_url( $url ),
 				'text'  => $link_text,
 				'title' => $link_title,
 			],

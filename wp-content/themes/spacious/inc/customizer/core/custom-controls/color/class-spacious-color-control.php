@@ -83,9 +83,7 @@ class Spacious_Color_Control extends Spacious_Customize_Base_Additional_Control 
 	 * Class variables for this control class are available in the `data` JS object;
 	 * export custom variables by overriding {@see WP_Customize_Control::to_json()}.
 	 *
-	 * @see    WP_Customize_Control::print_template()
-	 *
-	 * @access protected
+	 * @see WP_Customize_Control::print_template()
 	 */
 	protected function content_template() {
 		?>
@@ -102,10 +100,10 @@ class Spacious_Color_Control extends Spacious_Customize_Base_Additional_Control 
 
 			<div class="customize-control-content">
 				<input class="spacious-color-picker-alpha color-picker-hex"
-					   type="text"
-					   data-alpha="true"
-					   data-default-color="{{ data.default }}"
-					   value="{{ data.value }}"
+						type="text"
+						data-alpha-enabled="true"
+						data-default-color="{{ data.default }}"
+						value="{{ data.value }}"
 				/>
 			</div>
 		</div>

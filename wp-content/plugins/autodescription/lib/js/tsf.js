@@ -8,7 +8,7 @@
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -41,7 +41,7 @@
  * Holds The SEO Framework values in an object to avoid polluting global namespace.
  *
  * @since 2.2.4
- * @since 4.0.0 Thinned code over more files.
+ * @since 4.0.0 Thinned code, spread over more files.
  *
  * @constructor
  * @param {!jQuery} $ jQuery object.
@@ -111,9 +111,9 @@ window.tsf = function( $ ) {
 	 * @param {String} str The text to decode.
 	 * @return {String} The decoded text.
 	 */
-	const decodeEntities = ( str ) => {
+	const decodeEntities = str => {
 
-		if ( 'string' !== typeof str || ! str.length ) return '';
+		if ( ! str?.length ) return '';
 
 		let map = {
 			'<':  '&#x3C;',
@@ -140,17 +140,17 @@ window.tsf = function( $ ) {
 	 *
 	 * @since 3.0.1
 	 * @since 3.1.2 Now escapes backslashes correctly.
-	 * @since 4.0.0 : 1. Now escapes all backslashes, instead of only double.
-	 *                2. Now escapes forward slashes:
-	 *                   Although unlikely, some HTML parsers may omit the closing " of an attribute,
-	 *                   which may cause the slash to close the HTML tag.
+	 * @since 4.0.0 1. Now escapes all backslashes, instead of only double.
+	 *              2. Now escapes forward slashes:
+	 *                 Although unlikely, some HTML parsers may omit the closing " of an attribute,
+	 *                 which may cause the slash to close the HTML tag.
 	 * @access public
 	 *
 	 * @function
 	 * @param {string} str
 	 * @return {string}
 	 */
-	const escapeString = ( str ) => {
+	const escapeString = str => {
 
 		if ( ! str.length ) return '';
 
@@ -180,7 +180,7 @@ window.tsf = function( $ ) {
 	const ampHTMLtoText = str => str.replace( /&amp;|&#x0{0,3}26;|&#38;/gi, '&' );
 
 	/**
-	 * Removes duplicated spaces in strings.
+	 * Removes duplicated spaces from strings.
 	 *
 	 * @since 3.1.0
 	 * @access public
@@ -189,7 +189,31 @@ window.tsf = function( $ ) {
 	 * @param {string} str
 	 * @return {string}
 	 */
-	const sDoubleSpace = str => str.replace( /\s\s+/g, ' ' );
+	const sDoubleSpace = str => str.replace( /\s{2,}/g, ' ' );
+
+	/**
+	 * Removes line feeds from strings.
+	 *
+	 * @since 4.2.0
+	 * @access public
+	 *
+	 * @function
+	 * @param {string} str
+	 * @return {string}
+	 */
+	const sSingleLine = str => str.replace( /[\x0A\x0B\x0C\x0D]/g, ' ' );
+
+	/**
+	 * Removes line feeds from strings.
+	 *
+	 * @since 4.2.0
+	 * @access public
+	 *
+	 * @function
+	 * @param {string} str
+	 * @return {string}
+	 */
+	 const sTabs = str => str.replace( /\x09/g, ' ' );
 
 	/**
 	 * Gets string length.
@@ -201,7 +225,7 @@ window.tsf = function( $ ) {
 	 * @param {string} str
 	 * @return {number}
 	 */
-	const getStringLength = ( str ) => {
+	const getStringLength = str => {
 		let e,
 			length = 0;
 
@@ -209,9 +233,9 @@ window.tsf = function( $ ) {
 			e = document.createElement( 'span' );
 			e.innerHTML = escapeString( str ).trim();
 			// Trimming can lead to empty child nodes. Test for undefined.
-			if ( 'undefined' !== typeof e.childNodes[0] )
-				length = e.childNodes[0].nodeValue.length;
+			length = e.childNodes?.[0].nodeValue.length || 0;
 		}
+
 		return +length;
 	}
 
@@ -225,7 +249,6 @@ window.tsf = function( $ ) {
 	 * @function
 	 * @param {HTMLSelectElement} element The element to select an item in.
 	 * @param {string}            value   The value of the element ot set the index to.
-	 * @return {undefined}
 	 */
 	const selectByValue = ( element, value ) => {
 
@@ -266,7 +289,7 @@ window.tsf = function( $ ) {
 	 * @param {(object|string|undefined)} response
 	 * @return {(object|undefined)}
 	 */
-	const convertJSONResponse = ( response ) => {
+	const convertJSONResponse = response => {
 
 		let testJSON = response && response.json || void 0,
 			isJSON   = 1 === testJSON;
@@ -276,8 +299,8 @@ window.tsf = function( $ ) {
 
 			try {
 				response = JSON.parse( response );
-				isJSON = true;
-			} catch ( error ) {
+				isJSON   = true;
+			} catch ( e ) {
 				isJSON = false;
 			}
 
@@ -298,9 +321,8 @@ window.tsf = function( $ ) {
 	 *
 	 * @function
 	 * @param {String|Element|jQuery.Element} target
-	 * @return {undefined}
 	 */
-	const setAjaxLoader = ( target ) => {
+	const setAjaxLoader = target => {
 		$( target ).toggleClass( 'tsf-loading' );
 	}
 
@@ -313,7 +335,6 @@ window.tsf = function( $ ) {
 	 * @function
 	 * @param {String|Element|jQuery.Element} target
 	 * @param {Boolean} success
-	 * @return {undefined}
 	 */
 	const unsetAjaxLoader = ( target, success ) => {
 
@@ -338,9 +359,8 @@ window.tsf = function( $ ) {
 	 *
 	 * @function
 	 * @param {String|Element|jQuery.Element} target
-	 * @return {undefined}
 	 */
-	const resetAjaxLoader = ( target ) => {
+	const resetAjaxLoader = target => {
 		$( target ).stop( false, true ).empty().prop( 'class', 'tsf-ajax' ).show();
 	}
 
@@ -354,12 +374,11 @@ window.tsf = function( $ ) {
 	 * @param {string} target
 	 * @param {string} version
 	 * @param {string} replacement
-	 * @return {undefined}
 	 */
 	const deprecatedFunc = ( name, version, replacement ) => {
-		version     = version && ` since The SEO Framework ${version}` || '';
-		replacement = replacement && ` Use ${replacement} instead.` || '';
-		console.warn( `[DEPRECATED]: ${name} is deprecated since${version}.${replacement}` );
+		version     = version ? ` since The SEO Framework ${version}` : '';
+		replacement = replacement ? ` Use ${replacement} instead.` : '';
+		console.warn( `[DEPRECATED]: ${name} is deprecated${version}.${replacement}` );
 	}
 
 	/**
@@ -373,7 +392,6 @@ window.tsf = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initPostboxToggle = () => {
 
@@ -442,7 +460,6 @@ window.tsf = function( $ ) {
 		 *
 		 * @function
 		 * @param {Event} event
-		 * @return {undefined}
 		 */
 		const dismissNotice = event => {
 
@@ -461,10 +478,10 @@ window.tsf = function( $ ) {
 				// Do not inform the user of its completion--it adds a lot to the annoyance.
 				// Instead, rely on keeping the 'count' low!
 				wp.ajax.post(
-					'tsf-dismiss-notice',
+					'tsf_dismiss_notice',
 					{
-						'tsf-dismiss-key': key,
-						'tsf-dismiss-nonce': nonce,
+						tsf_dismiss_key:   key,
+						tsf_dismiss_nonce: nonce,
 					}
 				);
 			}
@@ -481,7 +498,43 @@ window.tsf = function( $ ) {
 		reset();
 	}
 
-	let _debounceNoticeReset = void 0;
+	let _dispatchEvents      = new Set(),
+		_loadedDispatchEvent = false;
+	/**
+	 * Offsets callback to interactive event.
+	 *
+	 * @since 4.2.1
+	 * @access public
+	 *
+	 * @function
+	 * @param {Element} element   The element to dispatch the event upon.
+	 * @param {string}  eventName The event name to trigger. Mustn't be custom.
+	 */
+	const dispatchAtInteractive = ( element, eventName ) => {
+
+		_dispatchEvents.add( [ element, eventName ] );
+
+		if ( ! _loadedDispatchEvent ) {
+			document.body.addEventListener( 'tsf-interactive', _loopDispatchAtInteractive );
+			_loadedDispatchEvent = true;
+		}
+	}
+
+	/**
+	 * Runs callbacks at interactive event.
+	 *
+	 * @since 4.2.0
+	 * @access private
+	 *
+	 * @function
+	 */
+	const _loopDispatchAtInteractive = () => {
+		_dispatchEvents.forEach( ( [ element, eventName ] ) => {
+			element.dispatchEvent( new Event( eventName ) );
+		} );
+	}
+
+	let _debounceNoticeReset;
 	/**
 	 * Invokes notice dismissal listener reset.
 	 *
@@ -494,8 +547,37 @@ window.tsf = function( $ ) {
 		clearTimeout( _debounceNoticeReset );
 		_debounceNoticeReset = setTimeout(
 			() => document.body.dispatchEvent( new CustomEvent( 'tsf-reset-notice-listeners' ) ),
-			100
+			100 // Magic number. Low enough not to cause ignored clicks, high enough not to cause lag.
 		);
+	}
+
+	let _debounceResize,
+		_debounceResizeTrigger,
+	    _throttleResize = false;
+	const _throttleResizeDebounceDelay = 100;
+	/**
+	 * Dispatches tsf-resize event on window.
+	 *
+	 * It fires immediately, after which it's debounced indefinitely until 100ms passed.
+	 * Once debounce is passed, another immediate trigger can happen again.
+	 *
+	 * @since 4.2.0
+	 * @access private
+	 *
+	 * @function
+	 */
+	const _triggerResize = () => {
+
+		clearTimeout( _debounceResize );
+		_debounceResize = setTimeout( () => { _throttleResize = false }, _throttleResizeDebounceDelay );
+
+		if ( _throttleResize ) {
+			clearTimeout( _debounceResizeTrigger );
+			_debounceResizeTrigger = setTimeout( _triggerResize, _throttleResizeDebounceDelay );
+		} else {
+			_throttleResize = true;
+			dispatchEvent( new CustomEvent( 'tsf-resize' ) );
+		}
 	}
 
 	let isInteractive = false;
@@ -595,7 +677,8 @@ window.tsf = function( $ ) {
 
 		// Trigger tsf-interactive event. 'load' might be too late 'cause images are loading (slow 3G...)
 		document.addEventListener( 'load', _triggerInteractive );
-		setTimeout( _triggerInteractive, 100 );
+
+		setTimeout( _triggerInteractive, 100 ); // Magic number. Low enough to be negligible. High enough to let other scripts finish.
 	}
 
 	return Object.assign( {
@@ -607,7 +690,6 @@ window.tsf = function( $ ) {
 		 * @access protected
 		 *
 		 * @function
-		 * @return {undefined}
 		 */
 		load: () => {
 
@@ -638,6 +720,9 @@ window.tsf = function( $ ) {
 				document.addEventListener( "DOMContentLoaded", _doReady );
 				document.addEventListener( "load", _doReady );
 			}
+
+			// Trigger tsf-resize event.
+			window.addEventListener( 'resize', _triggerResize );
 		}
 	}, {
 		stripTags,
@@ -645,6 +730,8 @@ window.tsf = function( $ ) {
 		escapeString,
 		ampHTMLtoText,
 		sDoubleSpace,
+		sSingleLine,
+		sTabs,
 		getStringLength,
 		selectByValue,
 		convertJSONResponse,
@@ -653,6 +740,7 @@ window.tsf = function( $ ) {
 		resetAjaxLoader,
 		deprecatedFunc,
 		triggerNoticeReset,
+		dispatchAtInteractive,
 	}, {
 		l10n
 	} );

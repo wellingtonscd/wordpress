@@ -8,7 +8,7 @@ namespace The_SEO_Framework\Builders\CoreSitemaps;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2020 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -32,11 +32,11 @@ namespace The_SEO_Framework\Builders\CoreSitemaps;
  *
  * @access private
  */
-class Main extends \The_SEO_Framework\Builders\Sitemap {
+class Main extends \The_SEO_Framework\Builders\Sitemap\Main {
 
 	/**
 	 * @since 4.1.2
-	 * @var \The_SEO_Framework\Builders\Sitemap
+	 * @var \The_SEO_Framework\Builders\Sitemap\Main
 	 */
 	private static $instance;
 
@@ -45,7 +45,7 @@ class Main extends \The_SEO_Framework\Builders\Sitemap {
 	 *
 	 * @since 4.1.2
 	 *
-	 * @return \The_SEO_Framework\Builders\Sitemap $instance
+	 * @return \The_SEO_Framework\Builders\Sitemap\Main $instance
 	 */
 	public static function get_instance() {
 		return static::$instance ?: ( static::$instance = new static );
@@ -77,9 +77,8 @@ class Main extends \The_SEO_Framework\Builders\Sitemap {
 	 */
 	public static function _filter_add_provider( $provider, $name ) {
 
-		if ( ! $provider instanceof \WP_Sitemaps_Provider ) {
+		if ( ! $provider instanceof \WP_Sitemaps_Provider )
 			return $provider;
-		}
 
 		switch ( $name ) {
 			case 'posts':
@@ -91,10 +90,9 @@ class Main extends \The_SEO_Framework\Builders\Sitemap {
 			case 'users':
 				// This option is not reversible through means other than filters.
 				// static::$tsf isn't set, because static doesn't require instantiation here.
-				if ( \the_seo_framework()->get_option( 'author_noindex' ) )
+				if ( \tsf()->get_option( 'author_noindex' ) )
 					$provider = null;
 				break;
-
 			default:
 				break;
 		}

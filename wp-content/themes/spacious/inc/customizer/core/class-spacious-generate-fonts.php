@@ -45,7 +45,7 @@ class Spacious_Generate_Fonts {
 
 		if ( ! empty( $font_weight ) && isset( self::$fonts[ $name ] ) ) {
 			foreach ( (array) $font_weight as $variant ) {
-				if ( ! in_array( $variant, self::$fonts[ $name ]['font-weight'] ) ) {
+				if ( ! in_array( $variant, self::$fonts[ $name ]['font-weight'], true ) ) {
 					self::$fonts[ $name ]['font-weight'][] = $variant;
 				}
 			}
@@ -84,6 +84,9 @@ class Spacious_Generate_Fonts {
 
 		foreach ( $font_list as $name => $font ) {
 			if ( ! empty( $name ) && ! isset( $system_fonts[ $name ] ) ) {
+				if ( 'Lato' == $name) {
+					continue;
+				}
 
 				// Add font variants.
 				$google_fonts[ $name ] = $font['font-weight'];
@@ -94,6 +97,12 @@ class Spacious_Generate_Fonts {
 					$font_subset = array_unique( $subset );
 				}
 			}
+		}
+
+		if ( empty( $google_fonts ) ) {
+
+			return;
+
 		}
 
 		$google_font_url = self::google_fonts_url( $google_fonts, $font_subset );
@@ -155,7 +164,7 @@ class Spacious_Generate_Fonts {
 				$font_args['subset'] = rawurlencode( trim( $subsets ) );
 			}
 
-			return add_query_arg( $font_args, $base_url );
+			return add_query_arg( array( $font_args, '&display=swap' ), $base_url );
 		}
 
 		return '';

@@ -168,7 +168,7 @@ class Tribe__Events__Aggregator__Service {
 		 * Allow to filter the variable used to build the URL with `add_query_arg` to insert or change
 		 * values as required.
 		 *
-		 * @since TBD
+		 * @since 5.4.0
 		 *
 		 * @param array<string, mixed> $data     An array with the data to build the URL.
 		 * @param string               $endpoint The endpoint used to construct the URL.
@@ -950,7 +950,7 @@ class Tribe__Events__Aggregator__Service {
 		if ( $is_other_url ) {
 			$limit_type = 'range';
 		} else {
-			$limit_type = tribe_get_option( 'tribe_aggregator_default_import_limit_type', false );
+			$limit_type = tribe_get_option( 'tribe_aggregator_default_import_limit_type', 'count' );
 		}
 
 		/** @var \Tribe__Events__Aggregator__Settings $settings */

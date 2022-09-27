@@ -8,7 +8,7 @@
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2020 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -35,15 +35,6 @@
  * @constructor
  */
 window.tsfTabs = function() {
-
-	/**
-	 * Data property injected by WordPress l10n handler.
-	 *
-	 * @since 4.1.3
-	 * @access public
-	 * @type {(Object<string, *>)|boolean|null} l10n Localized strings
-	 */
-	const l10n = 'undefined' !== typeof tsfTabsL10n && tsfTabsL10n;
 
 	/**
 	 * @since 4.1.3
@@ -96,14 +87,13 @@ window.tsfTabs = function() {
 		const stack      = getStack( stackId );
 		const newContent = document.getElementById( `${target.id}-content` );
 
-		if ( ! newContent.classList.contains( stack.HTMLClasses.activeTabContent ) ) {
-			const allContent = document.querySelectorAll( `.${target.name}-content` );
-
-			allContent && allContent.forEach( element => {
+		if ( newContent && ! newContent.classList.contains( stack.HTMLClasses.activeTabContent ) ) {
+			// Toggle all active content's HTML classes.
+			document.querySelectorAll( `.${target.name}-content` ).forEach( element => {
 				element.classList.remove( stack.HTMLClasses.activeTabContent );
 			} );
 
-			newContent && newContent.classList.add( stack.HTMLClasses.activeTabContent );
+			newContent.classList.add( stack.HTMLClasses.activeTabContent );
 		}
 
 		document.getElementById( target.id ).dispatchEvent( stack.tabToggledEvent );
@@ -125,6 +115,8 @@ window.tsfTabs = function() {
 		const cacheId = target.name;
 		const stack   = getStack( stackId );
 
+		// TODO make this a public API, and apply to media.js. and tsf.resetAjaxLoader et al.?
+		// Also add show/hide? -> new tsfUI file? tsfUI.fadeIn( element )
 		const fadeOutTimeout = 125;
 		const fadeInTimeout  = 175;
 		const fadeCSS        = {
@@ -140,8 +132,7 @@ window.tsfTabs = function() {
 				animationDuration:       `${fadeOutTimeout}ms`,
 				animationTimingFunction: 'cubic-bezier(.54,.12,.90,.60)',
 			}
-		};
-
+		}
 		const fadeIn  = element => { for ( const prop in fadeCSS.fadeIn ) element.style[ prop ] = fadeCSS.fadeIn[ prop ] };
 		const fadeOut = element => { for ( const prop in fadeCSS.fadeOut ) element.style[ prop ] = fadeCSS.fadeOut[ prop ] };
 
@@ -170,7 +161,7 @@ window.tsfTabs = function() {
 			await new Promise( _resolve => setTimeout( _resolve, fadeInTimeout * 2/3 ) );
 
 			return testTab(); // do not pass newContent!
-		};
+		}
 		const testTab = async () => {
 			// Regain this value from a new query, for the toggle's target-cache might've changed.
 			let newContent = document.getElementById( `${_toggleCache.get( 'target' ).get( cacheId )}-content` );
@@ -349,7 +340,6 @@ window.tsfTabs = function() {
 		 * @access protected
 		 *
 		 * @function
-		 * @return {undefined}
 		 */
 		load: () => {
 			_toggleCache.set( 'promises', new Map() );
@@ -365,8 +355,6 @@ window.tsfTabs = function() {
 		toggleTo,
 		getStack,
 		initStack,
-	}, {
-		l10n,
 	} );
 }();
 window.tsfTabs.load();

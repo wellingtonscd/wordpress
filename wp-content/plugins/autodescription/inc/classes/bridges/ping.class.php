@@ -8,7 +8,7 @@ namespace The_SEO_Framework\Bridges;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -24,6 +24,8 @@ namespace The_SEO_Framework\Bridges;
  */
 
 \defined( 'THE_SEO_FRAMEWORK_PRESENT' ) or die;
+
+use function \The_SEO_Framework\memo;
 
 /**
  * Pings search engines.
@@ -45,7 +47,7 @@ final class Ping {
 	 *
 	 * @since 4.0.0
 	 * @since 4.1.0 Now returns whether the cron engagement was successful.
-	 * @since 4.1.2 Now registers before and after cron hooks. They should run subsequential when successful.
+	 * @since 4.1.2 Now registers before and after cron hooks. They should run subsequentially when successful.
 	 * @see static::engage_pinging_retry_cron()
 	 *
 	 * @return bool True on success, false on failure.
@@ -78,7 +80,12 @@ final class Ping {
 	}
 
 	/**
-	 * Retries pinging the search engines.
+	 * Retries pinging the search engines for the base sitemap only.
+	 *
+	 * Devs: If you need to retry pinging another sitemap, please engage a custom scheduler,
+	 *       first call `engage_pinging_retry_cron( [ 'id' => 'my_sitemap_id' ] )`, then hook
+	 *       into action `tsf_sitemap_cron_hook_retry` and test `$args['id']` like below.
+	 *       Alternatively, hitch with `the_seo_framework_ping_search_engines`.
 	 *
 	 * @since 4.1.2
 	 * @see static::engage_pinging_retry_cron()
@@ -94,7 +101,7 @@ final class Ping {
 	}
 
 	/**
-	 * Pings search engines.
+	 * Pings search engines the base sitemap.
 	 *
 	 * @since 2.2.9
 	 * @since 2.8.0 Only worked when the blog was not public...
@@ -110,7 +117,7 @@ final class Ping {
 	 */
 	public static function ping_search_engines() {
 
-		$tsf = \the_seo_framework();
+		$tsf = \tsf();
 
 		if ( $tsf->get_option( 'site_noindex' ) || ! $tsf->is_blog_public() ) return;
 
@@ -160,20 +167,18 @@ final class Ping {
 	 * @since 4.0.0 Moved to \The_SEO_Framework\Bridges\Ping
 	 * @since 4.0.3 Google now redirects to HTTPS. Updated URL scheme to accomodate.
 	 * @since 4.1.2 Now fetches WP Sitemaps' index URL when it's enabled.
-	 * @link https://support.google.com/webmasters/answer/6065812?hl=en
+	 * @link https://developers.google.com/search/docs/advanced/crawling/ask-google-to-recrawl
 	 */
 	public static function ping_google() {
 
-		if ( \the_seo_framework()->use_core_sitemaps() ) {
-			$url = \get_sitemap_url( 'index' );
-		} else {
-			$url = \The_SEO_Framework\Bridges\Sitemap::get_instance()->get_expected_sitemap_endpoint_url();
-		}
+		$url = static::get_ping_url();
 
 		if ( ! $url ) return;
 
-		$pingurl = 'https://www.google.com/ping?sitemap=' . rawurlencode( $url );
-		\wp_safe_remote_get( $pingurl, [ 'timeout' => 3 ] );
+		\wp_safe_remote_get(
+			'https://www.google.com/ping?sitemap=' . rawurlencode( $url ),
+			[ 'timeout' => 3 ]
+		);
 	}
 
 	/**
@@ -184,19 +189,36 @@ final class Ping {
 	 * @since 4.0.0 Moved to \The_SEO_Framework\Bridges\Ping
 	 * @since 4.0.3 Bing now redirects to HTTPS. Updated URL scheme to accomodate.
 	 * @since 4.1.2 Now fetches WP Sitemaps' index URL when it's enabled.
-	 * @link https://www.bing.com/webmaster/help/how-to-submit-sitemaps-82a15bd4
+	 * @link https://www.bing.com/webmasters/help/Sitemaps-3b5cf6ed
 	 */
 	public static function ping_bing() {
 
-		if ( \the_seo_framework()->use_core_sitemaps() ) {
-			$url = \get_sitemap_url( 'index' );
-		} else {
-			$url = \The_SEO_Framework\Bridges\Sitemap::get_instance()->get_expected_sitemap_endpoint_url();
-		}
+		$url = static::get_ping_url();
 
 		if ( ! $url ) return;
 
-		$pingurl = 'https://www.bing.com/ping?sitemap=' . rawurlencode( $url );
-		\wp_safe_remote_get( $pingurl, [ 'timeout' => 3 ] );
+		\wp_safe_remote_get(
+			'https://www.bing.com/ping?sitemap=' . rawurlencode( $url ),
+			[ 'timeout' => 3 ]
+		);
+	}
+
+	/**
+	 * Return the base sitemap's ping URL.
+	 * Memoizes the return value.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @return string The ping URL. Empty string on failure.
+	 */
+	public static function get_ping_url() {
+		return memo() ?? memo(
+			(
+				\tsf()->use_core_sitemaps()
+					? \get_sitemap_url( 'index' )
+					: \The_SEO_Framework\Bridges\Sitemap::get_instance()->get_expected_sitemap_endpoint_url()
+			)
+			?: ''
+		);
 	}
 }

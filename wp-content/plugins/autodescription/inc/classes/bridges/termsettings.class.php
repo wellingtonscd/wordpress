@@ -8,7 +8,7 @@ namespace The_SEO_Framework\Bridges;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -60,7 +60,7 @@ final class TermSettings {
 		 * @since 2.9.0
 		 */
 		\do_action( 'the_seo_framework_pre_tt_inpost_box' );
-		\the_seo_framework()->get_view( 'edit/seo-settings-tt', get_defined_vars() );
+		\tsf()->get_view( 'edit/seo-settings-tt', get_defined_vars() );
 		/**
 		 * @since 2.9.0
 		 */

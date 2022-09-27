@@ -8,7 +8,7 @@ namespace The_SEO_Framework\Builders;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2018 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2018 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -25,17 +25,7 @@ namespace The_SEO_Framework\Builders;
 
 \defined( 'THE_SEO_FRAMEWORK_PRESENT' ) or die;
 
-/**
- * Sets up class loader as file is loaded.
- * This is done asynchronously, because static calls are handled prior and after.
- *
- * @see EOF. Because of the autoloader and (future) trait calling, we can't do it before the class is read.
- * @link https://bugs.php.net/bug.php?id=75771
- */
-$_load_scripts_class = function() {
-	// phpcs:ignore, TSF.Performance.Opcodes.ShouldHaveNamespaceEscape
-	new Scripts();
-};
+Scripts::prepare();
 
 /**
  * Registers and outputs admin GUI scripts. Auto-invokes everything the moment
@@ -63,8 +53,8 @@ final class Scripts {
 	 * @var int <bit 01>  REGISTERED
 	 * @var int <bit 10>  LOADED     (rather, enqueued)
 	 */
-	const REGISTERED = 0b01;
-	const LOADED     = 0b10;
+	private const REGISTERED = 0b01;
+	private const LOADED     = 0b10;
 
 	/**
 	 * @since 3.1.0
@@ -106,11 +96,12 @@ final class Scripts {
 	 *
 	 * @since 3.1.0
 	 */
-	public static function prepare() {}
+	public static function prepare() {
+		static::$instance ?? ( static::$instance = new static );
+	}
 
 	/**
-	 * The constructor. Can't be instantiated externally from this file.
-	 * Kills PHP on subsequent duplicated request. Enforces singleton.
+	 * The constructor.
 	 *
 	 * This probably autoloads at action "admin_enqueue_scripts", priority "0".
 	 *
@@ -118,19 +109,13 @@ final class Scripts {
 	 * @access private
 	 * @internal
 	 */
-	public function __construct() {
-
-		static $count = 0;
-		0 === $count++ or \wp_die( 'Don\'t instance <code>' . __CLASS__ . '</code>.' );
-
-		static::$instance = &$this;
-
+	private function __construct() {
 		// These fail when called in the body.
 		\add_filter( 'admin_body_class', [ $this, '_add_body_class' ] );
 		\add_action( 'in_admin_header', [ $this, '_print_tsfjs_script' ] );
 
-		\add_action( 'admin_enqueue_scripts', [ $this, '_prepare_admin_scripts' ], 1 );
-		\add_action( 'admin_footer', [ $this, '_output_templates' ], 999 );
+		\add_action( 'admin_enqueue_scripts', [ $this, '_prepare_admin_scripts' ], 1 ); // Magic number: we likely run at priority 0. Add 1.
+		\add_action( 'admin_footer', [ $this, '_output_templates' ], 999 ); // Magic number: later is less likely to collide?
 	}
 
 	/**
@@ -144,8 +129,8 @@ final class Scripts {
 	 * @return string
 	 */
 	public function _add_body_class( $classes ) {
-		// Add spaces at both sides, because who knows what others do.
-		return ' tsf-no-js ' . $classes;
+		// Add spaces on both sides, because who knows what others do.
+		return " tsf-no-js $classes";
 	}
 
 	/**
@@ -184,7 +169,7 @@ final class Scripts {
 	 * @return int <bit>
 	 */
 	public static function get_status_of( $id, $type ) {
-		return isset( static::$queue[ $type ][ $id ] ) ? static::$queue[ $type ][ $id ] : 0b0;
+		return static::$queue[ $type ][ $id ] ?? 0b0;
 	}
 
 	/**
@@ -206,9 +191,9 @@ final class Scripts {
 	 */
 	public static function footer_enqueue() {
 
-		if ( \The_SEO_Framework\_has_run( __METHOD__ ) ) return;
+		if ( \The_SEO_Framework\has_run( __METHOD__ ) ) return;
 
-		\add_action( 'admin_footer', [ static::class, 'enqueue' ], 998 );
+		\add_action( 'admin_footer', [ static::class, 'enqueue' ], 998 ); // Magic number: 1 before output_templates.
 	}
 
 	/**
@@ -245,7 +230,7 @@ final class Scripts {
 	 *    }
 	 * }
 	 */
-	public static function register( array $script ) {
+	public static function register( $script ) {
 		if ( array_values( $script ) === $script ) {
 			foreach ( $script as $s ) static::register( $s );
 			return;
@@ -284,11 +269,10 @@ final class Scripts {
 
 		static::forward_known_script( $id, $type );
 
-		if ( static::get_status_of( $id, $type ) & static::REGISTERED ) {
-			if ( ! ( static::get_status_of( $id, $type ) & static::LOADED ) ) {
-				static::load_script( $id, $type );
-			}
-		}
+		$status = static::get_status_of( $id, $type );
+
+		if ( ( $status & static::REGISTERED ) && ! ( $status & static::LOADED ) )
+			static::load_script( $id, $type );
 	}
 
 	/**
@@ -316,7 +300,7 @@ final class Scripts {
 	 * @uses static::egister_script()
 	 */
 	private function forward_known_scripts() {
-		//= Register them first to accomodate for dependencies.
+		// Register them first to accomodate for dependencies.
 		foreach ( static::$scripts as $s ) {
 			if ( static::get_status_of( $s['id'], $s['type'] ) & static::REGISTERED ) continue;
 			static::forward_script( $s );
@@ -352,7 +336,7 @@ final class Scripts {
 	 *
 	 * @param array $s The script.
 	 */
-	private static function forward_script( array $s ) {
+	private static function forward_script( $s ) {
 
 		$instance   = static::$instance;
 		$registered = false;
@@ -378,7 +362,7 @@ final class Scripts {
 		if ( $registered ) {
 			isset( static::$queue[ $s['type'] ][ $s['id'] ] )
 				and static::$queue[ $s['type'] ][ $s['id'] ] |= static::REGISTERED
-				 or static::$queue[ $s['type'] ][ $s['id'] ]  = static::REGISTERED; // phpcs:ignore, WordPress.WhiteSpace
+				 or static::$queue[ $s['type'] ][ $s['id'] ]  = static::REGISTERED;
 		}
 	}
 
@@ -409,7 +393,7 @@ final class Scripts {
 		if ( $loaded ) {
 			isset( static::$queue[ $type ][ $id ] )
 				and static::$queue[ $type ][ $id ] |= static::LOADED
-				 or static::$queue[ $type ][ $id ]  = static::LOADED; // phpcs:ignore, WordPress.WhiteSpace
+				 or static::$queue[ $type ][ $id ]  = static::LOADED;
 		}
 	}
 
@@ -423,12 +407,12 @@ final class Scripts {
 	 * @param array $type Either 'js' or 'css'.
 	 * @return string The file URL.
 	 */
-	private function generate_file_url( array $script, $type = 'js' ) {
+	private function generate_file_url( $script, $type = 'js' ) {
 
 		static $min, $rtl;
 
 		if ( ! isset( $min, $rtl ) ) {
-			$min = \the_seo_framework()->script_debug ? '' : '.min';
+			$min = \tsf()->script_debug ? '' : '.min';
 			$rtl = \is_rtl() ? '.rtl' : '';
 		}
 
@@ -449,14 +433,16 @@ final class Scripts {
 	 * @since 3.1.0
 	 * @uses $this->convert_color_css()
 	 *
-	 * @param array $styles The styles to add.
+	 * @param iterable $styles The styles to add.
 	 * @return string
 	 */
-	private function create_inline_css( array $styles ) {
+	private function create_inline_css( $styles ) {
 
 		$out = '';
+
 		foreach ( $styles as $selector => $css ) {
-			$out .= $selector . '{' . implode( ';', $this->convert_color_css( $css ) ) . '}';
+			$css  = implode( ';', $this->convert_color_css( $css ) );
+			$out .= "$selector{$css}";
 		}
 
 		return $out;
@@ -467,15 +453,15 @@ final class Scripts {
 	 *
 	 * @since 4.0.0
 	 *
-	 * @param array $scripts The scripts to add.
+	 * @param iterable $scripts The scripts to add.
 	 * @return string
 	 */
-	private function create_inline_js( array $scripts ) {
+	private function create_inline_js( $scripts ) {
 
 		$out = '';
-		foreach ( $scripts as $script ) {
+
+		foreach ( $scripts as $script )
 			$out .= ";$script";
-		}
 
 		return $out;
 	}
@@ -488,7 +474,7 @@ final class Scripts {
 	 * @param array $css The CSS to convert.
 	 * @return array $css
 	 */
-	private function convert_color_css( array $css ) {
+	private function convert_color_css( $css ) {
 
 		static $c_ck, $c_cv;
 		// Memoize the conversion types.
@@ -496,12 +482,12 @@ final class Scripts {
 			$_scheme = \get_user_option( 'admin_color' ) ?: 'fresh';
 			$_colors = $GLOBALS['_wp_admin_css_colors'];
 
-			$tsf = \the_seo_framework();
+			$tsf = \tsf();
 
 			if (
-			   ! isset( $_colors[ $_scheme ]->colors ) // phpcs:ignore, WordPress.WhiteSpace
+			   ! isset( $_colors[ $_scheme ]->colors )
 			|| ! \is_array( $_colors[ $_scheme ]->colors )
-			|| \count( $_colors[ $_scheme ]->colors ) < 4
+			|| \count( $_colors[ $_scheme ]->colors ) < 4 // unexpected scheme, ignore and override.
 			) {
 				$_colors = [
 					'#222',
@@ -554,15 +540,15 @@ final class Scripts {
 	 *   'args' => array $args. Optional,
 	 * }
 	 */
-	private function register_template( $id, array $templates ) {
-		//= Wrap template if it's only one on the base.
+	private function register_template( $id, $templates ) {
+		// Wrap template if it's only one on the base.
 		if ( isset( $templates['file'] ) )
 			$templates = [ $templates ];
 
 		foreach ( $templates as $t ) {
 			static::$templates[ $id ][] = [
 				$t['file'],
-				isset( $t['args'] ) ? $t['args'] : [],
+				$t['args'] ?? [],
 			];
 		}
 	}
@@ -606,21 +592,19 @@ final class Scripts {
 	 * @since 3.2.4 Enabled entropy to prevent system sleep.
 	 * @uses static::$include_secret
 	 *
-	 * @param string $file The file location.
-	 * @param array  $args The registered view arguments.
+	 * @param string   $file The file location.
+	 * @param iterable $args The registered view arguments.
 	 */
-	private function output_view( $file, array $args ) {
+	private function output_view( $file, $args ) {
 
 		foreach ( $args as $_key => $_val )
 			$$_key = $_val;
 		unset( $_key, $_val, $args );
 
-		//= Prevents private-includes hijacking.
+		// Prevents private-includes hijacking.
 		// phpcs:ignore, VariableAnalysis.CodeAnalysis.VariableAnalysis -- Read the include?
 		static::$include_secret = $_secret = mt_rand() . uniqid( '', true );
 		include $file;
 		static::$include_secret = null;
 	}
 }
-
-$_load_scripts_class();

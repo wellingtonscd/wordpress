@@ -8,7 +8,7 @@
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -33,9 +33,8 @@
  * @since 4.0.0
  *
  * @constructor
- * @param {!jQuery} $ jQuery object.
  */
-window.tsfTitle = function( $ ) {
+window.tsfTitle = function() {
 
 	/**
 	 * Data property injected by WordPress l10n handler.
@@ -82,20 +81,20 @@ window.tsfTitle = function( $ ) {
 	 * @access private
 	 * @type {(Object<string,Object<string,*>)} the query state.
 	 */
-	let states = {};
+	const states = {};
 
 	/**
 	 * @since 4.1.0
 	 * @access private
 	 * @type {(Map<string,string>)} The input element instances.
 	 */
-	let additionsStack = new Map();
+	const additionsStack = new Map();
 	/**
 	 * @since 4.1.0
 	 * @access private
 	 * @type {(Map<string,string>)} The input element instances.
 	 */
-	let prefixStack = new Map();
+	const prefixStack = new Map();
 
 	/**
 	 * @since 4.1.0
@@ -143,13 +142,13 @@ window.tsfTitle = function( $ ) {
 	 * @access private
 	 * @return {Element}
 	 */
-	const _getHoverPrefixElement = id => document.getElementById( 'tsf-title-placeholder-prefix_' + id ) || document.createElement( 'span' );
+	const _getHoverPrefixElement = id => document.getElementById( `tsf-title-placeholder-prefix_${id}` ) || document.createElement( 'span' );
 	/**
 	 * @since 4.1.0
 	 * @access private
 	 * @return {Element}
 	 */
-	const _getHoverAdditionsElement = id => document.getElementById( 'tsf-title-placeholder-additions_' + id ) || document.createElement( 'span' );
+	const _getHoverAdditionsElement = id => document.getElementById( `tsf-title-placeholder-additions_${id}` ) || document.createElement( 'span' );
 
 	/**
 	 * Sets input element for all listeners. Must be called prior interacting with this object.
@@ -160,11 +159,11 @@ window.tsfTitle = function( $ ) {
 	 * @access public
 	 *
 	 * @param {Element} element
-	 * @return {undefined}
 	 */
-	const setInputElement = ( element ) => {
+	const setInputElement = element => {
 		titleInputInstances.set( element.id, element );
 		states[ element.id ] = {
+			showPrefix:           true,
 			allowReferenceChange: true,
 			defaultTitle:         '',
 			separator:            l10n.states.titleSeparator,
@@ -185,44 +184,6 @@ window.tsfTitle = function( $ ) {
 	 */
 	const getInputElement = id => titleInputInstances.get( id );
 
-	let _legacyElementId = void 0;
-	/**
-	 * Gets legacy input element, if exists.
-	 *
-	 * @since 4.1.0
-	 * @access public
-	 *
-	 * @param {string} id The element ID.
-	 * @return {Element|undefined}
-	 */
-	const getLegacyElementId = () => {
-		if ( _legacyElementId ) return _legacyElementId;
-
-		for ( const id of titleInputInstances.keys() ) {
-			if ( getStateOf( id, 'hasLegacy' ) )
-				return _legacyElementId = id;
-		}
-
-		return undefined;
-	}
-
-	/**
-	 * Returns state.
-	 *
-	 * @since 4.0.0
-	 * @since 4.1.0 Deprecated.
-	 * @access public
-	 * @deprecated 4.1.0
-	 * @see getStateOf()
-	 *
-	 * @param {(string|undefined)} part The part to return. Leave empty to return the whole state.
-	 * @return {(Object<string, *>)|*|null}
-	 */
-	const getState = part => {
-		tsf.deprecatedFunc( 'tsfTitle.getState()', '4.1.0', 'tsfTitle.getStateOf()' );
-		return getStateOf( getLegacyElementId(), part );
-	}
-
 	/**
 	 * Returns state of ID.
 	 *
@@ -231,36 +192,9 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @param {string}             id The input element ID.
 	 * @param {(string|undefined)} part The part to return. Leave empty to return the whole state.
-	 * @return {(Object<string, *>)|*|null}
+	 * @return {(Object<string,*>)|*|null}
 	 */
-	const getStateOf = ( id, part ) => {
-		// Backward compat.
-		if ( 'useTagline' === part ) {
-			tsf.deprecatedFunc( 'tsfTitle.getStateOf( id, \'useTagline\' )', '4.1.0', 'tsfTitle.getStateOf( id, \'addAdditions\' )' );
-			part = 'addAdditions';
-		}
-		return part ? ( part in states[ id ] ? states[ id ][ part ] : void 0 ) : states[ id ];
-	}
-
-	/**
-	 * Updates state.
-	 *
-	 * There's no need to escape the input, it may be double-escaped if you do so.
-	 *
-	 * @since 4.0.0
-	 * @since 4.1.0 Deprecated.
-	 * @access public
-	 * @deprecated 4.1.0
-	 * @see updateStateOf()
-	 *
-	 * @param {string} part  The state index to change.
-	 * @param {*}      value The value to set the state to.
-	 * @return {undefined}
-	 */
-	const updateState = ( part, value ) => {
-		tsf.deprecatedFunc( 'tsfTitle.updateState()', '4.1.0', 'tsfTitle.updateStateOf()' );
-		return updateStateOf( getLegacyElementId(), part, value );
-	}
+	const getStateOf = ( id, part ) => part ? states[ id ]?.[ part ] : states[ id ];
 
 	/**
 	 * Updates state of ID.
@@ -268,26 +202,21 @@ window.tsfTitle = function( $ ) {
 	 * There's no need to escape the input, it may be double-escaped if you do so.
 	 *
 	 * @since 4.1.0
+	 * @since 4.2.0 Now remains intert on a non-change.
 	 * @access public
 	 *
 	 * @param {string} id The input element ID.
 	 * @param {string} part  The state index to change.
 	 * @param {*}      value The value to set the state to.
-	 * @return {undefined}
 	 */
 	const updateStateOf = ( id, part, value ) => {
-		// Legacy was probably called, but doesn't exist (yet).
-		if ( ! ( id in states ) ) return;
 
-		// Backward compat.
-		if ( 'useTagline' === part ) {
-			tsf.deprecatedFunc( 'tsfTitle.updateStateOf( id, \'useTagline\' )', '4.1.0', 'tsfTitle.updateStateOf( id, \'addAdditions\' )' );
-			part = 'addAdditions';
-		}
+		if ( states[ id ][ part ] === value ) return;
 
 		states[ id ][ part ] = value;
 
 		switch ( part ) {
+			case 'showPrefix':
 			case 'prefixValue':
 			case 'prefixPlacement':
 				_updatePrefixValue( id );
@@ -302,7 +231,6 @@ window.tsfTitle = function( $ ) {
 				enqueueTriggerInput( id );
 				break;
 
-			case 'useSocialTagline':
 			case 'allowReferenceChange':
 			case 'defaultTitle':
 			default:
@@ -317,15 +245,19 @@ window.tsfTitle = function( $ ) {
 	 * There's no need to escape the input, it may be double-escaped if you do so.
 	 *
 	 * @since 4.1.0
+	 * @since 4.2.0 Added a 3rd parameter, allowing you to exclude updates for certain elements.
 	 * @access public
-	 * @TODO add a "but" ({String|Array})
 	 *
-	 * @param {string} part  The state index to change.
-	 * @param {*}      value The value to set the state to.
-	 * @return {undefined}
+	 * @param {string}          part   The state index to change.
+	 * @param {*}               value  The value to set the state to.
+	 * @param {string|string[]} except The input element IDs to exclude from updates.
 	 */
-	const updateStateAll = ( part, value ) => {
+	const updateStateAll = ( part, value, except ) => {
+
+		except = Array.isArray( except ) ? except : [ except ];
+
 		titleInputInstances.forEach( element => {
+			if ( except.includes( element.id ) ) return;
 			updateStateOf( element.id, part, value );
 		} );
 	}
@@ -340,7 +272,7 @@ window.tsfTitle = function( $ ) {
 	 * @return {HTMLElement[]}
 	 */
 	const _getTitleReferences = id => {
-		let references = [ document.getElementById( 'tsf-title-reference_' + id ) ];
+		let references = [ document.getElementById( `tsf-title-reference_${id}` ) ];
 
 		if ( getStateOf( id, 'hasLegacy' ) ) {
 			let legacy = document.getElementById( 'tsf-title-reference' );
@@ -359,7 +291,7 @@ window.tsfTitle = function( $ ) {
 	 * @param {string} id The input element ID.
 	 * @return {HTMLElement[]}
 	 */
-	const _getTitleNaReferences = id => [ document.getElementById( 'tsf-title-noadditions-reference_' + id ) ];
+	const _getTitleNaReferences = id => [ document.getElementById( `tsf-title-noadditions-reference_${id}` ) ];
 
 	/**
 	 * Updates the title reference.
@@ -377,26 +309,24 @@ window.tsfTitle = function( $ ) {
 	 * @return {HTMLElement[]}
 	 */
 	const _setReferenceTitle = event => {
-		let references   = _getTitleReferences( event.target.id ),
-			referencesNa = _getTitleNaReferences( event.target.id );
+		const references   = _getTitleReferences( event.target.id ),
+			  referencesNa = _getTitleNaReferences( event.target.id );
 
 		if ( ! references[0] || ! referencesNa[0] ) return;
 
-		let allowReferenceChange = getStateOf( event.target.id, 'allowReferenceChange' ),
-			text                 = allowReferenceChange && event.target.value || getStateOf( event.target.id, 'defaultTitle' ) || '',
-			textNa               = '';
+		const allowReferenceChange = getStateOf( event.target.id, 'allowReferenceChange' );
 
-		text   = text.trim();
-		textNa = text;
+		let text   = allowReferenceChange && event.target.value.trim() || getStateOf( event.target.id, 'defaultTitle' ) || '',
+			textNa = text;
 
 		if ( text.length && allowReferenceChange ) {
 			let prefix    = _getPrefixValue( event.target.id ),
 				additions = _getAdditionsValue( event.target.id );
 
-			if ( prefix.length ) {
+			if ( prefix.length && getStateOf( event.target.id, 'showPrefix' ) ) {
 				switch ( getStateOf( event.target.id, 'prefixPlacement' ) ) {
 					case 'before':
-						if ( tsf.l10n.states.isRTL ) {
+						if ( window.isRtl ) {
 							text = text + prefix;
 						} else {
 							text = prefix + text;
@@ -404,7 +334,7 @@ window.tsfTitle = function( $ ) {
 						break;
 
 					case 'after':
-						if ( tsf.l10n.states.isRTL ) {
+						if ( window.isRtl ) {
 							text = prefix + text;
 						} else {
 							text = text + prefix;
@@ -426,8 +356,28 @@ window.tsfTitle = function( $ ) {
 			}
 		}
 
-		let referenceValue   = tsf.escapeString( tsf.decodeEntities( tsf.sDoubleSpace( text.trim() ) ) ),
-			referenceNaValue = tsf.escapeString( tsf.decodeEntities( tsf.sDoubleSpace( textNa.trim() ) ) );
+		const referenceValue = tsf.escapeString(
+			tsf.decodeEntities(
+				tsf.sDoubleSpace(
+					tsf.sTabs(
+						tsf.sSingleLine(
+							text
+						).trim()
+					)
+				)
+			) );
+		const referenceNaValue = tsf.escapeString(
+			tsf.decodeEntities(
+				tsf.sDoubleSpace(
+					tsf.sTabs(
+						tsf.sSingleLine(
+							textNa
+						).trim()
+					)
+				)
+			) );
+
+		const changeEvent = new Event( 'change' );
 
 		references.forEach( reference => {
 			// We require the event below when adjusting some states... Don't uncomment this.
@@ -435,7 +385,7 @@ window.tsfTitle = function( $ ) {
 
 			reference.innerHTML = referenceValue;
 			// Fires change event. Defered to another thread.
-			setTimeout( () => { reference.dispatchEvent( new Event( 'change' ) ) }, 0 );
+			setTimeout( () => { reference.dispatchEvent( changeEvent ) }, 0 );
 		} );
 
 		referencesNa.forEach( referenceNa => {
@@ -444,7 +394,7 @@ window.tsfTitle = function( $ ) {
 
 			referenceNa.innerHTML = referenceNaValue;
 			// Fires change event. Defered to another thread.
-			setTimeout( () => { referenceNa.dispatchEvent( new Event( 'change' ) ) }, 0 );
+			setTimeout( () => { referenceNa.dispatchEvent( changeEvent ) }, 0 );
 		} );
 	}
 
@@ -456,7 +406,6 @@ window.tsfTitle = function( $ ) {
 	 * @access private
 	 *
 	 * @param {string} id The input ID.
-	 * @return {undefined}
 	 */
 	const _updateAdditionsValue = id => {
 		let value          = '',
@@ -471,11 +420,11 @@ window.tsfTitle = function( $ ) {
 		if ( additionsValue ) {
 			switch ( getStateOf( id, 'additionPlacement' ) ) {
 				case 'before':
-					value = additionsValue + ' ' + separator + ' ';
+					value = `${additionsValue} ${separator} `;
 					break;
 
 				case 'after':
-					value = ' ' + separator + ' ' + additionsValue;
+					value = ` ${separator} ${additionsValue}`;
 					break;
 			}
 		}
@@ -492,27 +441,27 @@ window.tsfTitle = function( $ ) {
 	 * @access private
 	 *
 	 * @param {string} id The input ID.
-	 * @return {undefined}
 	 */
 	const _updatePrefixValue = id => {
 		let value       = '',
+			showPrefix  = getStateOf( id, 'showPrefix' ),
 			prefixValue = getStateOf( id, 'prefixValue' );
 
-		if ( prefixValue ) {
+		if ( showPrefix && prefixValue ) {
 			switch ( getStateOf( id, 'prefixPlacement' ) ) {
 				case 'before':
-					if ( tsf.l10n.states.isRTL ) {
-						value = ' ' + prefixValue;
+					if ( window.isRtl ) {
+						value = ` ${prefixValue}`;
 					} else {
-						value = prefixValue + ' ';
+						value = `${prefixValue} `;
 					}
 					break;
 
 				case 'after':
-					if ( tsf.l10n.states.isRTL ) {
-						value = prefixValue + ' ';
+					if ( window.isRtl ) {
+						value = `${prefixValue} `;
 					} else {
-						value = ' ' + prefixValue;
+						value = ` ${prefixValue}`;
 					}
 					break;
 			}
@@ -526,12 +475,14 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @since 4.0.0
 	 * @since 4.1.0 Now supports multiple instances.
+	 * @since 4.2.0 1. No longer relies on jQuery.
+	 *              2. Now supports dynamic border sizes, this means that you can
+	 *                 make a skewed-proportioned input element, and the hovers
+	 *                 will align properly with the input text.
 	 * @access private
-	 * TODO dejQuery this? We need to use stuff like .cssText then...
 	 *
 	 * @function
 	 * @param {Event} event
-	 * @return {undefined}
 	 */
 	const _updateHoverPlacement = event => {
 
@@ -544,11 +495,8 @@ window.tsfTitle = function( $ ) {
 		const input      = event.target,
 			  inputValue = event.target.value;
 
-		let prefix    = _getPrefixValue( event.target.id ),
-			additions = _getAdditionsValue( event.target.id );
-
-		let hasPrefixValue    = !! prefix.length,
-			hasAdditionsValue = !! additions.length;
+		const hasPrefixValue    = _getPrefixValue( event.target.id ).length && getStateOf( event.target.id, 'showPrefix' ),
+			  hasAdditionsValue = !! _getAdditionsValue( event.target.id ).length;
 
 		if ( ! hasPrefixValue && hoverPrefixElement )
 			hoverPrefixElement.style.display = 'none';
@@ -569,32 +517,42 @@ window.tsfTitle = function( $ ) {
 			return;
 		}
 
-		const $input = $( input );
+		const inputStyles = getComputedStyle( input ),
+			  inputRect   = input.getBoundingClientRect();
 
-		let outerWidth        = $input.outerWidth( true ),
-			verticalPadding   = ( $input.outerHeight( true ) - $input.height() ) / 2,
-			topMargin         = parseInt( $input.css( 'marginTop' ) ) / 2,
-			bottomMargin      = parseInt( $input.css( 'marginBottom' ) ) / 2,
-			horizontalPadding = ( outerWidth - $input.innerWidth() ) / 2;
+		// Quick and dirty.
+		const paddingTop    = parseInt( inputStyles.paddingTop ),
+			  paddingRight  = parseInt( inputStyles.paddingRight ),
+			  paddingBottom = parseInt( inputStyles.paddingBottom ),
+			  paddingLeft   = parseInt( inputStyles.paddingLeft ),
+			  borderTop     = parseInt( inputStyles.borderTopWidth ),
+			  borderRight   = parseInt( inputStyles.borderRightWidth ),
+			  borderBottom  = parseInt( inputStyles.borderBottomWidth ),
+			  borderLeft    = parseInt( inputStyles.borderTopWidth ),
+			  marginTop     = parseInt( inputStyles.marginTop ),
+			  marginRight   = parseInt( inputStyles.marginRight ),
+			  marginBottom  = parseInt( inputStyles.marginBottom ),
+			  marginLeft    = parseInt( inputStyles.marginLeft );
 
-		let offsetPosition = tsf.l10n.states.isRTL ? 'right' : 'left',
-			leftOffset     = ( outerWidth - $input.width() ) / 2;
+		const offsetPosition = window.isRtl ? 'right' : 'left',
+			  leftOffset     = paddingLeft + borderLeft + marginLeft,
+			  rightOffset    = paddingRight + borderRight + marginRight;
 
 		let fontStyleCSS = {
-			display:       $input.css( 'display' ),
-			lineHeight:    $input.css( 'lineHeight' ),
-			fontFamily:    $input.css( 'fontFamily' ),
-			fontWeight:    $input.css( 'fontWeight' ),
-			fontSize:      $input.css( 'fontSize' ),
-			letterSpacing: $input.css( 'letterSpacing' ),
-			marginTop:     topMargin + 'px',
-			marginBottom:  bottomMargin + 'px',
-			paddingTop:    verticalPadding + 'px',
-			paddingBottom: verticalPadding + 'px',
+			display:           inputStyles.display,
+			lineHeight:        inputStyles.lineHeight,
+			fontFamily:        inputStyles.fontFamily,
+			fontWeight:        inputStyles.fontWeight,
+			fontSize:          inputStyles.fontSize,
+			letterSpacing:     inputStyles.letterSpacing,
+			marginTop:         `${marginTop}px`,
+			marginBottom:      `${marginBottom}px`,
+			paddingTop:        `${paddingTop}px`,
+			paddingBottom:     `${paddingBottom}px`,
+			border:            `0 solid transparent`,
+			borderTopWidth:    `${borderTop}px`,
+			borderBottomWidth: `${borderBottom}px`,
 		};
-
-		const $prefixElement    = $( hoverPrefixElement ),
-			  $additionsElement = $( hoverAdditionsElement );
 
 		let additionsMaxWidth = 0,
 			additionsOffset   = 0,
@@ -602,86 +560,101 @@ window.tsfTitle = function( $ ) {
 			totalIndent       = 0,
 			prefixMaxWidth    = 0;
 
-		// TODO make this 18? x-button-Browser incompatible & indentation bugs! We should only calculate this when they show..
-		let elipsisWidth = 0;
-
 		if ( hasPrefixValue ) {
-			$prefixElement.css( fontStyleCSS );
-			$prefixElement.css( { maxWidth: 'initial' } );
+			Object.assign(
+				hoverPrefixElement.style,
+				fontStyleCSS,
+				{ maxWidth: 'initial' },
+			);
 			prefixMaxWidth = hoverPrefixElement.getBoundingClientRect().width;
-			if ( prefixMaxWidth < elipsisWidth ) // useless code since elipsis is always 0.
-				prefixMaxWidth = 0;
+			prefixOffset  += leftOffset; // rightOffset for RTL? -> difficult to determine?
 		}
-		if ( hasAdditionsValue ) {
-			let textWidth = 0;
 
-			(() => {
-				let offSetElement  = document.getElementById( `tsf-title-offset_${event.target.id}` ),
-					$offsetElement = $( offSetElement );
-				$offsetElement.text( inputValue );
-				$offsetElement.css({
+		if ( hasAdditionsValue ) {
+
+			Object.assign(
+				hoverAdditionsElement.style,
+				fontStyleCSS,
+				{ maxWidth: 'initial' },
+			);
+
+			const offsetElement = document.getElementById( `tsf-title-offset_${event.target.id}` );
+			offsetElement.textContent = inputValue;
+
+			Object.assign(
+				offsetElement.style,
+				{
 					fontFamily:    fontStyleCSS.fontFamily,
 					fontWeight:    fontStyleCSS.fontWeight,
-					letterSpacing: fontStyleCSS.letterSpacing,
 					fontSize:      fontStyleCSS.fontSize,
-				});
-				textWidth = offSetElement.getBoundingClientRect().width;
-			})();
+					letterSpacing: fontStyleCSS.letterSpacing,
+				},
+			);
+			const textWidth = offsetElement.getBoundingClientRect().width;
 
-			//= Input element width - Padding - input text width - prefix value width.
-			additionsMaxWidth = input.getBoundingClientRect().width - horizontalPadding - leftOffset - textWidth - prefixMaxWidth;
-			if ( additionsMaxWidth < elipsisWidth ) {
-				//= Add width to the prefix element, so it may stay its size, and hide the additions.
-				prefixMaxWidth += additionsMaxWidth;
-				additionsMaxWidth = 0;
-			}
-			$additionsElement.css( fontStyleCSS );
-			$additionsElement.css( { 'maxWidth' : 'initial' } );
+			const additionsWidth = hoverAdditionsElement.getBoundingClientRect().width;
 
 			switch ( getStateOf( event.target.id, 'additionPlacement' ) ) {
 				case 'before':
-					let additionsWidth = hoverAdditionsElement.getBoundingClientRect().width;
+					additionsMaxWidth = inputRect.width - rightOffset - paddingLeft - borderLeft - textWidth - prefixMaxWidth;
+					if ( additionsMaxWidth < 0 ) {
+						// Add negative width to the prefix element, so it may stay its size, and hide the additions first.
+						prefixMaxWidth   += additionsMaxWidth;
+						additionsMaxWidth = 0;
+					}
+					additionsMaxWidth = additionsMaxWidth < additionsWidth ? additionsMaxWidth : additionsWidth;
 
-					additionsWidth = additionsMaxWidth < additionsWidth ? additionsMaxWidth : additionsWidth;
-
-					if ( additionsWidth < elipsisWidth )
-						additionsWidth = 0;
-
-					additionsMaxWidth = additionsWidth;
+					if ( additionsMaxWidth < 0 )
+						additionsMaxWidth = 0;
 
 					totalIndent     += additionsMaxWidth;
 					prefixOffset    += additionsMaxWidth;
+					// "We" write to the right, so we take the leftoffset. TODO RTL?
 					additionsOffset += leftOffset;
 					break;
 
 				case 'after':
+					additionsMaxWidth = inputRect.width - leftOffset - paddingRight - borderRight - textWidth - prefixMaxWidth;
+					if ( additionsMaxWidth < 0 ) {
+						// Add negative width to the prefix element, so it may stay its size, and hide the additions first.
+						prefixMaxWidth   += additionsMaxWidth;
+						additionsMaxWidth = 0;
+					}
+					additionsMaxWidth = additionsMaxWidth < additionsWidth ? additionsMaxWidth : additionsWidth;
+
+					if ( additionsMaxWidth < 0 )
+						additionsMaxWidth = 0;
+
+					// "We" write to the right, so we take the leftoffset. TODO RTL?
 					additionsOffset += leftOffset + textWidth + prefixMaxWidth;
 					break;
 			}
 		}
-		prefixOffset  += leftOffset;
 		prefixMaxWidth = prefixMaxWidth < 0 ? 0 : prefixMaxWidth;
-		totalIndent   += prefixMaxWidth;
-
-		let _css;
 
 		if ( hasPrefixValue ) {
-			_css = {};
-			_css[ offsetPosition ] = prefixOffset + "px";
-			_css['maxWidth'] = prefixMaxWidth  + "px";
-			$prefixElement.css( _css );
+			Object.assign(
+				hoverPrefixElement.style,
+				{
+					[offsetPosition]: `${prefixOffset}px`,
+					maxWidth:         `${prefixMaxWidth}px`,
+				}
+			);
+			// Only set if there's actually a prefix.
+			totalIndent += prefixMaxWidth;
 		}
 
 		if ( hasAdditionsValue ) {
-			_css = {};
-			_css[ offsetPosition ] = additionsOffset + "px";
-			_css['maxWidth'] = additionsMaxWidth + "px";
-			$additionsElement.css( _css );
+			Object.assign(
+				hoverAdditionsElement.style,
+				{
+					[offsetPosition]: `${additionsOffset}px`,
+					maxWidth:         `${additionsMaxWidth}px`,
+				}
+			);
 		}
 
-		_css = {};
-		_css['text-indent'] = Math.round( totalIndent ) + "px";
-		$input.css( _css );
+		input.style.textIndent = `${totalIndent}px`;
 	}
 
 	/**
@@ -693,10 +666,9 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {Event} event
-	 * @return {undefined}
 	 */
 	const _updatePlaceholder = event => {
-		event.target.placeholder = _getTitleReferences( event.target.id )[0].innerText;
+		event.target.placeholder = _getTitleReferences( event.target.id )[0].textContent;
 	}
 
 	/**
@@ -707,12 +679,11 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {Event} event
-	 * @return {undefined}
 	 */
 	const _updateCounter = event => {
 		if ( ! ( 'tsfC' in window ) ) return;
 
-		let counter   = document.getElementById( event.target.id + '_chars' ),
+		let counter   = document.getElementById( `${event.target.id}_chars` ),
 			reference = _getTitleReferences( event.target.id )[0];
 
 		if ( ! counter ) return;
@@ -733,12 +704,11 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {Event} event
-	 * @return {undefined}
 	 */
 	const _updatePixels = event => {
 		if ( ! ( 'tsfC' in window ) ) return;
 
-		let pixels    = document.getElementById( event.target.id + '_pixels' ),
+		let pixels    = document.getElementById( `${event.target.id}_pixels` ),
 			reference = _getTitleReferences( event.target.id )[0];
 
 		if ( ! pixels ) return;
@@ -760,9 +730,9 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {string} id The input id. When not set, all inputs will be triggered.
-	 * @return {undefined}
 	 */
 	const triggerInput = id => {
+
 		if ( id ) {
 			let el = getInputElement( id );
 			el && el.dispatchEvent( new Event( 'input' ) );
@@ -781,7 +751,6 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {string} id The input id. When not set, all inputs will be triggered.
-	 * @return {undefined}
 	 */
 	const triggerCounter = id => {
 		if ( id ) {
@@ -803,7 +772,6 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {Event} event
-	 * @return {undefined}
 	 */
 	const _onUpdateTitlesTrigger = event => {
 
@@ -823,7 +791,6 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {Event} event
-	 * @return {undefined}
 	 */
 	const _onUpdateCounterTrigger = event => {
 		_updateCounter( event );
@@ -840,11 +807,10 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {string} id The input ID.
-	 * @return {undefined}
 	 */
 	const enqueueTriggerInput = id => {
 		( id in _enqueueTriggerInputBuffer ) && clearTimeout( _enqueueTriggerInputBuffer[ id ] );
-		_enqueueTriggerInputBuffer[ id ] = setTimeout( () => triggerInput( id ), 10 );
+		_enqueueTriggerInputBuffer[ id ] = setTimeout( () => triggerInput( id ), 1000/60 ); // 60 fps
 	}
 
 	/**
@@ -856,7 +822,6 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {string} id The input id. When not set, all inputs will be triggered.
-	 * @return {undefined}
 	 */
 	const triggerUnregisteredInput = id => {
 		if ( 'tsfAys' in window ) {
@@ -882,11 +847,10 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {string} id The input id. When not set, all inputs will be triggered.
-	 * @return {undefined}
 	 */
 	const enqueueUnregisteredInputTrigger = id => {
 		( id in _unregisteredTriggerBuffer ) && clearTimeout( _unregisteredTriggerBuffer[ id ] );
-		_unregisteredTriggerBuffer[ id ] = setTimeout( () => triggerUnregisteredInput( id ), 10 );
+		_unregisteredTriggerBuffer[ id ] = setTimeout( () => triggerUnregisteredInput( id ), 1000/60 ); // 60 fps
 	}
 
 	/**
@@ -895,11 +859,11 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @since 4.0.0
 	 * @since 4.1.0 Now supports multiple instances.
+	 * @TODO can we not just make the floaty mcfloattitle transparent to clicks?
 	 * @access private
 	 *
 	 * @function
 	 * @param {Event} event
-	 * @return {undefined}
 	 */
 	const _focusTitleInput = event => {
 
@@ -921,7 +885,7 @@ window.tsfTitle = function( $ ) {
 				let start, end;
 				if (
 					'additions' === type && 'after' === getStateOf( input.id, 'additionPlacement' )
-				||  'prefix' === type && tsf.l10n.states.isRTL
+				||  'prefix' === type && window.isRtl
 				) {
 					start = inputValue.replace( /(\w+|\s+)$/u, '' ).length;
 					end   = inputValue.length;
@@ -935,7 +899,9 @@ window.tsfTitle = function( $ ) {
 			case 1:
 			default:
 				// Set length to end if the placeholder is clicked; to 0 otherwise (prefix clicked).
-				let length = 'additions' === type && 'after' === getStateOf( input.id, 'additionPlacement' ) ? inputValue.length : 0;
+				let length = 'additions' === type && 'after' === getStateOf( input.id, 'additionPlacement' )
+					? inputValue.length
+					: 0;
 				input.setSelectionRange( length, length );
 				break;
 		}
@@ -967,7 +933,6 @@ window.tsfTitle = function( $ ) {
 	 * @see ...\wp-admin\js\common.js
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _doResize = () => {
 		let width = window.innerWidth;
@@ -991,13 +956,11 @@ window.tsfTitle = function( $ ) {
 	 * @access private
 	 *
 	 * @function
-	 * @return {undefined}
 	 */
 	const _initAllTitleActions = () => {
 
 		// Triggers input changes on resize after hitting thresholds.
-		// We can't bind to jQuery event listeners via native ES :(
-		$( document ).on( 'wp-window-resized', _doResize );
+		window.addEventListener( 'tsf-resize', _doResize );
 
 		// When counters are updated, trigger an input; which will reassess them.
 		window.addEventListener( 'tsf-counter-updated', () => enqueueUnregisteredInputTrigger() );
@@ -1010,7 +973,6 @@ window.tsfTitle = function( $ ) {
 	 *
 	 * @function
 	 * @param {Element} titleInput
-	 * @return {undefined}
 	 */
 	const _loadTitleActions = titleInput => {
 
@@ -1043,7 +1005,6 @@ window.tsfTitle = function( $ ) {
 		 * @access protected
 		 *
 		 * @function
-		 * @return {undefined}
 		 */
 		load: () => {
 			document.body.addEventListener( 'tsf-onload', _initAllTitleActions );
@@ -1051,9 +1012,7 @@ window.tsfTitle = function( $ ) {
 	}, {
 		setInputElement,
 		getInputElement,
-		getState,
 		getStateOf,
-		updateState,
 		updateStateOf,
 		updateStateAll,
 		triggerCounter,
@@ -1068,5 +1027,5 @@ window.tsfTitle = function( $ ) {
 		protectedPrefix,
 		stripTitleTags,
 	} );
-}( jQuery );
+}();
 window.tsfTitle.load();

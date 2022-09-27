@@ -10,7 +10,7 @@ namespace The_SEO_Framework;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2015 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2015 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -50,6 +50,7 @@ class Site_Options extends Sanitize {
 	 * @since 2.6.0
 	 * @since 3.1.0 Now applies filters 'the_seo_framework_default_site_options'
 	 * @since 4.0.0 `home_title_location` is now switched from right to left, or vice-versa.
+	 * @since 4.2.4 `max_image_preview` now defaults to `large`, from `standard`, matching WordPress's default.
 	 *
 	 * @return array Default site options.
 	 */
@@ -79,7 +80,6 @@ class Site_Options extends Sanitize {
 				'alter_search_query_type'  => 'in_query', // Search query type.
 
 				'cache_sitemap' => 1, // Sitemap transient cache.
-				'cache_object'  => 1, // Object caching.
 
 				// General. Layout.
 				'display_seo_bar_tables'  => 1, // SEO Bar post-list tables.
@@ -100,7 +100,8 @@ class Site_Options extends Sanitize {
 				'disabled_taxonomies' => [], // Taxonomy support.
 
 				// Title.
-				'title_separator'     => 'hyphen',  // Title separator, dropdown
+				'site_title'          => '',        // Blog name.
+				'title_separator'     => 'hyphen',  // Title separator, radio selection.
 				'title_location'      => $titleloc, // Title separation location
 				'title_rem_additions' => 0,         // Remove title additions
 				'title_rem_prefixes'  => 0,         // Remove title prefixes from archives.
@@ -141,13 +142,13 @@ class Site_Options extends Sanitize {
 				'advanced_query_protection' => 1,
 
 				// Robots pagination index.
-				'paged_noindex'      => 1, // Every second or later page noindex
+				'paged_noindex'      => 0, // Every second or later page noindex
 				'home_paged_noindex' => 0, // Every second or later homepage noindex
 
 				// Robots copyright.
 				'set_copyright_directives' => 1,          // Allow copyright directive settings.
 				'max_snippet_length'       => -1,         // Max text-snippet length. -1 = unlimited, 0 = disabled, R>0 = characters.
-				'max_image_preview'        => 'standard', // Max image-preview size. 'none', 'standard', 'large'.
+				'max_image_preview'        => 'large',    // Max image-preview size. 'none', 'standard', 'large'.
 				'max_video_preview'        => -1,         // Max video-preview size. -1 = unlimited, 0 = disabled, R>0 = seconds.
 
 				// Robots home.
@@ -170,6 +171,9 @@ class Site_Options extends Sanitize {
 
 				'homepage_social_image_url' => '',
 				'homepage_social_image_id'  => 0,
+
+				// Post Type Archives.
+				'pta' => $this->get_all_post_type_archive_meta_defaults(), // All of it. See $this->get_post_type_archive_meta(), which calls this index.
 
 				// Relationships.
 				'shortlink_tag'       => 0, // Adds shortlink tag
@@ -194,7 +198,7 @@ class Site_Options extends Sanitize {
 				// oEmbed.
 				'oembed_use_og_title'     => 0, // Use custom meta titles in oEmbeds
 				'oembed_use_social_image' => 1, // Use social images in oEmbeds
-				'oembed_remove_author'    => 0, // Remove author from oEmbeds
+				'oembed_remove_author'    => 1, // Remove author from oEmbeds
 
 				// Social on/off.
 				'og_tags'        => 1, // Output of Open Graph meta tags
@@ -247,10 +251,9 @@ class Site_Options extends Sanitize {
 
 				// Sitemaps.
 				'sitemaps_output'     => 1,    // Output of sitemap
-				'sitemap_query_limit' => 3000, // Sitemap post limit.
+				'sitemap_query_limit' => 1000, // Sitemap post limit.
 
 				'sitemaps_modified' => 1, // Add sitemap modified time.
-				'sitemaps_priority' => 0, // Add sitemap priorities.
 
 				'sitemaps_robots' => 1, // Add sitemap location to robots.txt
 
@@ -287,40 +290,43 @@ class Site_Options extends Sanitize {
 	 * @since 3.1.0 Now applies the "the_seo_framework_warned_site_options" filter.
 	 * @since 4.1.0 Added robots' post type setting warnings.
 	 * @since 4.1.2 Added `ping_use_cron_prerender`.
+	 * @since 4.2.0 Now memoizes its return value.
 	 *
 	 * @return array $options.
 	 */
 	public function get_warned_site_options() {
-		/**
-		 * Warned site settings. Only accepts checkbox options.
-		 * When listed as 1, it's a feature which can destroy your website's SEO value when checked.
-		 *
-		 * Unchecking a box is simply "I'm not active." - Removing features generally do not negatively impact SEO value.
-		 * Since it's all about the content.
-		 *
-		 * Only used within the SEO Settings page.
-		 *
-		 * @since 2.3.4
-		 * @param array $options The warned site options.
-		 */
-		return (array) \apply_filters(
-			'the_seo_framework_warned_site_options',
-			[
-				'title_rem_additions'     => 1, // Title remove additions.
-				'site_noindex'            => 1, // Site Page robots noindex.
-				'site_nofollow'           => 1, // Site Page robots nofollow.
-				'homepage_noindex'        => 1, // Homepage robots noindex.
-				'homepage_nofollow'       => 1, // Homepage robots noarchive.
-				$this->get_robots_post_type_option_id( 'noindex' ) => [
-					'post' => 1,
-					'page' => 1,
-				],
-				$this->get_robots_post_type_option_id( 'nofollow' ) => [
-					'post' => 1,
-					'page' => 1,
-				],
-				'ping_use_cron_prerender' => 1, // Sitemap cron-ping prerender.
-			]
+		return memo() ?? memo(
+			/**
+			 * Warned site settings. Only accepts checkbox options.
+			 * When listed as 1, it's a feature which can destroy your website's SEO value when checked.
+			 *
+			 * Unchecking a box is simply "I'm not active." - Removing features generally do not negatively impact SEO value.
+			 * Since it's all about the content.
+			 *
+			 * Only used within the SEO Settings page.
+			 *
+			 * @since 2.3.4
+			 * @param array $options The warned site options.
+			 */
+			(array) \apply_filters(
+				'the_seo_framework_warned_site_options',
+				[
+					'title_rem_additions'     => 1, // Title remove additions.
+					'site_noindex'            => 1, // Site Page robots noindex.
+					'site_nofollow'           => 1, // Site Page robots nofollow.
+					'homepage_noindex'        => 1, // Homepage robots noindex.
+					'homepage_nofollow'       => 1, // Homepage robots noarchive.
+					$this->get_robots_post_type_option_id( 'noindex' ) => [
+						'post' => 1,
+						'page' => 1,
+					],
+					$this->get_robots_post_type_option_id( 'nofollow' ) => [
+						'post' => 1,
+						'page' => 1,
+					],
+					'ping_use_cron_prerender' => 1, // Sitemap cron-ping prerender.
+				]
+			)
 		);
 	}
 
@@ -330,31 +336,52 @@ class Site_Options extends Sanitize {
 	 * @since 2.2.2
 	 * @since 2.8.2 No longer decodes entities on request.
 	 * @since 3.1.0 Now uses the filterable call when caching is disabled.
+	 * @since 4.2.0 Now supports an option index as a $key.
 	 * @uses THE_SEO_FRAMEWORK_SITE_OPTIONS
 	 *
-	 * @param string  $key       Option name.
-	 * @param boolean $use_cache Optional. Whether to use the cache value or not. Defaults to true.
+	 * @param string|string[] $key       Option name, or a map of indexes therefor.
+	 *                                   If you send an empty array, you'll get all options. Don't.
+	 * @param boolean         $use_cache Optional. Whether to use the cache value or not. Defaults to true.
 	 * @return mixed The value of this $key in the database. Empty string when not set.
 	 */
 	public function get_option( $key, $use_cache = true ) {
 
 		if ( ! $use_cache ) {
-			$options = $this->get_all_options( THE_SEO_FRAMEWORK_SITE_OPTIONS, true );
-			return isset( $options[ $key ] ) ? \stripslashes_deep( $options[ $key ] ) : '';
+			// Preassign all options to $val so we can loop through it.
+			$val = $this->get_all_options( THE_SEO_FRAMEWORK_SITE_OPTIONS, true );
+
+			// This loop digs through itself: $val[ $index ][ $index ]... etc.
+			foreach ( (array) $key as $k )
+				$val = $val[ $k ] ?? '';
+
+			return ! empty( $val ) ? \stripslashes_deep( $val ) : '';
 		}
 
-		static $cache = [];
+		static $cache;
 
-		if ( ! isset( $cache[ THE_SEO_FRAMEWORK_SITE_OPTIONS ] ) )
-			$cache[ THE_SEO_FRAMEWORK_SITE_OPTIONS ] = \stripslashes_deep( $this->get_all_options( THE_SEO_FRAMEWORK_SITE_OPTIONS ) );
+		// PHP 7.4: null coalesce equal operator: ??=
+		if ( ! isset( $cache ) )
+			$cache = \stripslashes_deep( $this->get_all_options( THE_SEO_FRAMEWORK_SITE_OPTIONS ) );
 
-		// TODO fall back to default if not registered? This means we no longer have to rely on upgrading. Or, array merge (recursive) at get_all_options?
-		return isset( $cache[ THE_SEO_FRAMEWORK_SITE_OPTIONS ][ $key ] ) ? $cache[ THE_SEO_FRAMEWORK_SITE_OPTIONS ][ $key ] : '';
+		$val = $cache;
+
+		// This loop digs through itself: $val[ $index ][ $index ]... etc.
+		foreach ( (array) $key as $k )
+			$val = $val[ $k ] ?? '';
+
+		return $val;
 	}
 
 	/**
 	 * Return current option array.
 	 * Memoizes the return value, can be bypassed and reset with second parameter.
+	 *
+	 * This method does NOT merge the default post options.
+	 *
+	 * @TODO Should we fall back to default options when one isn't registered (correctly)?
+	 *       See get_term_meta(), which falls back to default term meta.
+	 *       We'd need our fancy in-house array_merge_recursive_distinct() though.
+	 *       BLOCKER: This method always runs BEFORE 'pta' can be filled by other plugins.
 	 *
 	 * @since 2.6.0
 	 * @since 2.9.2 Added $use_current parameter.
@@ -368,22 +395,29 @@ class Site_Options extends Sanitize {
 
 		static $cache = [];
 
-		if ( ! $reset && isset( $cache[ $setting ] ) )
-			return $cache[ $setting ];
-
 		if ( ! $setting )
 			$setting = THE_SEO_FRAMEWORK_SITE_OPTIONS;
 
+		if ( ! $reset && isset( $cache[ $setting ] ) )
+			return $cache[ $setting ];
+
 		/**
 		 * @since 2.0.0
+		 * @since 4.1.4 1. Now considers headlessness.
+		 *              2. Now returns a 3rd parameter: boolean $headless.
+		 *
 		 * @param array  $settings The settings
 		 * @param string $setting  The settings field.
+		 * @param bool   $headless Whether the options are headless.
 		 */
 		return $cache[ $setting ] = \apply_filters_ref_array(
 			'the_seo_framework_get_options',
 			[
-				\get_option( $setting ),
+				$this->is_headless['settings'] && THE_SEO_FRAMEWORK_SITE_OPTIONS === $setting
+					? $this->get_default_site_options()
+					: \get_option( $setting ),
 				$setting,
+				$this->is_headless['settings'],
 			]
 		);
 	}
@@ -392,15 +426,47 @@ class Site_Options extends Sanitize {
 	 * Return Default SEO options from the SEO options array.
 	 *
 	 * @since 2.2.5
+	 * @since 4.2.0 1. Now supports an option index as `$key`.
+	 *              2. Removed second parameter (`$use_cache`).
+	 *              3. Now always memoizes.
 	 * @uses $this->get_default_settings() Return option from the options table and cache result.
 	 * @uses THE_SEO_FRAMEWORK_SITE_OPTIONS
 	 *
-	 * @param string  $key       Required. The option name.
-	 * @param boolean $use_cache Optional. Whether to use the cache value or not.
-	 * @return mixed The value of this $key in the database.
+	 * @param string|string[] $key Required. The option name, or a map of indexes.
+	 * @return mixed The default option. Null if it's not registered.
 	 */
-	public function get_default_option( $key, $use_cache = true ) {
-		return $this->get_default_settings( $key, '', $use_cache );
+	public function get_default_option( $key ) {
+
+		$val = umemo( __METHOD__ )
+			?? umemo( __METHOD__, \stripslashes_deep( $this->get_default_site_options() ) );
+
+		// This loop digs through itself: $val[ $index ][ $index ]... etc.
+		foreach ( (array) $key as $k )
+			$val = $val[ $k ] ?? null;
+
+		return $val ?? null;
+	}
+
+	/**
+	 * Return Warned SEO options from the SEO options array.
+	 *
+	 * @since 4.2.0
+	 * @uses $this->get_default_settings() Return option from the options table and cache result.
+	 * @uses THE_SEO_FRAMEWORK_SITE_OPTIONS
+	 *
+	 * @param string|string[] $key Required. The option name, or a map of indexes.
+	 * @return bool True if warning is registered. False otherwise.
+	 */
+	public function get_warned_option( $key ) {
+
+		$val = umemo( __METHOD__ )
+			?? umemo( __METHOD__, \stripslashes_deep( $this->get_warned_site_options() ) );
+
+		// This loop digs through itself: $val[ $index ][ $index ]... etc.
+		foreach ( (array) $key as $k )
+			$val = $val[ $k ] ?? null;
+
+		return (bool) ( $val ?? false );
 	}
 
 	/**
@@ -438,8 +504,7 @@ class Site_Options extends Sanitize {
 	 * @return mixed Cache value on success, $default if non-existent.
 	 */
 	public function get_static_cache( $key, $default = false ) {
-		$cache = \get_option( THE_SEO_FRAMEWORK_SITE_CACHE, [] );
-		return isset( $cache[ $key ] ) ? $cache[ $key ] : $default;
+		return \get_option( THE_SEO_FRAMEWORK_SITE_CACHE, [] )[ $key ] ?? $default;
 	}
 
 	/**
@@ -538,415 +603,323 @@ class Site_Options extends Sanitize {
 	}
 
 	/**
-	 * Get the default of any of the The SEO Framework settings.
-	 *
-	 * @since 2.2.4
-	 * @since 2.8.2 : No longer decodes entities on request.
-	 * @since 3.1.0 : 1. Now returns null if the option doesn't exist, instead of -1.
-	 *                2. Is now influenced by filters.
-	 *                3. Now also strips slashes when using cache.
-	 *                4. The second parameter is deprecated.
-	 * @uses $this->get_default_site_options()
-	 *
-	 * @param string $key       Required. The option name.
-	 * @param string $depr      Deprecated. Leave empty.
-	 * @param bool   $use_cache Optional. Whether to use the options cache or bypass it.
-	 * @return mixed default option
-	 *         null If option doesn't exist.
-	 */
-	public function get_default_settings( $key, $depr = '', $use_cache = true ) {
-
-		if ( ! $key ) return false;
-
-		if ( $depr )
-			$this->_doing_it_wrong( __METHOD__, 'The second parameter is deprecated.', '3.1.0' );
-
-		// If we need to bypass the cache
-		if ( ! $use_cache ) {
-			$defaults = $this->get_default_site_options();
-			return isset( $defaults[ $key ] ) ? \stripslashes_deep( $defaults[ $key ] ) : null;
-		}
-
-		static $cache;
-
-		if ( ! isset( $cache ) )
-			$cache = \stripslashes_deep( $this->get_default_site_options() );
-
-		return isset( $cache[ $key ] ) ? $cache[ $key ] : null;
-	}
-
-	/**
-	 * Get the warned setting of any of the The SEO Framework settings.
-	 *
-	 * @since 2.3.4
-	 * @since 3.1.0 : Now returns 0 if the option doesn't exist, instead of -1.
-	 * @uses THE_SEO_FRAMEWORK_SITE_OPTIONS
-	 * @uses $this->get_warned_site_options()
-	 *
-	 * @param string $key       Required. The option name.
-	 * @param string $depr      Deprecated. Leave empty.
-	 * @param bool   $use_cache Optional. Whether to use the options cache or bypass it.
-	 * @return int 0|1 Whether the option is flagged as dangerous for SEO.
-	 */
-	public function get_warned_settings( $key, $depr = '', $use_cache = true ) {
-
-		if ( empty( $key ) )
-			return false;
-
-		if ( $depr )
-			$this->_doing_it_wrong( __METHOD__, 'The second parameter is deprecated.', '3.1.0' );
-
-		// If we need to bypass the cache
-		if ( ! $use_cache ) {
-			$warned = $this->get_warned_site_options();
-			return $this->s_one_zero( ! empty( $warned[ $key ] ) );
-		}
-
-		static $cache;
-
-		if ( ! isset( $cache ) )
-			$cache = $this->get_warned_site_options();
-
-		return $this->s_one_zero( ! empty( $cache[ $key ] ) );
-	}
-
-	/**
 	 * Returns the option value for Post Type robots settings.
 	 *
 	 * @since 3.1.0
+	 * @since 4.2.0 No longer sanitizes the input parameter.
 	 *
 	 * @param string $type Accepts 'noindex', 'nofollow', 'noarchive'.
 	 * @return string
 	 */
 	public function get_robots_post_type_option_id( $type ) {
-		return $this->s_field_id( "{$type}_post_types" );
+		return "{$type}_post_types";
 	}
 
 	/**
 	 * Returns the option value for Taxonomy robots settings.
 	 *
 	 * @since 4.1.0
+	 * @since 4.2.0 No longer sanitizes the input parameter.
 	 *
 	 * @param string $type Accepts 'noindex', 'nofollow', 'noarchive'.
 	 * @return string
 	 */
 	public function get_robots_taxonomy_option_id( $type ) {
-		return $this->s_field_id( "{$type}_taxonomies" );
+		return "{$type}_taxonomies";
 	}
 
 	/**
-	 * Returns Facebook locales array values.
+	 * Returns supported social site locales.
 	 *
-	 * @since 2.5.2
-	 * TODO collapse this with language_keys(), ll_CC => ll?, return array_keys here, array_values there?
-	 *
+	 * @since 4.2.0
 	 * @see https://www.facebook.com/translations/FacebookLocales.xml (deprecated)
 	 * @see https://wordpress.org/support/topic/oglocale-problem/#post-11456346
 	 * mirror: http://web.archive.org/web/20190601043836/https://wordpress.org/support/topic/oglocale-problem/
-	 * @see $this->language_keys() for the associative array keys.
 	 *
-	 * @return array Valid Facebook locales
+	 * @return array Valid social locales
 	 */
-	public function fb_locales() {
+	public function supported_social_locales() {
 		return [
-			'af_ZA', // Afrikaans
-			'ak_GH', // Akan
-			'am_ET', // Amharic
-			'ar_AR', // Arabic
-			'as_IN', // Assamese
-			'ay_BO', // Aymara
-			'az_AZ', // Azerbaijani
-			'be_BY', // Belarusian
-			'bg_BG', // Bulgarian
-			'bn_IN', // Bengali
-			'br_FR', // Breton
-			'bs_BA', // Bosnian
-			'ca_ES', // Catalan
-			'cb_IQ', // Sorani Kurdish
-			'ck_US', // Cherokee
-			'co_FR', // Corsican
-			'cs_CZ', // Czech
-			'cx_PH', // Cebuano
-			'cy_GB', // Welsh
-			'da_DK', // Danish
-			'de_DE', // German
-			'el_GR', // Greek
-			'en_GB', // English (UK)
-			'en_IN', // English (India)
-			'en_PI', // English (Pirate)
-			'en_UD', // English (Upside Down)
-			'en_US', // English (US)
-			'eo_EO', // Esperanto
-			'es_CL', // Spanish (Chile)
-			'es_CO', // Spanish (Colombia)
-			'es_ES', // Spanish (Spain)
-			'es_LA', // Spanish
-			'es_MX', // Spanish (Mexico)
-			'es_VE', // Spanish (Venezuela)
-			'et_EE', // Estonian
-			'eu_ES', // Basque
-			'fa_IR', // Persian
-			'fb_LT', // Leet Speak
-			'ff_NG', // Fulah
-			'fi_FI', // Finnish
-			'fo_FO', // Faroese
-			'fr_CA', // French (Canada)
-			'fr_FR', // French (France)
-			'fy_NL', // Frisian
-			'ga_IE', // Irish
-			'gl_ES', // Galician
-			'gn_PY', // Guarani
-			'gu_IN', // Gujarati
-			'gx_GR', // Classical Greek
-			'ha_NG', // Hausa
-			'he_IL', // Hebrew
-			'hi_IN', // Hindi
-			'hr_HR', // Croatian
-			'hu_HU', // Hungarian
-			'hy_AM', // Armenian
-			'id_ID', // Indonesian
-			'ig_NG', // Igbo
-			'is_IS', // Icelandic
-			'it_IT', // Italian
-			'ja_JP', // Japanese
-			'ja_KS', // Japanese (Kansai)
-			'jv_ID', // Javanese
-			'ka_GE', // Georgian
-			'kk_KZ', // Kazakh
-			'km_KH', // Khmer
-			'kn_IN', // Kannada
-			'ko_KR', // Korean
-			'ku_TR', // Kurdish (Kurmanji)
-			'ky_KG', // Kyrgyz
-			'la_VA', // Latin
-			'lg_UG', // Ganda
-			'li_NL', // Limburgish
-			'ln_CD', // Lingala
-			'lo_LA', // Lao
-			'lt_LT', // Lithuanian
-			'lv_LV', // Latvian
-			'mg_MG', // Malagasy
-			'mi_NZ', // Māori
-			'mk_MK', // Macedonian
-			'ml_IN', // Malayalam
-			'mn_MN', // Mongolian
-			'mr_IN', // Marathi
-			'ms_MY', // Malay
-			'mt_MT', // Maltese
-			'my_MM', // Burmese
-			'nb_NO', // Norwegian (bokmal)
-			'nd_ZW', // Ndebele
-			'ne_NP', // Nepali
-			'nl_BE', // Dutch (België)
-			'nl_NL', // Dutch
-			'nn_NO', // Norwegian (nynorsk)
-			'ny_MW', // Chewa
-			'or_IN', // Oriya
-			'pa_IN', // Punjabi
-			'pl_PL', // Polish
-			'ps_AF', // Pashto
-			'pt_BR', // Portuguese (Brazil)
-			'pt_PT', // Portuguese (Portugal)
-			'qu_PE', // Quechua
-			'rm_CH', // Romansh
-			'ro_RO', // Romanian
-			'ru_RU', // Russian
-			'rw_RW', // Kinyarwanda
-			'sa_IN', // Sanskrit
-			'sc_IT', // Sardinian
-			'se_NO', // Northern Sámi
-			'si_LK', // Sinhala
-			'sk_SK', // Slovak
-			'sl_SI', // Slovenian
-			'sn_ZW', // Shona
-			'so_SO', // Somali
-			'sq_AL', // Albanian
-			'sr_RS', // Serbian
-			'sv_SE', // Swedish
-			'sy_SY', // Swahili
-			'sw_KE', // Syriac
-			'sz_PL', // Silesian
-			'ta_IN', // Tamil
-			'te_IN', // Telugu
-			'tg_TJ', // Tajik
-			'th_TH', // Thai
-			'tk_TM', // Turkmen
-			'tl_PH', // Filipino
-			'tl_ST', // Klingon
-			'tr_TR', // Turkish
-			'tt_RU', // Tatar
-			'tz_MA', // Tamazight
-			'uk_UA', // Ukrainian
-			'ur_PK', // Urdu
-			'uz_UZ', // Uzbek
-			'vi_VN', // Vietnamese
-			'wo_SN', // Wolof
-			'xh_ZA', // Xhosa
-			'yi_DE', // Yiddish
-			'yo_NG', // Yoruba
-			'zh_CN', // Simplified Chinese (China)
-			'zh_HK', // Traditional Chinese (Hong Kong)
-			'zh_TW', // Traditional Chinese (Taiwan)
-			'zu_ZA', // Zulu
-			'zz_TR', // Zazaki
+			'af_ZA' => 'af',  // Afrikaans
+			'ak_GH' => 'ak',  // Akan
+			'am_ET' => 'am',  // Amharic
+			'ar_AR' => 'ar',  // Arabic
+			'as_IN' => 'as',  // Assamese
+			'ay_BO' => 'ay',  // Aymara
+			'az_AZ' => 'az',  // Azerbaijani
+			'be_BY' => 'be',  // Belarusian
+			'bg_BG' => 'bg',  // Bulgarian
+			'bn_IN' => 'bn',  // Bengali
+			'br_FR' => 'br',  // Breton
+			'bs_BA' => 'bs',  // Bosnian
+			'ca_ES' => 'ca',  // Catalan
+			'cb_IQ' => 'cb',  // Sorani Kurdish
+			'ck_US' => 'ck',  // Cherokee
+			'co_FR' => 'co',  // Corsican
+			'cs_CZ' => 'cs',  // Czech
+			'cx_PH' => 'cx',  // Cebuano
+			'cy_GB' => 'cy',  // Welsh
+			'da_DK' => 'da',  // Danish
+			'de_DE' => 'de',  // German
+			'el_GR' => 'el',  // Greek
+			'en_GB' => 'en',  // English (UK)
+			'en_IN' => 'en',  // English (India)
+			'en_PI' => 'en',  // English (Pirate)
+			'en_UD' => 'en',  // English (Upside Down)
+			'en_US' => 'en',  // English (US)
+			'eo_EO' => 'eo',  // Esperanto
+			'es_CL' => 'es',  // Spanish (Chile)
+			'es_CO' => 'es',  // Spanish (Colombia)
+			'es_ES' => 'es',  // Spanish (Spain)
+			'es_LA' => 'es',  // Spanish
+			'es_MX' => 'es',  // Spanish (Mexico)
+			'es_VE' => 'es',  // Spanish (Venezuela)
+			'et_EE' => 'et',  // Estonian
+			'eu_ES' => 'eu',  // Basque
+			'fa_IR' => 'fa',  // Persian
+			'fb_LT' => 'fb',  // Leet Speak
+			'ff_NG' => 'ff',  // Fulah
+			'fi_FI' => 'fi',  // Finnish
+			'fo_FO' => 'fo',  // Faroese
+			'fr_CA' => 'fr',  // French (Canada)
+			'fr_FR' => 'fr',  // French (France)
+			'fy_NL' => 'fy',  // Frisian
+			'ga_IE' => 'ga',  // Irish
+			'gl_ES' => 'gl',  // Galician
+			'gn_PY' => 'gn',  // Guarani
+			'gu_IN' => 'gu',  // Gujarati
+			'gx_GR' => 'gx',  // Classical Greek
+			'ha_NG' => 'ha',  // Hausa
+			'he_IL' => 'he',  // Hebrew
+			'hi_IN' => 'hi',  // Hindi
+			'hr_HR' => 'hr',  // Croatian
+			'hu_HU' => 'hu',  // Hungarian
+			'hy_AM' => 'hy',  // Armenian
+			'id_ID' => 'id',  // Indonesian
+			'ig_NG' => 'ig',  // Igbo
+			'is_IS' => 'is',  // Icelandic
+			'it_IT' => 'it',  // Italian
+			'ja_JP' => 'ja',  // Japanese
+			'ja_KS' => 'ja',  // Japanese (Kansai)
+			'jv_ID' => 'jv',  // Javanese
+			'ka_GE' => 'ka',  // Georgian
+			'kk_KZ' => 'kk',  // Kazakh
+			'km_KH' => 'km',  // Khmer
+			'kn_IN' => 'kn',  // Kannada
+			'ko_KR' => 'ko',  // Korean
+			'ku_TR' => 'ku',  // Kurdish (Kurmanji)
+			'ky_KG' => 'ky',  // Kyrgyz
+			'la_VA' => 'la',  // Latin
+			'lg_UG' => 'lg',  // Ganda
+			'li_NL' => 'li',  // Limburgish
+			'ln_CD' => 'ln',  // Lingala
+			'lo_LA' => 'lo',  // Lao
+			'lt_LT' => 'lt',  // Lithuanian
+			'lv_LV' => 'lv',  // Latvian
+			'mg_MG' => 'mg',  // Malagasy
+			'mi_NZ' => 'mi',  // Māori
+			'mk_MK' => 'mk',  // Macedonian
+			'ml_IN' => 'ml',  // Malayalam
+			'mn_MN' => 'mn',  // Mongolian
+			'mr_IN' => 'mr',  // Marathi
+			'ms_MY' => 'ms',  // Malay
+			'mt_MT' => 'mt',  // Maltese
+			'my_MM' => 'my',  // Burmese
+			'nb_NO' => 'nb',  // Norwegian (bokmal)
+			'nd_ZW' => 'nd',  // Ndebele
+			'ne_NP' => 'ne',  // Nepali
+			'nl_BE' => 'nl',  // Dutch (België)
+			'nl_NL' => 'nl',  // Dutch
+			'nn_NO' => 'nn',  // Norwegian (nynorsk)
+			'ny_MW' => 'ny',  // Chewa
+			'or_IN' => 'or',  // Oriya
+			'pa_IN' => 'pa',  // Punjabi
+			'pl_PL' => 'pl',  // Polish
+			'ps_AF' => 'ps',  // Pashto
+			'pt_BR' => 'pt',  // Portuguese (Brazil)
+			'pt_PT' => 'pt',  // Portuguese (Portugal)
+			'qu_PE' => 'qu',  // Quechua
+			'rm_CH' => 'rm',  // Romansh
+			'ro_RO' => 'ro',  // Romanian
+			'ru_RU' => 'ru',  // Russian
+			'rw_RW' => 'rw',  // Kinyarwanda
+			'sa_IN' => 'sa',  // Sanskrit
+			'sc_IT' => 'sc',  // Sardinian
+			'se_NO' => 'se',  // Northern Sámi
+			'si_LK' => 'si',  // Sinhala
+			'sk_SK' => 'sk',  // Slovak
+			'sl_SI' => 'sl',  // Slovenian
+			'sn_ZW' => 'sn',  // Shona
+			'so_SO' => 'so',  // Somali
+			'sq_AL' => 'sq',  // Albanian
+			'sr_RS' => 'sr',  // Serbian
+			'sv_SE' => 'sv',  // Swedish
+			'sy_SY' => 'sy',  // Swahili
+			'sw_KE' => 'sw',  // Syriac
+			'sz_PL' => 'sz',  // Silesian
+			'ta_IN' => 'ta',  // Tamil
+			'te_IN' => 'te',  // Telugu
+			'tg_TJ' => 'tg',  // Tajik
+			'th_TH' => 'th',  // Thai
+			'tk_TM' => 'tk',  // Turkmen
+			'tl_PH' => 'tl',  // Filipino
+			'tl_ST' => 'tl',  // Klingon
+			'tr_TR' => 'tr',  // Turkish
+			'tt_RU' => 'tt',  // Tatar
+			'tz_MA' => 'tz',  // Tamazight
+			'uk_UA' => 'uk',  // Ukrainian
+			'ur_PK' => 'ur',  // Urdu
+			'uz_UZ' => 'uz',  // Uzbek
+			'vi_VN' => 'vi',  // Vietnamese
+			'wo_SN' => 'wo',  // Wolof
+			'xh_ZA' => 'xh',  // Xhosa
+			'yi_DE' => 'yi',  // Yiddish
+			'yo_NG' => 'yo',  // Yoruba
+			'zh_CN' => 'zh',  // Simplified Chinese (China)
+			'zh_HK' => 'zh',  // Traditional Chinese (Hong Kong)
+			'zh_TW' => 'zh',  // Traditional Chinese (Taiwan)
+			'zu_ZA' => 'zu',  // Zulu
+			'zz_TR' => 'zz',  // Zazaki
 		];
 	}
 
 	/**
-	 * Returns Facebook locales' associative array keys.
+	 * Returns all post type archive meta.
 	 *
-	 * This is apart from the fb_locales array since there are "duplicated" keys.
-	 * Use this to compare the numeric key position.
+	 * We do not test whether a post type is supported, for it'll conflict with data-fills on the
+	 * SEO settings page. This meta should never get called on the front-end if the post type is
+	 * disabled, anyway, for we never query post types externally, aside from the SEO settings page.
 	 *
-	 * @since 2.5.2
-	 * @see https://www.facebook.com/translations/FacebookLocales.xml (deprecated)
-	 * @see https://wordpress.org/support/topic/oglocale-problem/#post-11456346
-	 * mirror: http://web.archive.org/web/20190601043836/https://wordpress.org/support/topic/oglocale-problem/
+	 * @since 4.2.0
 	 *
-	 * @return array Valid Facebook locale keys
+	 * @param string $post_type The post type.
+	 * @param bool   $use_cache Whether to use caching.
+	 * @return array The post type archive's meta item's values.
 	 */
-	public function language_keys() {
+	public function get_post_type_archive_meta( $post_type, $use_cache = true ) {
+
+		// phpcs:ignore, WordPress.CodeAnalysis.AssignmentInCondition -- I know.
+		if ( $use_cache && ( $memo = memo( null, $post_type ) ) ) return $memo;
+
+		/**
+		 * We can't trust the filter to always contain the expected keys.
+		 * However, it may contain more keys than we anticipated. Merge them.
+		 */
+		$defaults = array_merge(
+			$this->get_unfiltered_post_type_archive_meta_defaults(),
+			$this->get_post_type_archive_meta_defaults( $post_type )
+		);
+
+		// Yes, we abide by "settings". WordPress never gave us Post Type Archive settings-pages.
+		if ( $this->is_headless['settings'] ) {
+			$meta = [];
+		} else {
+			// Unlike get_post_meta(), we need not filter here.
+			// See: <https://github.com/sybrew/the-seo-framework/issues/185>
+			$meta = $this->get_option( [ 'pta', $post_type ], $use_cache ) ?: [];
+		}
+
+		/**
+		 * @since 4.2.0
+		 * @note Do not delete/unset/add indexes! It'll cause errors.
+		 * @param array $meta      The current post type archive meta.
+		 * @param int   $post_type The post type.
+		 * @param bool  $headless  Whether the meta are headless.
+		 */
+		$meta = \apply_filters_ref_array(
+			'the_seo_framework_post_type_archive_meta',
+			[
+				array_merge( $defaults, $meta ),
+				$post_type,
+				$this->is_headless['settings'],
+			]
+		);
+
+		// Do not overwrite cache when not requested. Otherwise, we'd have two "initial" states, causing incongruities.
+		return $use_cache ? memo( $meta, $post_type ) : $meta;
+	}
+
+	/**
+	 * Returns a single post type archive item's value.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @param string $item      The item to get.
+	 * @param string $post_type The post type.
+	 * @param bool   $use_cache Whether to use caching.
+	 * @return array|null The post type archive's meta item's value. Null when item isn't registered.
+	 */
+	public function get_post_type_archive_meta_item( $item, $post_type = '', $use_cache = true ) {
+		return $this->get_post_type_archive_meta(
+			$post_type ?: $this->get_current_post_type(),
+			$use_cache
+		)[ $item ] ?? null;
+	}
+
+	// phpcs:disable, VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable -- You don't love PHP 7.
+	/**
+	 * Returns an array of all public post type archive option defaults.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @return array[] The Post Type Archive Metadata default options
+	 *                 of all public Post Type archives.
+	 */
+	public function get_all_post_type_archive_meta_defaults() {
+
+		foreach ( $this->get_public_post_type_archives() as $pta )
+			$defaults[ $pta ] = $this->get_post_type_archive_meta_defaults( $pta );
+
+		return $defaults ?? [];
+	}
+	// phpcs:enable, VariableAnalysis.CodeAnalysis.VariableAnalysis.UndefinedVariable
+
+	/**
+	 * Returns an array of default post type archive meta.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @param int $post_type The post type.
+	 * @return array The Post Type Archive Metadata default options.
+	 */
+	public function get_post_type_archive_meta_defaults( $post_type = '' ) {
+		/**
+		 * @since 4.2.0
+		 * @param array $defaults
+		 * @param int   $term_id The current term ID.
+		 */
+		return (array) \apply_filters_ref_array(
+			'the_seo_framework_get_post_type_archive_meta_defaults',
+			[
+				$this->get_unfiltered_post_type_archive_meta_defaults(),
+				$post_type ?: $this->get_current_post_type(),
+			]
+		);
+	}
+
+	/**
+	 * Returns the unfiltered post type archive meta defaults.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @return array The default, unfiltered, post type archive meta.
+	 */
+	protected function get_unfiltered_post_type_archive_meta_defaults() {
 		return [
-			'af', // Afrikaans
-			'ak', // Akan
-			'am', // Amharic
-			'ar', // Arabic
-			'as', // Assamese
-			'ay', // Aymara
-			'az', // Azerbaijani
-			'be', // Belarusian
-			'bg', // Bulgarian
-			'bn', // Bengali
-			'br', // Breton
-			'bs', // Bosnian
-			'ca', // Catalan
-			'cb', // Sorani Kurdish
-			'ck', // Cherokee
-			'co', // Corsican
-			'cs', // Czech
-			'cx', // Cebuano
-			'cy', // Welsh
-			'da', // Danish
-			'de', // German
-			'el', // Greek
-			'en', // English (UK)
-			'en', // English (India)
-			'en', // English (Pirate)
-			'en', // English (Upside Down)
-			'en', // English (US)
-			'eo', // Esperanto
-			'es', // Spanish (Chile)
-			'es', // Spanish (Colombia)
-			'es', // Spanish (Spain)
-			'es', // Spanish
-			'es', // Spanish (Mexico)
-			'es', // Spanish (Venezuela)
-			'et', // Estonian
-			'eu', // Basque
-			'fa', // Persian
-			'fb', // Leet Speak
-			'ff', // Fulah
-			'fi', // Finnish
-			'fo', // Faroese
-			'fr', // French (Canada)
-			'fr', // French (France)
-			'fy', // Frisian
-			'ga', // Irish
-			'gl', // Galician
-			'gn', // Guarani
-			'gu', // Gujarati
-			'gx', // Classical Greek
-			'ha', // Hausa
-			'he', // Hebrew
-			'hi', // Hindi
-			'hr', // Croatian
-			'hu', // Hungarian
-			'hy', // Armenian
-			'id', // Indonesian
-			'ig', // Igbo
-			'is', // Icelandic
-			'it', // Italian
-			'ja', // Japanese
-			'ja', // Japanese (Kansai)
-			'jv', // Javanese
-			'ka', // Georgian
-			'kk', // Kazakh
-			'km', // Khmer
-			'kn', // Kannada
-			'ko', // Korean
-			'ku', // Kurdish (Kurmanji)
-			'ky', // Kyrgyz
-			'la', // Latin
-			'lg', // Ganda
-			'li', // Limburgish
-			'ln', // Lingala
-			'lo', // Lao
-			'lt', // Lithuanian
-			'lv', // Latvian
-			'mg', // Malagasy
-			'mi', // Māori
-			'mk', // Macedonian
-			'ml', // Malayalam
-			'mn', // Mongolian
-			'mr', // Marathi
-			'ms', // Malay
-			'mt', // Maltese
-			'my', // Burmese
-			'nb', // Norwegian (bokmal)
-			'nd', // Ndebele
-			'ne', // Nepali
-			'nl', // Dutch (België)
-			'nl', // Dutch
-			'nn', // Norwegian (nynorsk)
-			'ny', // Chewa
-			'or', // Oriya
-			'pa', // Punjabi
-			'pl', // Polish
-			'ps', // Pashto
-			'pt', // Portuguese (Brazil)
-			'pt', // Portuguese (Portugal)
-			'qu', // Quechua
-			'rm', // Romansh
-			'ro', // Romanian
-			'ru', // Russian
-			'rw', // Kinyarwanda
-			'sa', // Sanskrit
-			'sc', // Sardinian
-			'se', // Northern Sámi
-			'si', // Sinhala
-			'sk', // Slovak
-			'sl', // Slovenian
-			'sn', // Shona
-			'so', // Somali
-			'sq', // Albanian
-			'sr', // Serbian
-			'sv', // Swedish
-			'sy', // Swahili
-			'sw', // Syriac
-			'sz', // Silesian
-			'ta', // Tamil
-			'te', // Telugu
-			'tg', // Tajik
-			'th', // Thai
-			'tk', // Turkmen
-			'tl', // Filipino
-			'tl', // Klingon
-			'tr', // Turkish
-			'tt', // Tatar
-			'tz', // Tamazight
-			'uk', // Ukrainian
-			'ur', // Urdu
-			'uz', // Uzbek
-			'vi', // Vietnamese
-			'wo', // Wolof
-			'xh', // Xhosa
-			'yi', // Yiddish
-			'yo', // Yoruba
-			'zh', // Simplified Chinese (China)
-			'zh', // Traditional Chinese (Hong Kong)
-			'zh', // Traditional Chinese (Taiwan)
-			'zu', // Zulu
-			'zz', // Zazaki
+			'doctitle'           => '',
+			'title_no_blog_name' => 0,
+			'description'        => '',
+			'og_title'           => '',
+			'og_description'     => '',
+			'tw_title'           => '',
+			'tw_description'     => '',
+			'social_image_url'   => '',
+			'social_image_id'    => 0,
+			'canonical'          => '',
+			'noindex'            => 0,
+			'nofollow'           => 0,
+			'noarchive'          => 0,
+			'redirect'           => '',
 		];
 	}
 }

@@ -1,14 +1,14 @@
 <?php
 /**
- * @package The_SEO_Framework\Classes\Interpreters\SeoBar
- * @subpackage The_SEO_Framework\SeoBar
+ * @package The_SEO_Framework\Classes\Interpreters\SEOBar
+ * @subpackage The_SEO_Framework\SEOBar
  */
 
 namespace The_SEO_Framework\Interpreters;
 
 /**
  * The SEO Framework plugin
- * Copyright (C) 2019 - 2020 Sybre Waaijer, CyberWire (https://cyberwire.nl/)
+ * Copyright (C) 2019 - 2022 Sybre Waaijer, CyberWire B.V. (https://cyberwire.nl/)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published
@@ -25,22 +25,37 @@ namespace The_SEO_Framework\Interpreters;
 
 \defined( 'THE_SEO_FRAMEWORK_PRESENT' ) or die;
 
+use function \The_SEO_Framework\umemo;
+
 /**
  * Interprets the SEO Bar into an HTML item.
  *
  * @since 4.0.0
- * @see \the_seo_framework()->get_generated_seo_bar( $args ) for easy access.
+ * @see \tsf()->get_generated_seo_bar( $args ) for easy access.
  *
  * @access public
  *         Note that you can't instance this class. Only static methods and properties are accessible.
+ * @final Can't be extended.
  */
-final class SeoBar {
+final class SEOBar {
 
-	const STATE_UNDEFINED = 0b0000;
-	const STATE_UNKNOWN   = 0b0001;
-	const STATE_BAD       = 0b0010;
-	const STATE_OKAY      = 0b0100;
-	const STATE_GOOD      = 0b1000;
+	/**
+	 * The recognized SEO Bar item states.
+	 * Mixed types will fall back to 'undefined'.
+	 *
+	 * @since 4.1.0
+	 * @access public
+	 * @var int <bit    0> STATE_UNDEFINED
+	 * @var int <bit    1> STATE_UNKNOWN
+	 * @var int <bit   10> STATE_BAD
+	 * @var int <bit  100> STATE_OKAY
+	 * @var int <bit 1000> STATE_GOOD
+	 */
+	public const STATE_UNDEFINED = 0b0000;
+	public const STATE_UNKNOWN   = 0b0001;
+	public const STATE_BAD       = 0b0010;
+	public const STATE_OKAY      = 0b0100;
+	public const STATE_GOOD      = 0b1000;
 
 	/**
 	 * @since 4.0.0
@@ -50,26 +65,22 @@ final class SeoBar {
 
 	/**
 	 * @since 4.0.0
-	 * @var \The_SEO_Framework\Interpreters\SeoBar $instance The instance.
+	 * @var \The_SEO_Framework\Interpreters\SEOBar $instance The instance.
 	 */
 	private static $instance;
 
 	/**
 	 * @since 4.0.0
-	 * @var array $item The current SEO Bar item list : {
-	 *
+	 * @var array $item The current SEO Bar item list. {
+	 *    string $symbol : The displayed symbol that identifies your bar.
+	 *    string $title  : The title of the assessment.
+	 *    string $status : Accepts 'good', 'okay', 'bad', 'unknown'.
+	 *    string $reason : The final assessment: The reason for the $status.
+	 *    string $assess : The assessments on why the reason is set. Keep it short and concise!
+	 *                     Does not accept HTML for performant ARIA support.
 	 * }
 	 */
 	private static $items = [];
-
-	/**
-	 * Constructor.
-	 *
-	 * @since 4.0.0
-	 */
-	private function __construct() {
-		static::$instance = &$this;
-	}
 
 	/**
 	 * Returns this instance.
@@ -79,42 +90,51 @@ final class SeoBar {
 	 * @return static
 	 */
 	private static function get_instance() {
-		static::$instance instanceof static or new static;
-		return static::$instance;
+		return static::$instance ?? ( static::$instance = new static );
 	}
 
 	/**
+	 * Generates the SEO Bar.
+	 *
 	 * @since 4.0.0
+	 * @since 4.1.4 Now manages the builder, too.
 	 *
 	 * @param array $query : {
 	 *   int    $id        : Required. The current post or term ID.
 	 *   string $taxonomy  : Optional. If not set, this will interpret it as a post.
+	 *   string $pta       : Not implemented. Do not populate.
 	 *   string $post_type : Optional. If not set, this will be automatically filled.
 	 *                                 This parameter is ignored for taxonomies.
+	 *                                 This parameter will become obsolete once WP fixes its post cache.
+	 *                                 <https://core.trac.wordpress.org/ticket/50567>
 	 * }
 	 * @return string The SEO Bar.
 	 */
-	public static function generate_bar( array $query ) {
+	public static function generate_bar( $query ) {
 
-		static::$query = array_merge(
-			[
-				'id'        => 0,
-				'taxonomy'  => '',
-				'post_type' => '',
-			],
-			$query
-		);
+		static::$query = $query + [
+			'id'        => 0,
+			'taxonomy'  => '',
+			'pta'       => '',
+			'post_type' => '',
+		];
 
 		if ( ! static::$query['id'] ) return '';
 
 		if ( ! static::$query['taxonomy'] )
 			static::$query['post_type'] = static::$query['post_type'] ?: \get_post_type( static::$query['id'] );
 
+		if ( static::$query['taxonomy'] ) {
+			$builder = \The_SEO_Framework\Builders\SEOBar\Term::get_instance();
+		} else {
+			$builder = \The_SEO_Framework\Builders\SEOBar\Page::get_instance();
+		}
+
 		$instance = static::get_instance();
-		$instance->store_default_bar_items();
+		$instance->store_seo_bar_items( $builder );
 
 		/**
-		 * Add or adjust SEO Bar items here.
+		 * Add or adjust SEO Bar items here, after the tests have run.
 		 *
 		 * @link Example: https://gist.github.com/sybrew/59130560fcbeb98f7580dc11c54ba174
 		 * @since 4.0.0
@@ -126,6 +146,7 @@ final class SeoBar {
 
 		// There's no need to leak memory.
 		$instance->clear_seo_bar_items();
+		$builder->clear_query_cache();
 
 		return $bar;
 	}
@@ -137,7 +158,14 @@ final class SeoBar {
 	 * @since 4.1.1 Is now static.
 	 * @collector
 	 *
-	 * @return array SEO Bar items. Passed by reference.
+	 * @return array SEO Bar items. Passed by reference. {
+	 *    string $symbol : The displayed symbol that identifies your bar.
+	 *    string $title  : The title of the assessment.
+	 *    string $status : Accepts 'good', 'okay', 'bad', 'unknown'.
+	 *    string $reason : The final assessment: The reason for the $status.
+	 *    string $assess : The assessments on why the reason is set. Keep it short and concise!
+	 *                     Does not accept HTML for performant ARIA support.
+	 * }
 	 */
 	public static function &collect_seo_bar_items() {
 		return static::$items;
@@ -158,7 +186,7 @@ final class SeoBar {
 	 *                               Does not accept HTML for performant ARIA support.
 	 * }
 	 */
-	public static function register_seo_bar_item( $key, array $item ) {
+	public static function register_seo_bar_item( $key, $item ) {
 		static::$items[ $key ] = $item;
 	}
 
@@ -203,32 +231,30 @@ final class SeoBar {
 	 * Stores the SEO Bar items.
 	 *
 	 * @since 4.0.0
+	 * @since 4.1.4 Offloaded the builder's instantiation.
 	 * @factory
+	 *
+	 * @param \The_SEO_Framework\Builders\SEOBar\Main $builder The builder instance.
 	 */
-	private function store_default_bar_items() {
-
-		if ( static::$query['taxonomy'] ) {
-			$builder = \The_SEO_Framework\Builders\SeoBar_Term::get_instance();
-		} else {
-			$builder = \The_SEO_Framework\Builders\SeoBar_Page::get_instance();
-		}
+	private function store_seo_bar_items( $builder ) {
 
 		/**
-		 * Adjust interpreter and builder items here.
+		 * Adjust interpreter and builder items here, before the tests have run.
 		 *
 		 * The only use we can think of here is removing items from `$builder::$tests`,
-		 * and reading `$interpreter::$query`. Do not add tests here. Do not alter the query.
+		 * and reading `$builder::$query{_cache}`. Do not add tests here. Do not alter the query.
 		 *
 		 * @link Example: https://gist.github.com/sybrew/03dd428deadc860309879e1d5208e1c4
+		 * @see related (recommended) action 'the_seo_framework_seo_bar'
 		 * @since 4.0.0
-		 * @param string                             $interpreter The current class name.
-		 * @param \The_SEO_Framework\Builders\SeoBar $builder     The builder object.
+		 * @param string                                  $interpreter The current class name.
+		 * @param \The_SEO_Framework\Builders\SEOBar\Main $builder     The builder object.
 		 */
 		\do_action_ref_array( 'the_seo_framework_prepare_seo_bar', [ static::class, $builder ] );
 
 		$items = &$this->collect_seo_bar_items();
 
-		foreach ( $builder->_run_test( $builder::$tests, static::$query ) as $key => $data )
+		foreach ( $builder->_run_all_tests( static::$query ) as $key => $data )
 			$items[ $key ] = $data;
 	}
 
@@ -237,10 +263,10 @@ final class SeoBar {
 	 *
 	 * @since 4.0.0
 	 *
-	 * @param array $items The SEO Bar items.
+	 * @param iterable $items The SEO Bar items.
 	 * @return string The SEO Bar
 	 */
-	private function create_seo_bar( array $items ) {
+	private function create_seo_bar( $items ) {
 
 		$blocks = [];
 
@@ -265,10 +291,10 @@ final class SeoBar {
 	 *        WordPress still hangs on tight to their PHP5.2 roots, where HTML4+ escaping wasn't supported well. Updating that requires
 	 *        a whole lot of time, and paves way for potential security issues due to oversight. But, that'd speed up escaping for everyone.
 	 *
-	 * @param array $items The SEO Bar items.
+	 * @param iterable $items The SEO Bar items.
 	 * @yield The SEO Bar HTML item.
 	 */
-	private function generate_seo_bar_blocks( array $items ) {
+	private function generate_seo_bar_blocks( $items ) {
 		foreach ( $items as $item )
 			yield vsprintf(
 				'<span class="tsf-seo-bar-section-wrap tsf-tooltip-wrap"><span class="tsf-seo-bar-item tsf-tooltip-item tsf-seo-bar-%1$s" title="%2$s" aria-label="%2$s" data-desc="%3$s" tabindex=0>%4$s</span></span>',
@@ -291,7 +317,7 @@ final class SeoBar {
 	 * @param string $type The description type. Accepts 'html' or 'aria'.
 	 * @return string The SEO Bar item description.
 	 */
-	private function build_item_description( array $item, $type ) {
+	private function build_item_description( $item, $type ) {
 
 		static $gettext = null;
 		if ( null === $gettext ) {
@@ -332,7 +358,7 @@ final class SeoBar {
 	 * @param array $item See `$this->register_seo_bar_item()`
 	 * @return string The SEO Bar item assessment, in plaintext.
 	 */
-	private function enumerate_assessment_list( array $item ) {
+	private function enumerate_assessment_list( $item ) {
 
 		$count       = \count( $item['assess'] );
 		$assessments = [];
@@ -416,14 +442,12 @@ final class SeoBar {
 	 * @param array $item See `$this->register_seo_bar_item()`
 	 * @return string The SEO Bar item assessment, in plaintext.
 	 */
-	private function interpret_status_to_symbol( array $item ) {
+	private function interpret_status_to_symbol( $item ) {
 
-		static $use_symbols = null;
-		if ( null === $use_symbols ) {
-			$use_symbols = (bool) \the_seo_framework()->get_option( 'seo_bar_symbols' );
-		}
+		$symbols = umemo( __METHOD__ . '/use_symbols' )
+				?? umemo( __METHOD__ . '/use_symbols', (bool) \tsf()->get_option( 'seo_bar_symbols' ) );
 
-		if ( $use_symbols && $item['status'] ^ static::STATE_GOOD ) {
+		if ( $symbols && $item['status'] ^ static::STATE_GOOD ) {
 			switch ( $item['status'] ) :
 				case static::STATE_OKAY:
 					$symbol = '!?';
